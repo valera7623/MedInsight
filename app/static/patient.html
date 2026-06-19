@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — Карточка пациента</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">MedInsight</div>
+    <div class="nav-links">
+      <a href="/">Дашборд</a>
+      <a href="/patients">Пациенты</a>
+      <a href="/docs" target="_blank">API Docs</a>
+    </div>
+    <button class="btn btn-secondary btn-sm" id="logout-btn">Выйти</button>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1 id="patient-name">Карточка пациента</h1>
+      <a href="/patients" class="btn btn-secondary">← К списку</a>
+    </header>
+
+    <div class="patient-info-card" id="patient-info"></div>
+
+    <div class="section-card">
+      <h2>Документы</h2>
+      <ul id="documents-list"></ul>
+    </div>
+
+    <div class="section-card">
+      <h2>Прогнозы</h2>
+      <div class="section-actions">
+        <button class="btn btn-primary" id="generate-prediction-btn">Сгенерировать прогноз</button>
+        <button class="btn btn-secondary" id="generate-insights-btn">AI-инсайты</button>
+      </div>
+      <div id="prediction-loading" class="loading-indicator hidden">Генерация прогноза (Celery)...</div>
+      <div id="prediction-result"></div>
+      <div id="insights-result" class="hidden"></div>
+    </div>
+  </main>
+
+  <script src="/static/dashboard.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initPatientPage();
+    });
+  </script>
+</body>
+</html>

@@ -53,6 +53,41 @@
       </div>
     </div>
 
+    <div class="predictions-section">
+      <h2>Прогнозы и риски</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-high-risk">—</div>
+          <div class="stat-label">Пациентов с высоким риском</div>
+        </div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h2>Риски по отделению</h2>
+          <canvas id="dept-risk-chart"></canvas>
+        </div>
+        <div class="chart-card">
+          <h2>Тренды рисков по месяцам</h2>
+          <canvas id="trends-chart"></canvas>
+        </div>
+      </div>
+      <div class="recent-section">
+        <h2>Пациенты с высоким риском</h2>
+        <table class="data-table" id="high-risk-table">
+          <thead>
+            <tr>
+              <th>Пациент</th>
+              <th>Риск реадмиссии</th>
+              <th>Риск осложнений</th>
+              <th>Дата прогноза</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="recent-section">
       <h2>Недавние пациенты</h2>
       <table class="data-table" id="recent-patients-table">
@@ -146,7 +181,7 @@
           <input type="file" id="upload-file" accept=".docx,.pdf" required>
         </div>
         <div id="upload-error" class="error-message hidden"></div>
-        <div id="upload-progress" class="hidden">Загрузка и парсинг...</div>
+        <div id="upload-progress" class="hidden">Загрузка документа (асинхронный парсинг)...</div>
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary modal-close">Отмена</button>
           <button type="submit" class="btn btn-primary">Загрузить</button>

@@ -7,7 +7,7 @@ cd "$SCRIPT_DIR"
 if [ ! -f .env ]; then
   echo "Creating .env from .env.example..."
   cp .env.example .env
-  echo "Update SECRET_KEY in .env before production use!"
+  echo "Update SECRET_KEY and OPENAI_API_KEY in .env before production use!"
 fi
 
 mkdir -p storage
@@ -25,11 +25,11 @@ if [ "$MODE" = "production" ]; then
   echo "Starting MedInsight (production)..."
   docker stop medinsight-traefik 2>/dev/null || true
   docker rm medinsight-traefik 2>/dev/null || true
-  docker compose "${COMPOSE_FILES[@]}" up -d --build app
+  docker compose "${COMPOSE_FILES[@]}" up -d --build redis app celery_worker celery_beat
   APP_PORT="8000"
 else
   echo "Starting MedInsight (development)..."
-  docker compose "${COMPOSE_FILES[@]}" up -d --build app
+  docker compose "${COMPOSE_FILES[@]}" up -d --build redis app celery_worker celery_beat
   APP_PORT="8000"
 fi
 
@@ -41,4 +41,4 @@ echo "  Login:      http://localhost:${APP_PORT}/login"
 echo "  HTTP (80):  http://localhost/"
 echo "  API Docs:   http://localhost:${APP_PORT}/docs"
 echo ""
-echo "Logs: docker compose ${COMPOSE_FILES[*]} logs -f app"
+echo "Logs: docker compose ${COMPOSE_FILES[*]} logs -f app celery_worker"

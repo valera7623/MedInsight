@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -18,6 +18,8 @@ class User(Base):
 
     patients: Mapped[list["Patient"]] = relationship("Patient", back_populates="owner")
     documents: Mapped[list["Document"]] = relationship("Document", back_populates="owner")
+    predictions: Mapped[list["Prediction"]] = relationship("Prediction", back_populates="owner")
+    analysis_jobs: Mapped[list["AnalysisJob"]] = relationship("AnalysisJob", back_populates="owner")
 
 
 class Patient(Base):
@@ -41,6 +43,12 @@ class Patient(Base):
     documents: Mapped[list["Document"]] = relationship(
         "Document", back_populates="patient", cascade="all, delete-orphan"
     )
+    predictions: Mapped[list["Prediction"]] = relationship(
+        "Prediction", back_populates="patient", cascade="all, delete-orphan"
+    )
+    analysis_jobs: Mapped[list["AnalysisJob"]] = relationship(
+        "AnalysisJob", back_populates="patient", cascade="all, delete-orphan"
+    )
 
 
 class Document(Base):
@@ -61,3 +69,47 @@ class Document(Base):
 
     patient: Mapped["Patient"] = relationship("Patient", back_populates="documents")
     owner: Mapped["User"] = relationship("User", back_populates="documents")
+    analysis_jobs: Mapped[list["AnalysisJob"]] = relationship("AnalysisJob", back_populates="document")
+
+
+class AnalysisJob(Base):
+    __tablename__ = "analysis_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    patient_id: Mapped[int] = mapped_column(Integer, ForeignKey("patients.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    document_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("documents.id"), nullable=True, index=True)
+    type: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
+    celery_task_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    patient: Mapped["Patient"] = relationship("Patient", back_populates="analysis_jobs")
+    owner: Mapped["User"] = relationship("User", back_populates="analysis_jobs")
+    document: Mapped["Document | None"] = relationship("Document", back_populates="analysis_jobs")
+    predictions: Mapped[list["Prediction"]] = relationship("Prediction", back_populates="analysis_job")
+
+
+class Prediction(Base):
+    __tablename__ = "predictions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    patient_id: Mapped[int] = mapped_column(Integer, ForeignKey("patients.id"), nullable=False, index=True)
+    analysis_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("analysis_jobs.id"), nullable=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(50), nullable=False, default="readmission")
+    features: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    prediction: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    probabilities: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    confidence_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    validated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    validated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    patient: Mapped["Patient"] = relationship("Patient", back_populates="predictions")
+    owner: Mapped["User"] = relationship("User", back_populates="predictions")
+    analysis_job: Mapped["AnalysisJob | None"] = relationship("AnalysisJob", back_populates="predictions")

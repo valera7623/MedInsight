@@ -1,4 +1,13 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: medinsight-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - medinsight-net
+
   app:
     build: .
     container_name: medinsight-app
@@ -9,6 +18,36 @@ services:
       - "${APP_PORT:-8000}:8000"
     volumes:
       - ./storage:/app/storage
+    depends_on:
+      - redis
+    networks:
+      - medinsight-net
+
+  celery_worker:
+    build: .
+    container_name: medinsight-celery-worker
+    restart: unless-stopped
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/app/storage
+    depends_on:
+      - redis
+      - app
+    networks:
+      - medinsight-net
+
+  celery_beat:
+    build: .
+    container_name: medinsight-celery-beat
+    restart: unless-stopped
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - app
     networks:
       - medinsight-net
 

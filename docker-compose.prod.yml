@@ -8,8 +8,32 @@ services:
     environment:
       DATABASE_URL: sqlite:////app/data/medinsight.db
       STORAGE_PATH: /app/storage
+      REDIS_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
     volumes:
       - ./storage:/app/storage
+      - medinsight-data:/app/data
+
+  celery_worker:
+    container_name: medinsight-celery-worker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: sqlite:////app/data/medinsight.db
+      STORAGE_PATH: /app/storage
+      REDIS_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    volumes:
+      - ./storage:/app/storage
+      - medinsight-data:/app/data
+
+  celery_beat:
+    container_name: medinsight-celery-beat
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: sqlite:////app/data/medinsight.db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    volumes:
       - medinsight-data:/app/data
 
 volumes:

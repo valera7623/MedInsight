@@ -10,9 +10,10 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.config import settings
 from app.database import get_db
-from app.models import Document, Patient, User
+from app.models import AnalysisJob, Document, Patient, User
 from app.services.extractor import extract_entities
 from app.services.parser import SUPPORTED_EXTENSIONS, parse_document
+from app.tasks.parse_task import parse_document_task
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 logger = logging.getLogger(__name__)
@@ -52,7 +53,8 @@ def _get_document_or_404(db: Session, doc_id: int, user_id: int) -> Document:
     return doc
 
 
-def _process_document(doc: Document, db: Session) -> None:
+def _process_document_sync(doc: Document, db: Session) -> None:
+    """Synchronous fallback when Celery/Redis is unavailable."""
     try:
         text = parse_document(doc.file_path)
         parsed = extract_entities(text)
@@ -64,6 +66,32 @@ def _process_document(doc: Document, db: Session) -> None:
         doc.status = "failed"
         doc.parsed_data = {"error": str(exc), "full_text": ""}
     db.commit()
+
+
+def _enqueue_parse(doc: Document, db: Session, user_id: int) -> str | None:
+    """Returns job_id if async parse was enqueued, None if sync fallback was used."""
+    try:
+        job = AnalysisJob(
+            patient_id=doc.patient_id,
+            user_id=user_id,
+            document_id=doc.id,
+            type="parse",
+            status="pending",
+        )
+        db.add(job)
+        doc.status = "processing"
+        db.commit()
+        db.refresh(job)
+
+        task = parse_document_task.delay(job.id, doc.id)
+        job.celery_task_id = task.id
+        db.commit()
+        return str(job.id)
+    except Exception as exc:
+        logger.warning("Celery unavailable, falling back to sync parse: %s", exc)
+        db.rollback()
+        _process_document_sync(doc, db)
+        return None
 
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
@@ -122,7 +150,7 @@ async def upload_document(
     db.commit()
     db.refresh(doc)
 
-    _process_document(doc, db)
+    _enqueue_parse(doc, db, current_user.id)
     db.refresh(doc)
     return doc
 

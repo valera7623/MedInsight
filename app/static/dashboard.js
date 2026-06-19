@@ -159,6 +159,24 @@ function formatFullName(p) {
 
 let diagnosesChart = null;
 let medicationsChart = null;
+let deptRiskChart = null;
+let trendsChart = null;
+
+function riskLevel(value) {
+  if (value < 40) return 'low';
+  if (value < 70) return 'medium';
+  return 'high';
+}
+
+function riskBadge(value) {
+  const level = riskLevel(value);
+  const labels = { low: 'Низкий', medium: 'Средний', high: 'Высокий' };
+  return `<span class="risk-badge risk-badge-${level}">${labels[level]} (${value}%)</span>`;
+}
+
+function riskClass(value) {
+  return `risk-${riskLevel(value)}`;
+}
 
 async function loadDashboard() {
   const res = await apiFetch('/api/analytics/dashboard');
@@ -182,6 +200,7 @@ async function loadDashboard() {
       <td>${GENDER_LABELS[p.gender] || p.gender}</td>
       <td>${new Date(p.created_at).toLocaleDateString('ru-RU')}</td>
       <td>
+        <a href="/patient/${p.id}" class="btn btn-secondary btn-sm">Карточка</a>
         ${renderPatientActions(p.id, formatFullName(p))}
       </td>
     `;
@@ -189,6 +208,112 @@ async function loadDashboard() {
   });
 
   bindPatientActionButtons(() => loadDashboard());
+  loadPredictionsDashboard();
+}
+
+async function loadPredictionsDashboard() {
+  const statEl = document.getElementById('stat-high-risk');
+  if (!statEl) return;
+
+  try {
+    const res = await apiFetch('/api/analytics/dashboard/predictions');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Ошибка загрузки прогнозов');
+
+    statEl.textContent = data.high_risk_patients.length;
+
+    const tbody = document.querySelector('#high-risk-table tbody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      if (data.high_risk_patients.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b">Нет данных — сгенерируйте прогнозы для пациентов</td></tr>';
+      }
+      data.high_risk_patients.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.name}</td>
+          <td>${riskBadge(Math.round(p.readmission_risk))}</td>
+          <td>${riskBadge(Math.round(p.complication_risk))}</td>
+          <td>${new Date(p.last_prediction_at).toLocaleDateString('ru-RU')}</td>
+          <td><a href="/patient/${p.id}" class="btn btn-secondary btn-sm">Открыть</a></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    renderDeptRiskChart(data.risk_by_department);
+    renderTrendsChart(data.monthly_trends);
+  } catch (err) {
+    console.error('Predictions dashboard error:', err);
+  }
+}
+
+function renderDeptRiskChart(deptData) {
+  const canvas = document.getElementById('dept-risk-chart');
+  if (!canvas) return;
+
+  const entries = Object.entries(deptData);
+  const labels = entries.map(([dept]) => dept);
+  const readmission = entries.map(([, v]) => v.readmission_avg);
+  const complication = entries.map(([, v]) => v.complication_avg);
+
+  if (deptRiskChart) deptRiskChart.destroy();
+
+  deptRiskChart = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels.length ? labels : ['Нет данных'],
+      datasets: [
+        {
+          label: 'Реадмиссия',
+          data: readmission.length ? readmission : [0],
+          backgroundColor: 'rgba(220, 38, 38, 0.7)',
+        },
+        {
+          label: 'Осложнения',
+          data: complication.length ? complication : [0],
+          backgroundColor: 'rgba(37, 99, 235, 0.7)',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, max: 100 } },
+    },
+  });
+}
+
+function renderTrendsChart(trends) {
+  const canvas = document.getElementById('trends-chart');
+  if (!canvas) return;
+
+  const labels = trends.labels || [];
+  if (trendsChart) trendsChart.destroy();
+
+  trendsChart = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: labels.length ? labels : ['—'],
+      datasets: [
+        {
+          label: 'Реадмиссия',
+          data: trends.readmission || [],
+          borderColor: 'rgba(220, 38, 38, 1)',
+          tension: 0.3,
+        },
+        {
+          label: 'Осложнения',
+          data: trends.complication || [],
+          borderColor: 'rgba(37, 99, 235, 1)',
+          tension: 0.3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, max: 100 } },
+    },
+  });
 }
 
 function renderBarChart(canvasId, dataObj, existingChart, setChart) {
@@ -338,6 +463,7 @@ async function loadPatientsList(page = 1) {
       <td>${p.phone}</td>
       <td>${p.email || '—'}</td>
       <td>
+        <a href="/patient/${p.id}" class="btn btn-secondary btn-sm">Карточка</a>
         ${renderPatientActions(p.id, formatFullName(p))}
       </td>
     `;
@@ -350,6 +476,191 @@ async function loadPatientsList(page = 1) {
   document.getElementById('page-info').textContent = `Страница ${page} из ${totalPages}`;
   document.getElementById('prev-page').disabled = page <= 1;
   document.getElementById('next-page').disabled = page >= totalPages;
+}
+
+async function pollJobStatus(jobId, onComplete, onError) {
+  const maxAttempts = 60;
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    const res = await apiFetch(`/api/analytics/predict/status/${jobId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Ошибка статуса задачи');
+
+    if (data.status === 'completed') {
+      onComplete(data.result);
+      return;
+    }
+    if (data.status === 'failed') {
+      onError(data.error || 'Задача завершилась с ошибкой');
+      return;
+    }
+  }
+  onError('Превышено время ожидания');
+}
+
+async function pollDocumentStatus(docId, onComplete, onError) {
+  const maxAttempts = 60;
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    const res = await apiFetch(`/api/documents/${docId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Ошибка статуса документа');
+
+    if (data.status === 'parsed') {
+      onComplete(data);
+      return;
+    }
+    if (data.status === 'failed') {
+      onError(data.parsed_data?.error || 'Парсинг завершился с ошибкой');
+      return;
+    }
+  }
+  onError('Превышено время ожидания парсинга');
+}
+
+async function startPrediction(patientId) {
+  const loadingEl = document.getElementById('prediction-loading');
+  const resultEl = document.getElementById('prediction-result');
+  if (loadingEl) loadingEl.classList.remove('hidden');
+  if (resultEl) resultEl.innerHTML = '';
+
+  try {
+    const res = await apiFetch(`/api/analytics/predict/${patientId}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Ошибка запуска прогноза');
+
+    await pollJobStatus(
+      data.job_id,
+      () => loadPatientPredictions(patientId),
+      (err) => { if (resultEl) resultEl.innerHTML = `<div class="error-message">${err}</div>`; }
+    );
+  } catch (err) {
+    if (resultEl) resultEl.innerHTML = `<div class="error-message">${err.message}</div>`;
+  } finally {
+    if (loadingEl) loadingEl.classList.add('hidden');
+  }
+}
+
+async function loadPatientInsights(patientId) {
+  const el = document.getElementById('insights-result');
+  if (el) {
+    el.classList.remove('hidden');
+    el.innerHTML = '<div class="loading-indicator">Генерация инсайтов...</div>';
+  }
+
+  try {
+    const res = await apiFetch(`/api/analytics/insights/${patientId}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Ошибка генерации инсайтов');
+
+    if (el) {
+      el.innerHTML = `
+        <div class="recommendations-list">
+          <h3>Клиническая заметка</h3>
+          <p>${data.insights}</p>
+          <h3>Рекомендации</h3>
+          <ul>${data.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
+        </div>
+      `;
+    }
+  } catch (err) {
+    if (el) el.innerHTML = `<div class="error-message">${err.message}</div>`;
+  }
+}
+
+async function loadPatientPredictions(patientId) {
+  const resultEl = document.getElementById('prediction-result');
+  if (!resultEl) return;
+
+  const res = await apiFetch(`/api/analytics/predictions/${patientId}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || 'Ошибка загрузки прогнозов');
+
+  if (!data.predictions.length) {
+    resultEl.innerHTML = '<p style="color:#64748b">Прогнозы ещё не сгенерированы. Нажмите «Сгенерировать прогноз».</p>';
+    return;
+  }
+
+  const latest = data.predictions[0];
+  const pred = latest.prediction || {};
+  const readmission = Math.round(pred.readmission_risk || 0);
+  const complication = Math.round(pred.complication_risk || 0);
+
+  resultEl.innerHTML = `
+    <div class="risk-grid">
+      <div class="risk-card ${riskClass(readmission)}">
+        <div class="risk-label">Риск реадмиссии</div>
+        <div class="risk-value">${readmission}%</div>
+        ${riskBadge(readmission)}
+      </div>
+      <div class="risk-card ${riskClass(complication)}">
+        <div class="risk-label">Риск осложнений</div>
+        <div class="risk-value">${complication}%</div>
+        ${riskBadge(complication)}
+      </div>
+    </div>
+    ${pred.factors?.length ? `
+      <div class="recommendations-list">
+        <h3>Факторы риска</h3>
+        <ul>${pred.factors.map(f => `<li>${f}</li>`).join('')}</ul>
+      </div>
+    ` : ''}
+    ${pred.recommendations?.length ? `
+      <div class="recommendations-list">
+        <h3>Рекомендации</h3>
+        <ul>${pred.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
+      </div>
+    ` : ''}
+    <p style="font-size:0.8rem;color:#64748b;margin-top:0.75rem">
+      Уверенность: ${Math.round(latest.confidence_score * 100)}% ·
+      ${new Date(latest.created_at).toLocaleString('ru-RU')}
+      ${latest.validated ? ' · ✓ Подтверждено врачом' : ''}
+    </p>
+  `;
+}
+
+async function loadPatientDetail(patientId) {
+  const res = await apiFetch(`/api/patients/${patientId}`);
+  const patient = await res.json();
+  if (!res.ok) throw new Error(patient.detail || 'Пациент не найден');
+
+  document.getElementById('patient-name').textContent = formatFullName(patient);
+  document.getElementById('patient-info').innerHTML = `
+    <p><strong>Дата рождения:</strong> ${patient.birth_date}</p>
+    <p><strong>Пол:</strong> ${GENDER_LABELS[patient.gender] || patient.gender}</p>
+    <p><strong>Телефон:</strong> ${patient.phone}</p>
+    <p><strong>Email:</strong> ${patient.email || '—'}</p>
+  `;
+
+  const docsRes = await apiFetch(`/api/documents/patient/${patientId}`);
+  const docs = await docsRes.json();
+  const docsEl = document.getElementById('documents-list');
+  if (docsEl) {
+    docsEl.innerHTML = docs.length
+      ? docs.map(d => `<li>${d.filename} — <em>${d.status}</em> (${new Date(d.created_at).toLocaleDateString('ru-RU')})</li>`).join('')
+      : '<li style="color:#64748b">Документы не загружены</li>';
+  }
+
+  await loadPatientPredictions(patientId);
+}
+
+function initPatientPage() {
+  if (!requireAuth()) return;
+  setupLogout();
+
+  const match = window.location.pathname.match(/\/patient\/(\d+)/);
+  const patientId = match ? parseInt(match[1], 10) : null;
+  if (!patientId) {
+    window.location.href = '/patients';
+    return;
+  }
+
+  document.getElementById('generate-prediction-btn')?.addEventListener('click', () => startPrediction(patientId));
+  document.getElementById('generate-insights-btn')?.addEventListener('click', () => loadPatientInsights(patientId));
+
+  fetchCurrentUser()
+    .then(() => loadPatientDetail(patientId))
+    .catch(err => console.error(err));
 }
 
 function initPatientsPage() {

@@ -12,5 +12,12 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:8000"
     SPACY_MODEL: str = "ru_core_news_lg"
 
+    REDIS_URL: str = "redis://redis:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://redis:6379/1"
+
+    OPENAI_API_KEY: str = ""
+    OPENAI_BASE_URL: str = "https://api.proxyapi.ru/openai/v1"
+    OPENAI_MODEL: str = "gpt-4o-mini"
+
 
 settings = Settings()
