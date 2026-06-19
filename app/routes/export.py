@@ -2,7 +2,7 @@ import io
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -15,7 +15,9 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.middleware.tenant import get_request_tenant_id
 from app.models import Document, Patient, User
+from app.services.access import can_export, effective_tenant_id
 
 router = APIRouter(prefix="/export", tags=["export"])
 
@@ -39,12 +41,17 @@ def _register_fonts():
 @router.post("/patient/{patient_id}")
 def export_patient_pdf(
     patient_id: int,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
+    if not can_export(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot export")
+
+    tenant_id = effective_tenant_id(current_user, get_request_tenant_id(request))
     patient = (
         db.query(Patient)
-        .filter(Patient.id == patient_id, Patient.user_id == current_user.id)
+        .filter(Patient.id == patient_id, Patient.tenant_id == tenant_id)
         .first()
     )
     if not patient:
@@ -52,7 +59,7 @@ def export_patient_pdf(
 
     documents = (
         db.query(Document)
-        .filter(Document.patient_id == patient_id, Document.user_id == current_user.id)
+        .filter(Document.patient_id == patient_id, Document.tenant_id == tenant_id)
         .order_by(Document.created_at.desc())
         .all()
     )

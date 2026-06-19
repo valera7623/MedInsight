@@ -3,16 +3,26 @@ from datetime import datetime
 
 from app.database import SessionLocal
 from app.models import AnalysisJob, Document
+from app.services.encryption import decrypt_file
 from app.services.extractor import extract_entities
-from app.services.parser import parse_document
+from app.services.parser import parse_document, parse_document_from_bytes
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
 
+def _parse_doc(doc: Document) -> str:
+    if doc.is_encrypted or doc.file_path.endswith(".age"):
+        content = decrypt_file(doc.file_path)
+        return parse_document_from_bytes(content, doc.filename)
+    return parse_document(doc.file_path)
+
+
 @celery_app.task(bind=True, name="app.tasks.parse_task.parse_document_task")
 def parse_document_task(self, job_id: int, document_id: int) -> dict:
     db = SessionLocal()
+    doc = None
+    job = None
     try:
         job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
         doc = db.query(Document).filter(Document.id == document_id).first()
@@ -26,7 +36,7 @@ def parse_document_task(self, job_id: int, document_id: int) -> dict:
         doc.status = "processing"
         db.commit()
 
-        text = parse_document(doc.file_path)
+        text = _parse_doc(doc)
         parsed = extract_entities(text)
         doc.parsed_data = parsed
         doc.status = "parsed"

@@ -6,6 +6,8 @@ venv/
 *.db
 storage/*
 !storage/.gitkeep
+secrets/*
+!secrets/.gitkeep
 .idea/
 .vscode/
 *.egg-info/

@@ -2,17 +2,21 @@ from collections import Counter
 
 from sqlalchemy.orm import Session
 
-from app.models import Document, Patient
+from app.models import Document, Patient, User
+from app.services.access import effective_tenant_id
 
 
-def get_dashboard_data(db: Session, user_id: int) -> dict:
-    patients = db.query(Patient).filter(Patient.user_id == user_id).all()
+def get_dashboard_data(db: Session, user: User, tenant_id: int | None = None) -> dict:
+    tid = effective_tenant_id(user, tenant_id)
 
-    documents = (
-        db.query(Document)
-        .filter(Document.user_id == user_id)
-        .all()
-    )
+    patients_q = db.query(Patient)
+    documents_q = db.query(Document)
+    if tid is not None:
+        patients_q = patients_q.filter(Patient.tenant_id == tid)
+        documents_q = documents_q.filter(Document.tenant_id == tid)
+
+    patients = patients_q.all()
+    documents = documents_q.all()
 
     diagnoses_counter: Counter = Counter()
     medications_counter: Counter = Counter()

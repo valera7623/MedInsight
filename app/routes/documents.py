@@ -3,16 +3,21 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.config import settings
 from app.database import get_db
+from app.middleware.tenant import get_request_tenant_id
 from app.models import AnalysisJob, Document, Patient, User
+from app.services.access import can_upload_document, is_super_admin
+from app.services.audit import log_audit
+from app.services.encryption import EncryptionError, decrypt_file, encrypt_bytes, ensure_encryption_key
 from app.services.extractor import extract_entities
-from app.services.parser import SUPPORTED_EXTENSIONS, parse_document
+from app.services.parser import SUPPORTED_EXTENSIONS, parse_document, parse_document_from_bytes
 from app.tasks.parse_task import parse_document_task
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -27,13 +32,14 @@ ALLOWED_MIMES = {
 
 class DocumentResponse(BaseModel):
     id: int
+    tenant_id: int
     patient_id: int
     user_id: int
     filename: str
-    file_path: str
     file_size: int
     mime_type: str
     document_type: str
+    is_encrypted: bool
     parsed_data: dict | None
     status: str
     created_at: datetime
@@ -42,21 +48,29 @@ class DocumentResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-def _get_document_or_404(db: Session, doc_id: int, user_id: int) -> Document:
-    doc = (
-        db.query(Document)
-        .filter(Document.id == doc_id, Document.user_id == user_id)
-        .first()
-    )
+def _get_document_or_404(
+    db: Session, doc_id: int, user: User, request: Request | None = None
+) -> Document:
+    tid = effective_tenant_id(user, get_request_tenant_id(request) if request else None)
+    query = db.query(Document).filter(Document.id == doc_id)
+    if tid is not None:
+        query = query.filter(Document.tenant_id == tid)
+    doc = query.first()
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     return doc
 
 
+def _parse_document_content(doc: Document) -> str:
+    if doc.is_encrypted or doc.file_path.endswith(".age"):
+        content = decrypt_file(doc.file_path)
+        return parse_document_from_bytes(content, doc.filename)
+    return parse_document(doc.file_path)
+
+
 def _process_document_sync(doc: Document, db: Session) -> None:
-    """Synchronous fallback when Celery/Redis is unavailable."""
     try:
-        text = parse_document(doc.file_path)
+        text = _parse_document_content(doc)
         parsed = extract_entities(text)
         doc.parsed_data = parsed
         doc.status = "parsed"
@@ -68,10 +82,26 @@ def _process_document_sync(doc: Document, db: Session) -> None:
     db.commit()
 
 
+def _redis_available() -> bool:
+    try:
+        import redis
+
+        client = redis.from_url(settings.REDIS_URL, socket_connect_timeout=1, socket_timeout=1)
+        client.ping()
+        return True
+    except Exception:
+        return False
+
+
 def _enqueue_parse(doc: Document, db: Session, user_id: int) -> str | None:
-    """Returns job_id if async parse was enqueued, None if sync fallback was used."""
+    if not _redis_available():
+        logger.info("Redis unavailable — sync parse for document %s", doc.id)
+        _process_document_sync(doc, db)
+        return None
+
     try:
         job = AnalysisJob(
+            tenant_id=doc.tenant_id,
             patient_id=doc.patient_id,
             user_id=user_id,
             document_id=doc.id,
@@ -96,59 +126,86 @@ def _enqueue_parse(doc: Document, db: Session, user_id: int) -> str | None:
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     patient_id: int = Form(...),
     document_type: str = Form("discharge"),
     file: UploadFile = File(...),
 ):
-    patient = (
-        db.query(Patient)
-        .filter(Patient.id == patient_id, Patient.user_id == current_user.id)
-        .first()
-    )
+    if not can_upload_document(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot upload documents")
+
+    header_tid = get_request_tenant_id(request)
+    patient_query = db.query(Patient).filter(Patient.id == patient_id)
+
+    if is_super_admin(current_user):
+        if header_tid is not None:
+            patient_query = patient_query.filter(Patient.tenant_id == header_tid)
+    elif current_user.tenant_id is not None:
+        patient_query = patient_query.filter(Patient.tenant_id == current_user.tenant_id)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not assigned to a tenant. Re-login or contact admin.",
+        )
+
+    patient = patient_query.first()
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+
+    tenant_id = patient.tenant_id
 
     if not file.filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Filename is required")
 
     suffix = Path(file.filename).suffix.lower()
     if suffix not in SUPPORTED_EXTENSIONS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only DOCX and PDF files are supported",
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only DOCX and PDF files are supported")
 
     if file.content_type and file.content_type not in ALLOWED_MIMES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported MIME type: {file.content_type}",
-        )
-
-    storage_dir = Path(settings.STORAGE_PATH) / str(current_user.id) / str(patient_id)
-    storage_dir.mkdir(parents=True, exist_ok=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported MIME type: {file.content_type}")
 
     safe_name = Path(file.filename).name
-    dest_path = storage_dir / safe_name
-
     content = await file.read()
-    with open(dest_path, "wb") as f:
-        f.write(content)
+
+    try:
+        ensure_encryption_key()
+        file_path, stored_size = encrypt_bytes(content, tenant_id, patient_id, safe_name)
+    except EncryptionError as exc:
+        logger.error("Encryption failed during upload: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="File encryption unavailable. Check ENCRYPTION_KEY or secrets volume.",
+        ) from exc
 
     doc = Document(
+        tenant_id=tenant_id,
         patient_id=patient_id,
         user_id=current_user.id,
         filename=safe_name,
-        file_path=str(dest_path),
-        file_size=len(content),
+        file_path=file_path,
+        file_size=stored_size,
         mime_type=file.content_type or "application/octet-stream",
         document_type=document_type,
+        is_encrypted=settings.ENCRYPTION_ENABLED,
         status="uploaded",
     )
     db.add(doc)
     db.commit()
     db.refresh(doc)
+
+    log_audit(
+        db,
+        user_id=current_user.id,
+        tenant_id=tenant_id,
+        action="upload",
+        resource_type="document",
+        resource_id=doc.id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        details={"filename": safe_name, "encrypted": doc.is_encrypted},
+    )
 
     _enqueue_parse(doc, db, current_user.id)
     db.refresh(doc)
@@ -158,12 +215,14 @@ async def upload_document(
 @router.get("/patient/{patient_id}", response_model=list[DocumentResponse])
 def list_patient_documents(
     patient_id: int,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
+    tenant_id = effective_tenant_id(current_user, get_request_tenant_id(request))
     patient = (
         db.query(Patient)
-        .filter(Patient.id == patient_id, Patient.user_id == current_user.id)
+        .filter(Patient.id == patient_id, Patient.tenant_id == tenant_id)
         .first()
     )
     if not patient:
@@ -171,7 +230,7 @@ def list_patient_documents(
 
     return (
         db.query(Document)
-        .filter(Document.patient_id == patient_id, Document.user_id == current_user.id)
+        .filter(Document.patient_id == patient_id, Document.tenant_id == tenant_id)
         .order_by(Document.created_at.desc())
         .all()
     )
@@ -180,7 +239,40 @@ def list_patient_documents(
 @router.get("/{document_id}", response_model=DocumentResponse)
 def get_document(
     document_id: int,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    return _get_document_or_404(db, document_id, current_user.id)
+    return _get_document_or_404(db, document_id, current_user, request)
+
+
+@router.get("/{document_id}/download")
+def download_document(
+    document_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    doc = _get_document_or_404(db, document_id, current_user, request)
+
+    if doc.is_encrypted or doc.file_path.endswith(".age"):
+        content = decrypt_file(doc.file_path)
+    else:
+        content = Path(doc.file_path).read_bytes()
+
+    log_audit(
+        db,
+        user_id=current_user.id,
+        tenant_id=doc.tenant_id,
+        action="download",
+        resource_type="document",
+        resource_id=doc.id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+
+    return Response(
+        content=content,
+        media_type=doc.mime_type,
+        headers={"Content-Disposition": f'attachment; filename="{doc.filename}"'},
+    )

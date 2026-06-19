@@ -19,5 +19,15 @@ class Settings(BaseSettings):
     OPENAI_BASE_URL: str = "https://api.proxyapi.ru/openai/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
 
+    TENANT_MODE: bool = True
+    ENCRYPTION_ENABLED: bool = True
+    ENCRYPTION_KEY: str = ""
+    ENCRYPTION_KEY_PATH: str = "secrets/encryption_key.txt"
+
+    SUPER_ADMIN_EMAIL: str = "admin@medinsight.com"
+    SUPER_ADMIN_PASSWORD: str = "change_me_super_admin"
+    DEFAULT_TENANT_NAME: str = "Default Clinic"
+    DEFAULT_TENANT_SUBDOMAIN: str = "default"
+
 
 settings = Settings()

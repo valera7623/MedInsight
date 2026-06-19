@@ -1,5 +1,6 @@
 import logging
 import re
+import tempfile
 from pathlib import Path
 
 from docx import Document as DocxDocument
@@ -28,6 +29,15 @@ def extract_text_from_pdf(file_path: Path) -> str:
         if text:
             pages.append(text.strip())
     return "\n".join(pages)
+
+
+def parse_document_from_bytes(content: bytes, filename: str) -> str:
+    """Parse document from in-memory bytes (for encrypted files)."""
+    suffix = Path(filename).suffix.lower()
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=True) as tmp:
+        tmp.write(content)
+        tmp.flush()
+        return parse_document(tmp.name)
 
 
 def parse_document(file_path: str) -> str:

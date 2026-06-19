@@ -14,10 +14,15 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      DATABASE_URL: sqlite:////app/data/medinsight.db
+      ENCRYPTION_KEY_PATH: /app/secrets/encryption_key.txt
     ports:
       - "${APP_PORT:-8000}:8000"
     volumes:
       - ./storage:/app/storage
+      - ./secrets:/app/secrets
+      - medinsight-data:/app/data
     depends_on:
       - redis
     networks:
@@ -27,11 +32,16 @@ services:
     build: .
     container_name: medinsight-celery-worker
     restart: unless-stopped
-    command: celery -A app.tasks.celery_app worker --loglevel=info
     env_file:
       - .env
+    environment:
+      DATABASE_URL: sqlite:////app/data/medinsight.db
+      ENCRYPTION_KEY_PATH: /app/secrets/encryption_key.txt
+    command: ["bash", "scripts/start_celery_worker.sh"]
     volumes:
       - ./storage:/app/storage
+      - ./secrets:/app/secrets
+      - medinsight-data:/app/data
     depends_on:
       - redis
       - app
@@ -42,9 +52,13 @@ services:
     build: .
     container_name: medinsight-celery-beat
     restart: unless-stopped
-    command: celery -A app.tasks.celery_app beat --loglevel=info
     env_file:
       - .env
+    environment:
+      DATABASE_URL: sqlite:////app/data/medinsight.db
+    command: ["bash", "scripts/start_celery_beat.sh"]
+    volumes:
+      - medinsight-data:/app/data
     depends_on:
       - redis
       - app
@@ -78,6 +92,7 @@ services:
       - medinsight-net
 
 volumes:
+  medinsight-data:
   traefik-certs:
 
 networks:

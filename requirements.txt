@@ -15,6 +15,7 @@ celery>=5.3.0
 redis>=5.0.0
 openai>=1.0.0
 tenacity>=8.2.0
+pyrage>=1.2.0
 
 # spaCy (NLP) — опционально, см. requirements-nlp.txt
 # Python 3.14: работает без spaCy (regex-only). Для spaCy — Docker (Python 3.12).

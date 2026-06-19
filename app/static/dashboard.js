@@ -6,6 +6,23 @@ function getToken() {
   return localStorage.getItem('token');
 }
 
+function getTenantId() {
+  return localStorage.getItem('tenant_id');
+}
+
+function setSession(token, tenantId, role) {
+  localStorage.setItem('token', token);
+  if (tenantId != null) localStorage.setItem('tenant_id', String(tenantId));
+  if (role) localStorage.setItem('role', role);
+}
+
+function clearSession() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('tenant_id');
+  localStorage.removeItem('role');
+  currentUser = null;
+}
+
 function requireAuth() {
   if (!getToken()) {
     window.location.href = '/login';
@@ -18,6 +35,8 @@ async function apiFetch(path, options = {}) {
   const token = getToken();
   const headers = { ...(options.headers || {}) };
   if (token) headers['Authorization'] = `Bearer ${token}`;
+  const tenantId = getTenantId();
+  if (tenantId) headers['X-Tenant-ID'] = tenantId;
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = headers['Content-Type'] || 'application/json';
   }
@@ -25,7 +44,7 @@ async function apiFetch(path, options = {}) {
   const res = await fetch(`${API}${path}`, { ...options, headers });
 
   if (res.status === 401) {
-    localStorage.removeItem('token');
+    clearSession();
     window.location.href = '/login';
     throw new Error('Unauthorized');
   }
@@ -37,23 +56,47 @@ function setupLogout() {
   const btn = document.getElementById('logout-btn');
   if (btn) {
     btn.addEventListener('click', () => {
-      localStorage.removeItem('token');
-      currentUser = null;
+      clearSession();
       window.location.href = '/login';
     });
   }
 }
 
+function formatApiError(detail) {
+  if (Array.isArray(detail)) {
+    return detail.map((d) => d.msg || JSON.stringify(d)).join(', ');
+  }
+  if (typeof detail === 'object' && detail !== null) {
+    return detail.message || JSON.stringify(detail);
+  }
+  return detail || 'Неизвестная ошибка';
+}
+
 async function fetchCurrentUser() {
   const res = await apiFetch('/api/auth/me');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || 'Ошибка загрузки профиля');
+  if (!res.ok) throw new Error(formatApiError(data.detail) || 'Ошибка загрузки профиля');
   currentUser = data;
+  if (data.tenant_id != null) {
+    localStorage.setItem('tenant_id', String(data.tenant_id));
+  }
+  localStorage.setItem('role', data.role);
   return currentUser;
 }
 
 function isAdmin() {
-  return currentUser?.role === 'admin';
+  return currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
+}
+
+function isViewer() {
+  return currentUser?.role === 'viewer' || currentUser?.role === 'researcher';
+}
+
+function showAdminNav() {
+  if (!isAdmin()) return;
+  document.querySelectorAll('.nav-admin-link').forEach(el => {
+    el.classList.remove('hidden');
+  });
 }
 
 function renderPatientActions(patientId, patientName = '') {
@@ -385,6 +428,10 @@ function setupUploadForm(onSuccess) {
     formData.append('document_type', document.getElementById('upload-type').value);
 
     progressEl.classList.remove('hidden');
+    errEl.classList.add('hidden');
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
 
     try {
       const res = await apiFetch('/api/documents/upload', {
@@ -393,7 +440,7 @@ function setupUploadForm(onSuccess) {
         headers: {},
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Ошибка загрузки');
+      if (!res.ok) throw new Error(formatApiError(data.detail) || 'Ошибка загрузки');
 
       document.getElementById('upload-modal').classList.add('hidden');
       form.reset();
@@ -401,8 +448,11 @@ function setupUploadForm(onSuccess) {
       if (onSuccess) onSuccess(data);
     } catch (err) {
       progressEl.classList.add('hidden');
-      errEl.textContent = err.message;
+      errEl.textContent = err.message || 'Ошибка загрузки';
       errEl.classList.remove('hidden');
+      console.error('Upload failed:', err);
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
     }
   });
 }
@@ -437,7 +487,7 @@ function initDashboard() {
   });
 
   fetchCurrentUser()
-    .then(() => loadDashboard())
+    .then(() => { showAdminNav(); return loadDashboard(); })
     .catch(err => console.error(err));
 }
 
@@ -674,6 +724,6 @@ function initPatientsPage() {
   document.getElementById('next-page').addEventListener('click', () => loadPatientsList(patientsPage + 1));
 
   fetchCurrentUser()
-    .then(() => loadPatientsList())
+    .then(() => { showAdminNav(); return loadPatientsList(); })
     .catch(err => console.error(err));
 }

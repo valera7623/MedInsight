@@ -3,13 +3,15 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.middleware.tenant import get_request_tenant_id
 from app.models import AnalysisJob, Patient, Prediction, User
+from app.services.access import can_predict, effective_tenant_id
 from app.services.summarizer import generate_insights
 from app.tasks.predict_task import predict_risk_task
 
@@ -69,23 +71,23 @@ class PredictionsDashboardResponse(BaseModel):
     monthly_trends: dict[str, list]
 
 
-def _get_patient_or_404(db: Session, patient_id: int, user_id: int) -> Patient:
-    patient = (
-        db.query(Patient)
-        .filter(Patient.id == patient_id, Patient.user_id == user_id)
-        .first()
-    )
+def _get_patient_or_404(db: Session, patient_id: int, user: User, request: Request) -> Patient:
+    tid = effective_tenant_id(user, get_request_tenant_id(request))
+    query = db.query(Patient).filter(Patient.id == patient_id)
+    if tid is not None:
+        query = query.filter(Patient.tenant_id == tid)
+    patient = query.first()
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
     return patient
 
 
-def _get_job_or_404(db: Session, job_id: int, user_id: int) -> AnalysisJob:
-    job = (
-        db.query(AnalysisJob)
-        .filter(AnalysisJob.id == job_id, AnalysisJob.user_id == user_id)
-        .first()
-    )
+def _get_job_or_404(db: Session, job_id: int, user: User, request: Request) -> AnalysisJob:
+    tid = effective_tenant_id(user, get_request_tenant_id(request))
+    query = db.query(AnalysisJob).filter(AnalysisJob.id == job_id)
+    if tid is not None:
+        query = query.filter(AnalysisJob.tenant_id == tid)
+    job = query.first()
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
     return job
@@ -94,12 +96,18 @@ def _get_job_or_404(db: Session, job_id: int, user_id: int) -> AnalysisJob:
 @router.post("/predict/{patient_id}", response_model=JobStartResponse)
 def start_prediction(
     patient_id: int,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    _get_patient_or_404(db, patient_id, current_user.id)
+    if not can_predict(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot run predictions")
+
+    patient = _get_patient_or_404(db, patient_id, current_user, request)
+    tenant_id = patient.tenant_id
 
     job = AnalysisJob(
+        tenant_id=tenant_id,
         patient_id=patient_id,
         user_id=current_user.id,
         type="predict",
@@ -119,7 +127,7 @@ def start_prediction(
 
         job.status = "processing"
         db.commit()
-        prediction = predict_risk(db, patient_id, current_user.id, job.id)
+        prediction = predict_risk(db, patient_id, current_user.id, job.id, tenant_id)
         job.status = "completed"
         job.result = {
             "prediction_id": prediction.id,
@@ -136,10 +144,11 @@ def start_prediction(
 @router.get("/predict/status/{job_id}", response_model=JobStatusResponse)
 def prediction_status(
     job_id: int,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    job = _get_job_or_404(db, job_id, current_user.id)
+    job = _get_job_or_404(db, job_id, current_user, request)
     return JobStatusResponse(
         status=job.status,
         result=job.result,
@@ -150,14 +159,15 @@ def prediction_status(
 @router.get("/predictions/{patient_id}", response_model=PredictionsListResponse)
 def list_predictions(
     patient_id: int,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    _get_patient_or_404(db, patient_id, current_user.id)
+    patient = _get_patient_or_404(db, patient_id, current_user, request)
 
     predictions = (
         db.query(Prediction)
-        .filter(Prediction.patient_id == patient_id, Prediction.user_id == current_user.id)
+        .filter(Prediction.patient_id == patient_id, Prediction.tenant_id == patient.tenant_id)
         .order_by(Prediction.created_at.desc())
         .all()
     )
@@ -167,10 +177,11 @@ def list_predictions(
 @router.post("/insights/{patient_id}", response_model=InsightsResponse)
 def patient_insights(
     patient_id: int,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    _get_patient_or_404(db, patient_id, current_user.id)
+    patient = _get_patient_or_404(db, patient_id, current_user, request)
     result = generate_insights(db, patient_id, current_user.id)
     return InsightsResponse(
         insights=result.get("summary", ""),
@@ -181,12 +192,13 @@ def patient_insights(
 @router.post("/validate-prediction/{prediction_id}", response_model=ValidateResponse)
 def validate_prediction(
     prediction_id: int,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     prediction = (
         db.query(Prediction)
-        .filter(Prediction.id == prediction_id, Prediction.user_id == current_user.id)
+        .filter(Prediction.id == prediction_id, Prediction.tenant_id == effective_tenant_id(current_user, get_request_tenant_id(request)))
         .first()
     )
     if not prediction:
@@ -200,15 +212,15 @@ def validate_prediction(
 
 @router.get("/dashboard/predictions", response_model=PredictionsDashboardResponse)
 def predictions_dashboard(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    predictions = (
-        db.query(Prediction)
-        .filter(Prediction.user_id == current_user.id)
-        .order_by(Prediction.created_at.desc())
-        .all()
-    )
+    tid = effective_tenant_id(current_user, get_request_tenant_id(request))
+    query = db.query(Prediction)
+    if tid is not None:
+        query = query.filter(Prediction.tenant_id == tid)
+    predictions = query.order_by(Prediction.created_at.desc()).all()
 
     latest_by_patient: dict[int, Prediction] = {}
     for pred in predictions:

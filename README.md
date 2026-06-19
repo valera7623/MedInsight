@@ -12,6 +12,7 @@
 - **AI:** OpenAI GPT через [ProxyAPI](https://proxyapi.ru)
 - **Frontend:** Vanilla JS + Chart.js
 - **Deploy:** Docker + Traefik
+- **Security (Phase 3):** Multi-tenancy, RBAC, age encryption
 
 ## Требования
 
@@ -193,3 +194,64 @@ curl -X POST http://localhost:8000/api/analytics/insights/1 \
 ## Лицензия
 
 MIT
+
+## Фаза 3: Multi-tenancy, RBAC, Encryption
+
+### Мультитенантность
+
+- Каждый пользователь принадлежит **Tenant** (клинике)
+- Все данные изолированы по `tenant_id`
+- **Super Admin** видит все tenant'ы
+- Заголовок `X-Tenant-ID` или subdomain при входе
+
+### RBAC — роли
+
+| Роль | Права |
+|------|-------|
+| `super_admin` | Все tenant'ы, управление системой |
+| `admin` | Полный доступ в своей клинике, пользователи, аудит |
+| `doctor` | Свои пациенты (CRUD), просмотр всех пациентов клиники |
+| `researcher` | Анонимизированные данные клиники |
+| `viewer` | Только просмотр |
+
+### Шифрование (age)
+
+```bash
+python scripts/generate_encryption_key.py
+# Ключ: secrets/encryption_key.txt (не в git!)
+```
+
+- Файлы шифруются при загрузке → `storage/encrypted/tenant_{id}/patient_{id}/`
+- Скачивание расшифровывает **в памяти** (не на диск)
+- `ENCRYPTION_ENABLED=true` в `.env`
+
+### Admin API
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| POST | `/api/admin/tenants` | Создать клинику (super_admin) |
+| GET | `/api/admin/tenants` | Список клиник |
+| POST | `/api/admin/users` | Создать пользователя |
+| GET | `/api/admin/audit` | Журнал аудита |
+| GET | `/api/admin/health` | Системное здоровье |
+| POST | `/api/admin/encryption/rotate` | Ротация ключа (super_admin) |
+
+### Тест Фазы 3
+
+```bash
+pip install httpx python-docx pyrage
+python scripts/test_tenant.py http://localhost:8000
+```
+
+Super Admin по умолчанию: `admin@medinsight.com` / `change_me_super_admin` (из `.env`).
+
+### Переменные окружения (Фаза 3)
+
+| Переменная | Описание |
+|------------|----------|
+| `TENANT_MODE` | Мультитенантность (true/false) |
+| `ENCRYPTION_ENABLED` | Шифрование файлов |
+| `ENCRYPTION_KEY` | age ключ (опционально) |
+| `ENCRYPTION_KEY_PATH` | Путь к ключу (default: secrets/encryption_key.txt) |
+| `SUPER_ADMIN_EMAIL` | Email суперадмина |
+| `SUPER_ADMIN_PASSWORD` | Пароль суперадмина |

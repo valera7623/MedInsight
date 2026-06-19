@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — Админ-панель</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">MedInsight</div>
+    <div class="nav-links">
+      <a href="/">Дашборд</a>
+      <a href="/patients">Пациенты</a>
+      <a href="/admin" class="active">Админ</a>
+    </div>
+    <button class="btn btn-secondary btn-sm" id="logout-btn">Выйти</button>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Админ-панель</h1>
+    </header>
+
+    <div class="section-card">
+      <h2>Система</h2>
+      <div id="health-info">Загрузка...</div>
+    </div>
+
+    <div class="section-card">
+      <h2>Пользователи</h2>
+      <table class="data-table" id="users-table">
+        <thead>
+          <tr><th>ID</th><th>Email</th><th>ФИО</th><th>Роль</th><th>Статус</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-card">
+      <h2>Аудит (последние 50)</h2>
+      <table class="data-table" id="audit-table">
+        <thead>
+          <tr><th>Время</th><th>Действие</th><th>Ресурс</th><th>IP</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="/static/dashboard.js"></script>
+  <script>
+    async function loadAdmin() {
+      if (!requireAuth()) return;
+      setupLogout();
+      const me = await fetchCurrentUser();
+      if (me.role !== 'admin' && me.role !== 'super_admin') {
+        alert('Доступ запрещён');
+        window.location.href = '/';
+        return;
+      }
+
+      const health = await apiFetch('/api/admin/health');
+      const h = await health.json();
+      document.getElementById('health-info').innerHTML = `
+        <p>Статус: <strong>${h.status}</strong></p>
+        <p>Мультитенантность: ${h.tenant_mode ? 'вкл' : 'выкл'}</p>
+        <p>Шифрование: ${h.encryption_enabled ? 'вкл' : 'выкл'}</p>
+        <p>Tenant'ов: ${h.tenants_count}, пользователей: ${h.users_count}, пациентов: ${h.patients_count}</p>
+      `;
+
+      const users = await apiFetch('/api/admin/users');
+      const udata = await users.json();
+      const utbody = document.querySelector('#users-table tbody');
+      utbody.innerHTML = udata.map(u => `
+        <tr>
+          <td>${u.id}</td>
+          <td>${u.email}</td>
+          <td>${u.full_name}</td>
+          <td>${u.role}</td>
+          <td>${u.is_blocked ? 'заблокирован' : 'активен'}</td>
+        </tr>
+      `).join('');
+
+      const audit = await apiFetch('/api/admin/audit?limit=50');
+      const adata = await audit.json();
+      const atbody = document.querySelector('#audit-table tbody');
+      atbody.innerHTML = adata.map(a => `
+        <tr>
+          <td>${new Date(a.created_at).toLocaleString('ru-RU')}</td>
+          <td>${a.action}</td>
+          <td>${a.resource_type || '—'} ${a.resource_id || ''}</td>
+          <td>${a.ip_address || '—'}</td>
+        </tr>
+      `).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAdmin);
+  </script>
+</body>
+</html>

@@ -25,8 +25,10 @@ RUN pip install --no-cache-dir -r requirements.txt \
 
 COPY . .
 
-RUN mkdir -p storage
+RUN mkdir -p storage data
 
 EXPOSE 8000
+
+RUN chmod +x scripts/start_celery_worker.sh scripts/start_celery_beat.sh 2>/dev/null || true
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -19,12 +19,11 @@ def _calculate_age(birth_date: date) -> int:
     return age
 
 
-def _collect_patient_features(db: Session, patient_id: int, user_id: int) -> dict:
-    patient = (
-        db.query(Patient)
-        .filter(Patient.id == patient_id, Patient.user_id == user_id)
-        .first()
-    )
+def _collect_patient_features(db: Session, patient_id: int, user_id: int, tenant_id: int | None = None) -> dict:
+    query = db.query(Patient).filter(Patient.id == patient_id, Patient.user_id == user_id)
+    if tenant_id is not None:
+        query = query.filter(Patient.tenant_id == tenant_id)
+    patient = query.first()
     if not patient:
         raise ValueError("Patient not found")
 
@@ -45,6 +44,7 @@ def _collect_patient_features(db: Session, patient_id: int, user_id: int) -> dic
     age = _calculate_age(patient.birth_date)
     return {
         "patient_id": patient.id,
+        "tenant_id": patient.tenant_id,
         "name": f"{patient.last_name} {patient.first_name}",
         "age": age,
         "gender": GENDER_LABELS.get(patient.gender, patient.gender),
@@ -117,10 +117,11 @@ def predict_risk(
     patient_id: int,
     user_id: int,
     analysis_id: int | None = None,
+    tenant_id: int | None = None,
 ) -> Prediction:
     import asyncio
 
-    features = _collect_patient_features(db, patient_id, user_id)
+    features = _collect_patient_features(db, patient_id, user_id, tenant_id)
 
     try:
         prediction_data = asyncio.run(_gpt_prediction(features))
@@ -134,6 +135,7 @@ def predict_risk(
     complication = float(prediction_data.get("complication_risk", 0))
 
     prediction = Prediction(
+        tenant_id=tenant_id or features.get("tenant_id", 1),
         patient_id=patient_id,
         user_id=user_id,
         analysis_id=analysis_id,

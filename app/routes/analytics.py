@@ -1,11 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.middleware.tenant import get_request_tenant_id
 from app.models import User
 from app.services.dashboard import get_dashboard_data
 
@@ -32,7 +33,8 @@ class DashboardResponse(BaseModel):
 
 @router.get("/dashboard", response_model=DashboardResponse)
 def dashboard(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    return get_dashboard_data(db, current_user.id)
+    return get_dashboard_data(db, current_user, get_request_tenant_id(request))

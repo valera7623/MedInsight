@@ -15,6 +15,10 @@
 
     <form id="login-form">
       <div class="form-group">
+        <label for="subdomain">Клиника (subdomain)</label>
+        <select id="subdomain" required></select>
+      </div>
+      <div class="form-group">
         <label for="email">Email</label>
         <input type="email" id="email" name="email" required placeholder="doctor@clinic.ru">
       </div>
@@ -32,6 +36,10 @@
 
     <form id="register-form" class="hidden">
       <div class="form-group">
+        <label for="reg-subdomain">Клиника</label>
+        <select id="reg-subdomain" required></select>
+      </div>
+      <div class="form-group">
         <label for="reg-full-name">ФИО</label>
         <input type="text" id="reg-full-name" required placeholder="Иванов Иван">
       </div>
@@ -48,7 +56,7 @@
         <select id="reg-role">
           <option value="doctor">Врач</option>
           <option value="researcher">Исследователь</option>
-          <option value="admin">Администратор</option>
+          <option value="viewer">Наблюдатель</option>
         </select>
       </div>
       <div id="register-error" class="error-message hidden"></div>
@@ -64,10 +72,31 @@
       window.location.href = '/';
     }
 
+    async function loadTenants() {
+      const res = await fetch(`${API}/api/auth/tenants`);
+      const tenants = await res.json();
+      ['subdomain', 'reg-subdomain'].forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '';
+        tenants.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.subdomain;
+          opt.textContent = `${t.name} (${t.subdomain})`;
+          opt.dataset.id = t.id;
+          sel.appendChild(opt);
+        });
+      });
+    }
+
+    loadTenants();
+
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const errEl = document.getElementById('login-error');
       errEl.classList.add('hidden');
+
+      const subdomain = document.getElementById('subdomain').value;
+      const tenantOpt = document.getElementById('subdomain').selectedOptions[0];
 
       try {
         const res = await fetch(`${API}/api/auth/login`, {
@@ -76,11 +105,14 @@
           body: JSON.stringify({
             email: document.getElementById('email').value,
             password: document.getElementById('password').value,
+            subdomain,
           }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Ошибка входа');
         localStorage.setItem('token', data.access_token);
+        localStorage.setItem('tenant_id', String(data.tenant_id || tenantOpt.dataset.id));
+        localStorage.setItem('role', data.role);
         window.location.href = '/';
       } catch (err) {
         errEl.textContent = err.message;
@@ -92,6 +124,8 @@
       e.preventDefault();
       const errEl = document.getElementById('register-error');
       errEl.classList.add('hidden');
+      const subdomain = document.getElementById('reg-subdomain').value;
+      const tenantOpt = document.getElementById('reg-subdomain').selectedOptions[0];
 
       try {
         const res = await fetch(`${API}/api/auth/register`, {
@@ -102,6 +136,7 @@
             password: document.getElementById('reg-password').value,
             full_name: document.getElementById('reg-full-name').value,
             role: document.getElementById('reg-role').value,
+            subdomain,
           }),
         });
         const data = await res.json();
@@ -113,10 +148,13 @@
           body: JSON.stringify({
             email: document.getElementById('reg-email').value,
             password: document.getElementById('reg-password').value,
+            subdomain,
           }),
         });
         const loginData = await loginRes.json();
         localStorage.setItem('token', loginData.access_token);
+        localStorage.setItem('tenant_id', String(loginData.tenant_id || tenantOpt.dataset.id));
+        localStorage.setItem('role', loginData.role);
         window.location.href = '/';
       } catch (err) {
         errEl.textContent = err.message;

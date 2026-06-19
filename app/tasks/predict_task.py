@@ -27,6 +27,7 @@ def predict_risk_task(self, job_id: int) -> dict:
             patient_id=job.patient_id,
             user_id=job.user_id,
             analysis_id=job.id,
+            tenant_id=job.tenant_id,
         )
 
         job.status = "completed"
