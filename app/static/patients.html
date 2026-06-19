@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — Пациенты</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">MedInsight</div>
+    <div class="nav-links">
+      <a href="/">Дашборд</a>
+      <a href="/patients" class="active">Пациенты</a>
+      <a href="/docs" target="_blank">API Docs</a>
+    </div>
+    <button class="btn btn-secondary btn-sm" id="logout-btn">Выйти</button>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Пациенты</h1>
+      <button class="btn btn-primary" id="new-patient-btn">+ Новый пациент</button>
+    </header>
+
+    <table class="data-table" id="patients-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>ФИО</th>
+          <th>Дата рождения</th>
+          <th>Пол</th>
+          <th>Телефон</th>
+          <th>Email</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="pagination" id="pagination">
+      <button class="btn btn-secondary btn-sm" id="prev-page" disabled>← Назад</button>
+      <span id="page-info">Страница 1</span>
+      <button class="btn btn-secondary btn-sm" id="next-page">Вперёд →</button>
+    </div>
+  </main>
+
+  <!-- Modal: New Patient -->
+  <div class="modal hidden" id="patient-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <h2>Новый пациент</h2>
+      <form id="patient-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Фамилия</label>
+            <input type="text" id="p-last-name" required>
+          </div>
+          <div class="form-group">
+            <label>Имя</label>
+            <input type="text" id="p-first-name" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Отчество</label>
+          <input type="text" id="p-middle-name">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Дата рождения</label>
+            <input type="date" id="p-birth-date" required>
+          </div>
+          <div class="form-group">
+            <label>Пол</label>
+            <select id="p-gender" required>
+              <option value="M">Мужской</option>
+              <option value="F">Женский</option>
+              <option value="O">Другой</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Телефон</label>
+            <input type="tel" id="p-phone" required>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="p-email">
+          </div>
+        </div>
+        <div id="patient-error" class="error-message hidden"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-close">Отмена</button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/dashboard.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initPatientsPage();
+    });
+  </script>
+</body>
+</html>

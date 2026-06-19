@@ -1,0 +1,6 @@
+# NLP-зависимости (Python 3.11–3.12 рекомендуется)
+-r requirements.txt
+spacy==3.8.2
+
+# После установки:
+#   python -m spacy download ru_core_news_lg

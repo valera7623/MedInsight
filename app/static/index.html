@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — Дашборд</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">MedInsight</div>
+    <div class="nav-links">
+      <a href="/" class="active">Дашборд</a>
+      <a href="/patients">Пациенты</a>
+      <a href="/docs" target="_blank">API Docs</a>
+    </div>
+    <button class="btn btn-secondary btn-sm" id="logout-btn">Выйти</button>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Дашборд</h1>
+      <div class="header-actions">
+        <button class="btn btn-primary" id="new-patient-btn">+ Новый пациент</button>
+        <button class="btn btn-secondary" id="upload-doc-btn">Загрузить документ</button>
+      </div>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-patients">—</div>
+        <div class="stat-label">Пациентов</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-documents">—</div>
+        <div class="stat-label">Документов</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-diagnoses">—</div>
+        <div class="stat-label">Диагнозов</div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h2>Топ-5 диагнозов</h2>
+        <canvas id="diagnoses-chart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>Топ-5 лекарств</h2>
+        <canvas id="medications-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="recent-section">
+      <h2>Недавние пациенты</h2>
+      <table class="data-table" id="recent-patients-table">
+        <thead>
+          <tr>
+            <th>ФИО</th>
+            <th>Дата рождения</th>
+            <th>Пол</th>
+            <th>Добавлен</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Modal: New Patient -->
+  <div class="modal hidden" id="patient-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <h2>Новый пациент</h2>
+      <form id="patient-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Фамилия</label>
+            <input type="text" id="p-last-name" required>
+          </div>
+          <div class="form-group">
+            <label>Имя</label>
+            <input type="text" id="p-first-name" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Отчество</label>
+          <input type="text" id="p-middle-name">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Дата рождения</label>
+            <input type="date" id="p-birth-date" required>
+          </div>
+          <div class="form-group">
+            <label>Пол</label>
+            <select id="p-gender" required>
+              <option value="M">Мужской</option>
+              <option value="F">Женский</option>
+              <option value="O">Другой</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Телефон</label>
+            <input type="tel" id="p-phone" required>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="p-email">
+          </div>
+        </div>
+        <div id="patient-error" class="error-message hidden"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-close">Отмена</button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Upload Document -->
+  <div class="modal hidden" id="upload-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <h2>Загрузить документ</h2>
+      <form id="upload-form">
+        <div class="form-group">
+          <label>Пациент</label>
+          <select id="upload-patient" required></select>
+        </div>
+        <div class="form-group">
+          <label>Тип документа</label>
+          <select id="upload-type">
+            <option value="discharge">Выписка</option>
+            <option value="lab">Лаборатория</option>
+            <option value="history">История болезни</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Файл (DOCX / PDF)</label>
+          <input type="file" id="upload-file" accept=".docx,.pdf" required>
+        </div>
+        <div id="upload-error" class="error-message hidden"></div>
+        <div id="upload-progress" class="hidden">Загрузка и парсинг...</div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-close">Отмена</button>
+          <button type="submit" class="btn btn-primary">Загрузить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/dashboard.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initDashboard();
+    });
+  </script>
+</body>
+</html>

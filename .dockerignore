@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+venv
+__pycache__
+*.py[cod]
+.env
+*.db
+storage/*
+!storage/.gitkeep
+.idea
+.vscode
+*.md
+scripts/setup-vps-ssh.sh

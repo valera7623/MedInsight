@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — Вход</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>MedInsight</h1>
+      <p>Клиническая аналитика</p>
+    </div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required placeholder="doctor@clinic.ru">
+      </div>
+      <div class="form-group">
+        <label for="password">Пароль</label>
+        <input type="password" id="password" name="password" required placeholder="••••••••">
+      </div>
+      <div id="login-error" class="error-message hidden"></div>
+      <button type="submit" class="btn btn-primary btn-block">Войти</button>
+    </form>
+
+    <div class="auth-footer">
+      <p>Нет аккаунта? <a href="#" id="show-register">Зарегистрироваться</a></p>
+    </div>
+
+    <form id="register-form" class="hidden">
+      <div class="form-group">
+        <label for="reg-full-name">ФИО</label>
+        <input type="text" id="reg-full-name" required placeholder="Иванов Иван">
+      </div>
+      <div class="form-group">
+        <label for="reg-email">Email</label>
+        <input type="email" id="reg-email" required>
+      </div>
+      <div class="form-group">
+        <label for="reg-password">Пароль</label>
+        <input type="password" id="reg-password" required minlength="6">
+      </div>
+      <div class="form-group">
+        <label for="reg-role">Роль</label>
+        <select id="reg-role">
+          <option value="doctor">Врач</option>
+          <option value="researcher">Исследователь</option>
+          <option value="admin">Администратор</option>
+        </select>
+      </div>
+      <div id="register-error" class="error-message hidden"></div>
+      <button type="submit" class="btn btn-primary btn-block">Создать аккаунт</button>
+      <button type="button" class="btn btn-secondary btn-block" id="show-login">Назад к входу</button>
+    </form>
+  </div>
+
+  <script>
+    const API = '';
+
+    if (localStorage.getItem('token')) {
+      window.location.href = '/';
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('login-error');
+      errEl.classList.add('hidden');
+
+      try {
+        const res = await fetch(`${API}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Ошибка входа');
+        localStorage.setItem('token', data.access_token);
+        window.location.href = '/';
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('register-error');
+      errEl.classList.add('hidden');
+
+      try {
+        const res = await fetch(`${API}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('reg-email').value,
+            password: document.getElementById('reg-password').value,
+            full_name: document.getElementById('reg-full-name').value,
+            role: document.getElementById('reg-role').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Ошибка регистрации');
+
+        const loginRes = await fetch(`${API}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('reg-email').value,
+            password: document.getElementById('reg-password').value,
+          }),
+        });
+        const loginData = await loginRes.json();
+        localStorage.setItem('token', loginData.access_token);
+        window.location.href = '/';
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('show-register').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('login-form').classList.add('hidden');
+      document.getElementById('register-form').classList.remove('hidden');
+      document.querySelector('.auth-footer').classList.add('hidden');
+    });
+
+    document.getElementById('show-login').addEventListener('click', () => {
+      document.getElementById('register-form').classList.add('hidden');
+      document.getElementById('login-form').classList.remove('hidden');
+      document.querySelector('.auth-footer').classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
