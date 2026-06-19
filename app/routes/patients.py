@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user, require_admin
 from app.database import get_db
-from app.models import Patient, User
+from app.models import Document, Patient, User
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
@@ -131,5 +132,14 @@ def delete_patient(
     patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+
+    documents = db.query(Document).filter(Document.patient_id == patient_id).all()
+    for doc in documents:
+        try:
+            Path(doc.file_path).unlink(missing_ok=True)
+        except OSError:
+            pass
+        db.delete(doc)
+
     db.delete(patient)
     db.commit()

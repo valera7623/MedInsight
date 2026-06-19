@@ -38,7 +38,9 @@ class Patient(Base):
     )
 
     owner: Mapped["User"] = relationship("User", back_populates="patients")
-    documents: Mapped[list["Document"]] = relationship("Document", back_populates="patient")
+    documents: Mapped[list["Document"]] = relationship(
+        "Document", back_populates="patient", cascade="all, delete-orphan"
+    )
 
 
 class Document(Base):

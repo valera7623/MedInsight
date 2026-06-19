@@ -78,17 +78,24 @@ async function deletePatient(patientId, onSuccess) {
   const btn = document.querySelector(`.delete-btn[data-id="${patientId}"]`);
   const name = btn?.dataset.name;
   const message = name
-    ? `Удалить пациента «${name}»? Это действие необратимо.`
-    : 'Удалить пациента? Это действие необратимо.';
+    ? `Удалить пациента «${name}»? Все документы пациента также будут удалены.`
+    : 'Удалить пациента? Все документы пациента также будут удалены.';
   if (!confirm(message)) return;
 
-  const res = await apiFetch(`/api/patients/${patientId}`, { method: 'DELETE' });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    alert(data.detail || 'Ошибка удаления');
-    return;
+  try {
+    const res = await apiFetch(`/api/patients/${patientId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const detail = Array.isArray(data.detail)
+        ? data.detail.map((d) => d.msg || d).join(', ')
+        : data.detail;
+      alert(detail || 'Ошибка удаления');
+      return;
+    }
+    if (onSuccess) onSuccess();
+  } catch (err) {
+    alert(err.message || 'Ошибка удаления');
   }
-  if (onSuccess) onSuccess();
 }
 
 function setupModals() {
