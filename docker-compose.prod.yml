@@ -4,22 +4,13 @@ services:
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8000}:8000"
+      - "80:8000"
     environment:
       DATABASE_URL: sqlite:////app/data/medinsight.db
       STORAGE_PATH: /app/storage
     volumes:
       - ./storage:/app/storage
       - medinsight-data:/app/data
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.medinsight.rule=Host(`${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.medinsight.entrypoints=websecure"
-      - "traefik.http.routers.medinsight.tls.certresolver=letsencrypt"
-      - "traefik.http.services.medinsight.loadbalancer.server.port=8000"
-      - "traefik.http.routers.medinsight-http.rule=Host(`${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.medinsight-http.entrypoints=web"
-      - "traefik.http.routers.medinsight-http.middlewares=redirect-to-https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
 
 volumes:
   medinsight-data:

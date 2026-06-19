@@ -71,11 +71,9 @@ jobs:
             fi
 
             if [ -n "${APP_PORT:-}" ]; then
-              if grep -q '^APP_PORT=' .env; then
-                sed -i "s|^APP_PORT=.*|APP_PORT=${APP_PORT}|" .env
-              else
-                echo "APP_PORT=${APP_PORT}" >> .env
-              fi
+              sed -i "s|^APP_PORT=.*|APP_PORT=${APP_PORT}|" .env
+            else
+              sed -i 's|^APP_PORT=.*|APP_PORT=8000|' .env 2>/dev/null || echo "APP_PORT=8000" >> .env
             fi
 
             if [ -n "${CORS_ORIGINS:-}" ]; then

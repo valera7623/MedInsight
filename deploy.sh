@@ -17,9 +17,16 @@ COMPOSE_FILES=(-f docker-compose.yml)
 
 if [ "$MODE" = "production" ]; then
   COMPOSE_FILES+=(-f docker-compose.prod.yml)
-  echo "Starting MedInsight (production: app + Traefik)..."
-  docker compose "${COMPOSE_FILES[@]}" --profile production up -d --build
-  APP_PORT="$(grep -E '^APP_PORT=' .env | cut -d= -f2 || echo 8000)"
+  if grep -q '^APP_PORT=' .env; then
+    sed -i 's|^APP_PORT=.*|APP_PORT=8000|' .env
+  else
+    echo "APP_PORT=8000" >> .env
+  fi
+  echo "Starting MedInsight (production)..."
+  docker stop medinsight-traefik 2>/dev/null || true
+  docker rm medinsight-traefik 2>/dev/null || true
+  docker compose "${COMPOSE_FILES[@]}" up -d --build app
+  APP_PORT="8000"
 else
   echo "Starting MedInsight (development)..."
   docker compose "${COMPOSE_FILES[@]}" up -d --build app
@@ -28,10 +35,10 @@ fi
 
 echo ""
 echo "MedInsight is running."
-  echo "  Health:     http://localhost:${APP_PORT}/health"
-  echo "  Dashboard:  http://localhost:${APP_PORT}/"
-  echo "  HTTPS:      https://${DOMAIN:-localhost}/ (Traefik, if DOMAIN configured)"
+echo "  Health:     http://localhost:${APP_PORT}/health"
+echo "  Dashboard:  http://localhost:${APP_PORT}/"
 echo "  Login:      http://localhost:${APP_PORT}/login"
+echo "  HTTP (80):  http://localhost/"
 echo "  API Docs:   http://localhost:${APP_PORT}/docs"
 echo ""
 echo "Logs: docker compose ${COMPOSE_FILES[*]} logs -f app"
