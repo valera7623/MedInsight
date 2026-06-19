@@ -10,18 +10,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt requirements-nlp.txt ./
 
-# ru_core_news_lg — wheel с github.com/releases (не raw.githubusercontent.com).
-# При сбое сети сборка продолжается: приложение работает в regex-only режиме.
+# spaCy model ~500MB with GitHub — часто падает на VPS (SSL EOF).
+# По умолчанию ПРОПУСКАЕМ: приложение работает в regex-only режиме.
+# Для установки модели: docker compose build --build-arg INSTALL_SPACY_MODEL=1
+ARG INSTALL_SPACY_MODEL=0
 ARG SPACY_MODEL_URL=https://github.com/explosion/spacy-models/releases/download/ru_core_news_lg-3.8.0/ru_core_news_lg-3.8.0-py3-none-any.whl
 
 RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir -r requirements-nlp.txt \
-    && (for i in 1 2 3; do \
-          pip install --no-cache-dir --default-timeout=300 "${SPACY_MODEL_URL}" && exit 0; \
-          echo "spaCy model download attempt $i failed, retrying..."; sleep 10; \
-        done; \
-        echo "WARNING: ru_core_news_lg not installed — NER will use regex fallback"; \
-        exit 0)
+    && if [ "$INSTALL_SPACY_MODEL" = "1" ]; then \
+         pip install --no-cache-dir --retries 1 --timeout 120 \
+           "${SPACY_MODEL_URL}" \
+         || echo "WARNING: ru_core_news_lg not installed — NER will use regex fallback"; \
+       else \
+         echo "Skipping spaCy model download (INSTALL_SPACY_MODEL=0, regex-only NER)"; \
+       fi
 
 COPY . .
 

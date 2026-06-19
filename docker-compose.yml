@@ -9,7 +9,10 @@ services:
       - medinsight-net
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_SPACY_MODEL: "0"
     container_name: medinsight-app
     restart: unless-stopped
     env_file:
@@ -29,7 +32,10 @@ services:
       - medinsight-net
 
   celery_worker:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_SPACY_MODEL: "0"
     container_name: medinsight-celery-worker
     restart: unless-stopped
     env_file:
@@ -49,7 +55,10 @@ services:
       - medinsight-net
 
   celery_beat:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_SPACY_MODEL: "0"
     container_name: medinsight-celery-beat
     restart: unless-stopped
     env_file:

@@ -36,9 +36,10 @@ else
   echo "Starting MedInsight (development)..."
 fi
 
-echo "Rebuilding and restarting containers..."
+echo "Rebuilding and restarting containers (spaCy model skipped for fast build)..."
 docker compose "${COMPOSE_FILES[@]}" down
-docker compose "${COMPOSE_FILES[@]}" up -d --build redis app celery_worker celery_beat
+docker compose "${COMPOSE_FILES[@]}" build --build-arg INSTALL_SPACY_MODEL=0
+docker compose "${COMPOSE_FILES[@]}" up -d redis app celery_worker celery_beat
 
 echo "Waiting for app startup..."
 sleep 5
