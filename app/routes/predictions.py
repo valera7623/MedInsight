@@ -13,6 +13,7 @@ from app.middleware.tenant import get_request_tenant_id
 from app.models import AnalysisJob, Patient, Prediction, User
 from app.services.access import can_predict, effective_tenant_id
 from app.services.summarizer import generate_insights
+from app.tasks.celery_app import redis_available
 from app.tasks.predict_task import predict_risk_task
 
 router = APIRouter(prefix="/analytics", tags=["predictions"])
@@ -117,12 +118,7 @@ def start_prediction(
     db.commit()
     db.refresh(job)
 
-    try:
-        task = predict_risk_task.delay(job.id)
-        job.celery_task_id = task.id
-        db.commit()
-    except Exception as exc:
-        logger.warning("Celery unavailable, running sync prediction: %s", exc)
+    def _run_sync() -> None:
         from app.services.predictor import predict_risk
 
         job.status = "processing"
@@ -137,6 +133,21 @@ def start_prediction(
         }
         job.completed_at = datetime.utcnow()
         db.commit()
+
+    if not redis_available():
+        logger.info("Redis unavailable — running sync prediction for job %s", job.id)
+        _run_sync()
+        return JobStartResponse(job_id=str(job.id), status="completed")
+
+    try:
+        task = predict_risk_task.delay(job.id)
+        job.celery_task_id = task.id
+        db.commit()
+    except Exception as exc:
+        logger.warning("Celery unavailable, running sync prediction: %s", exc)
+        db.rollback()
+        _run_sync()
+        return JobStartResponse(job_id=str(job.id), status="completed")
 
     return JobStartResponse(job_id=str(job.id), status="pending")
 

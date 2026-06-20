@@ -13,11 +13,12 @@ from app.config import settings
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
 from app.models import AnalysisJob, Document, Patient, User
-from app.services.access import can_upload_document, is_super_admin
+from app.services.access import can_upload_document, effective_tenant_id, is_super_admin
 from app.services.audit import log_audit
 from app.services.encryption import EncryptionError, decrypt_file, encrypt_bytes, ensure_encryption_key
 from app.services.extractor import extract_entities
 from app.services.parser import SUPPORTED_EXTENSIONS, parse_document, parse_document_from_bytes
+from app.tasks.celery_app import redis_available
 from app.tasks.parse_task import parse_document_task
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -82,19 +83,8 @@ def _process_document_sync(doc: Document, db: Session) -> None:
     db.commit()
 
 
-def _redis_available() -> bool:
-    try:
-        import redis
-
-        client = redis.from_url(settings.REDIS_URL, socket_connect_timeout=1, socket_timeout=1)
-        client.ping()
-        return True
-    except Exception:
-        return False
-
-
 def _enqueue_parse(doc: Document, db: Session, user_id: int) -> str | None:
-    if not _redis_available():
+    if not redis_available():
         logger.info("Redis unavailable — sync parse for document %s", doc.id)
         _process_document_sync(doc, db)
         return None

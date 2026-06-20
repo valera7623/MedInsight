@@ -181,10 +181,13 @@ def register(data: UserRegister, db: Annotated[Session, Depends(get_db)]):
 def login(data: UserLogin, request: Request, db: Annotated[Session, Depends(get_db)]):
     tenant = resolve_tenant_for_auth(db, data.subdomain)
 
-    user = db.query(User).filter(User.email == data.email).first()
-    if user and user.role != "super_admin":
-        if tenant and user.tenant_id != tenant.id:
-            user = None
+    candidates = db.query(User).filter(User.email == data.email).all()
+    user = next((c for c in candidates if c.role == "super_admin"), None)
+    if user is None:
+        user = next(
+            (c for c in candidates if tenant is None or c.tenant_id == tenant.id),
+            None,
+        )
 
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")

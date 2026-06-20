@@ -28,3 +28,19 @@ celery_app.conf.update(
 )
 
 celery_app.conf.beat_schedule = {}
+
+
+def redis_available() -> bool:
+    """Fast check whether the Redis broker is reachable.
+
+    Avoids long broker-connection timeouts in request handlers when Redis is
+    down, so endpoints can fall back to synchronous processing immediately.
+    """
+    try:
+        import redis
+
+        client = redis.from_url(settings.REDIS_URL, socket_connect_timeout=1, socket_timeout=1)
+        client.ping()
+        return True
+    except Exception:
+        return False
