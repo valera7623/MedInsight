@@ -96,6 +96,9 @@ services:
     restart: unless-stopped
     profiles:
       - production
+    environment:
+      # Pin Docker API version; Traefik's default is too old for this daemon.
+      DOCKER_API_VERSION: "1.44"
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
