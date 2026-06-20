@@ -21,25 +21,26 @@ fi
 
 MODE="${1:-dev}"
 COMPOSE_FILES=(-f docker-compose.yml)
+PROFILE_ARGS=()
 
 if [ "$MODE" = "production" ]; then
   COMPOSE_FILES+=(-f docker-compose.prod.yml)
+  # Traefik (HTTPS/Let's Encrypt) lives behind the "production" compose profile.
+  PROFILE_ARGS=(--profile production)
   if grep -q '^APP_PORT=' .env; then
     sed -i 's|^APP_PORT=.*|APP_PORT=8000|' .env
   else
     echo "APP_PORT=8000" >> .env
   fi
-  echo "Starting MedInsight (production)..."
-  docker stop medinsight-traefik 2>/dev/null || true
-  docker rm medinsight-traefik 2>/dev/null || true
+  echo "Starting MedInsight (production, HTTPS via Traefik)..."
 else
   echo "Starting MedInsight (development)..."
 fi
 
 echo "Rebuilding and restarting containers (spaCy model skipped for fast build)..."
-docker compose "${COMPOSE_FILES[@]}" down
-docker compose "${COMPOSE_FILES[@]}" build --build-arg INSTALL_SPACY_MODEL=0
-docker compose "${COMPOSE_FILES[@]}" up -d redis app celery_worker celery_beat
+docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" down
+docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" build --build-arg INSTALL_SPACY_MODEL=0
+docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" up -d
 
 echo "Waiting for app startup..."
 sleep 5
