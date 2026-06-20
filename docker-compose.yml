@@ -91,7 +91,7 @@ services:
       - medinsight-net
 
   traefik:
-    image: traefik:v3.2
+    image: traefik:v3.5
     container_name: medinsight-traefik
     restart: unless-stopped
     profiles:
