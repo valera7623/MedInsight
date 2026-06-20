@@ -163,3 +163,76 @@ class AuditLog(Base):
 
     user: Mapped["User | None"] = relationship("User", back_populates="audit_logs")
     tenant: Mapped["Tenant | None"] = relationship("Tenant", back_populates="audit_logs")
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: Self-healing RAG, Webhooks, Payments
+# ---------------------------------------------------------------------------
+
+
+class ErrorFix(Base):
+    """Self-healing knowledge base record (also indexed in ChromaDB)."""
+
+    __tablename__ = "error_fixes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    error_text: Mapped[str] = mapped_column(Text, nullable=False)
+    error_type: Mapped[str] = mapped_column(String(100), nullable=False, default="unknown", index=True)
+    agent_name: Mapped[str] = mapped_column(String(100), nullable=False, default="unknown", index=True)
+    stack_trace: Mapped[str | None] = mapped_column(Text, nullable=True)
+    solution_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    solution_code: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    was_successful: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    success_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    fail_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    tenant_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_used_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Webhook(Base):
+    __tablename__ = "webhooks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    url: Mapped[str] = mapped_column(String(1000), nullable=False)
+    secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    events: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_triggered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    failure_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    yookassa_payment_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    plan_type: Mapped[str] = mapped_column(String(50), nullable=False, default="freemium")
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
+    reports_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    reports_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    current_period_start: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    current_period_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    provider: Mapped[str] = mapped_column(String(50), nullable=False)
+    provider_payment_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="RUB")
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

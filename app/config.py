@@ -29,5 +29,44 @@ class Settings(BaseSettings):
     DEFAULT_TENANT_NAME: str = "Default Clinic"
     DEFAULT_TENANT_SUBDOMAIN: str = "default"
 
+    # Phase 4: Self-Healing RAG
+    SELF_HEALING_ENABLED: bool = True
+    CHROMA_PERSIST_DIR: str = "./chroma_data"
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    SIMILARITY_THRESHOLD: float = 0.75
+    MAX_RETRY_ATTEMPTS: int = 2
+
+    # Phase 4: Webhooks
+    WEBHOOK_ENABLED: bool = True
+    WEBHOOK_TIMEOUT_SECONDS: float = 10.0
+    WEBHOOK_RETRY_COUNT: int = 3
+    WEBHOOK_RETRY_DELAY_SECONDS: float = 2.0
+    WEBHOOK_FAILURE_DEACTIVATE_THRESHOLD: int = 5
+    WEBHOOK_PUBLIC_BASE_URL: str = ""
+
+    # Phase 4: Payments — Stripe
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_PUBLISHABLE_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_PRICE_ID_PRO: str = ""
+    STRIPE_PRICE_ID_ENTERPRISE: str = ""
+    STRIPE_SUCCESS_URL: str = "http://localhost:8000/payment/success"
+    STRIPE_CANCEL_URL: str = "http://localhost:8000/payment/cancel"
+
+    # Phase 4: Payments — ЮKassa
+    YOOKASSA_SHOP_ID: str = ""
+    YOOKASSA_SECRET_KEY: str = ""
+    YOOKASSA_RETURN_URL_SUCCESS: str = "http://localhost:8000/payment/success"
+    YOOKASSA_RETURN_URL_CANCEL: str = "http://localhost:8000/payment/cancel"
+
+    # Phase 4: Plan limits
+    FREEMIUM_ANALYSIS_LIMIT: int = 5
+    PRO_ANALYSIS_LIMIT: int = 100
+    ENTERPRISE_ANALYSIS_LIMIT: int = 999999
+    PRO_PRICE_RUB: int = 199000  # kopecks (1990 ₽)
+    PRO_PRICE_USD: int = 1999  # cents ($19.99)
+    ENTERPRISE_PRICE_RUB: int = 999000  # kopecks (9990 ₽)
+    ENTERPRISE_PRICE_USD: int = 9999  # cents ($99.99)
+
 
 settings = Settings()

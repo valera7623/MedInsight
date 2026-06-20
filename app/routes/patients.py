@@ -160,6 +160,14 @@ def update_patient(
     patient.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(patient)
+
+    try:
+        from app.tasks.webhook_task import fire_event
+
+        fire_event("patient.updated", patient.tenant_id, patient_id=patient.id)
+    except Exception:
+        pass
+
     return _serialize_patient(patient, current_user)
 
 

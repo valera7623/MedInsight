@@ -10,10 +10,12 @@ services:
       STORAGE_PATH: /app/storage
       REDIS_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
+      CHROMA_PERSIST_DIR: /app/chroma_data
     volumes:
       - ./storage:/app/storage
       - ./secrets:/app/secrets
       - medinsight-data:/app/data
+      - medinsight-chroma:/app/chroma_data
 
   celery_worker:
     container_name: medinsight-celery-worker
@@ -25,10 +27,12 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       ENCRYPTION_KEY_PATH: /app/secrets/encryption_key.txt
+      CHROMA_PERSIST_DIR: /app/chroma_data
     volumes:
       - ./storage:/app/storage
       - ./secrets:/app/secrets
       - medinsight-data:/app/data
+      - medinsight-chroma:/app/chroma_data
 
   celery_beat:
     container_name: medinsight-celery-beat
@@ -38,8 +42,11 @@ services:
       DATABASE_URL: sqlite:////app/data/medinsight.db
       REDIS_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
+      CHROMA_PERSIST_DIR: /app/chroma_data
     volumes:
       - medinsight-data:/app/data
+      - medinsight-chroma:/app/chroma_data
 
 volumes:
   medinsight-data:
+  medinsight-chroma:

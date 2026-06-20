@@ -20,12 +20,14 @@ services:
     environment:
       DATABASE_URL: sqlite:////app/data/medinsight.db
       ENCRYPTION_KEY_PATH: /app/secrets/encryption_key.txt
+      CHROMA_PERSIST_DIR: /app/chroma_data
     ports:
       - "${APP_PORT:-8000}:8000"
     volumes:
       - ./storage:/app/storage
       - ./secrets:/app/secrets
       - medinsight-data:/app/data
+      - medinsight-chroma:/app/chroma_data
     depends_on:
       - redis
     networks:
@@ -43,11 +45,13 @@ services:
     environment:
       DATABASE_URL: sqlite:////app/data/medinsight.db
       ENCRYPTION_KEY_PATH: /app/secrets/encryption_key.txt
+      CHROMA_PERSIST_DIR: /app/chroma_data
     command: ["bash", "scripts/start_celery_worker.sh"]
     volumes:
       - ./storage:/app/storage
       - ./secrets:/app/secrets
       - medinsight-data:/app/data
+      - medinsight-chroma:/app/chroma_data
     depends_on:
       - redis
       - app
@@ -66,8 +70,12 @@ services:
     environment:
       DATABASE_URL: sqlite:////app/data/medinsight.db
     command: ["bash", "scripts/start_celery_beat.sh"]
+    environment:
+      DATABASE_URL: sqlite:////app/data/medinsight.db
+      CHROMA_PERSIST_DIR: /app/chroma_data
     volumes:
       - medinsight-data:/app/data
+      - medinsight-chroma:/app/chroma_data
     depends_on:
       - redis
       - app
@@ -102,6 +110,7 @@ services:
 
 volumes:
   medinsight-data:
+  medinsight-chroma:
   traefik-certs:
 
 networks:

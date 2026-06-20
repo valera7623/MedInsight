@@ -10,16 +10,20 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import Base, bootstrap_system, engine, run_migrations
 from app.middleware.audit import AuditMiddleware
-from app.routes import admin, analytics, documents, export, patients, predictions, users
+from app.middleware.usage_limit import UsageLimitMiddleware
+from app.routes import admin, analytics, documents, export, patients, payments, predictions, users, webhooks
+from app.webhooks import stripe as stripe_webhook
+from app.webhooks import yookassa as yookassa_webhook
 from app.auth import router as auth_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="MedInsight", description="Clinical analytics platform", version="0.3.0")
+app = FastAPI(title="MedInsight", description="Clinical analytics platform", version="0.4.0")
 
 origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(AuditMiddleware)
+app.add_middleware(UsageLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -46,8 +50,16 @@ def on_startup():
     Base.metadata.create_all(bind=engine)
     run_migrations()
     bootstrap_system()
+    if settings.SELF_HEALING_ENABLED:
+        try:
+            from app.services.self_healing.vector_store import seed_knowledge_base
+
+            imported, skipped = seed_knowledge_base()
+            logger.info("Self-healing seed fixes: %d imported, %d skipped", imported, skipped)
+        except Exception as exc:
+            logger.warning("Self-healing seed failed: %s", exc)
     logger.info(
-        "MedInsight v0.3 started. Storage: %s, DB: %s",
+        "MedInsight v0.4 started. Storage: %s, DB: %s",
         settings.STORAGE_PATH,
         settings.DATABASE_URL,
     )
@@ -61,6 +73,11 @@ app.include_router(predictions.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
+app.include_router(webhooks.router, prefix="/api")
+app.include_router(payments.router, prefix="/api")
+# Inbound payment provider webhooks (no /api prefix, no auth — verified by signature)
+app.include_router(stripe_webhook.router)
+app.include_router(yookassa_webhook.router)
 
 static_dir = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
@@ -93,4 +110,4 @@ def admin_page():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "0.3.0"}
+    return {"status": "ok", "version": "0.4.0"}

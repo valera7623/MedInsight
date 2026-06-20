@@ -13,6 +13,7 @@
 - **Frontend:** Vanilla JS + Chart.js
 - **Deploy:** Docker + Traefik
 - **Security (Phase 3):** Multi-tenancy, RBAC, age encryption
+- **Phase 4:** Self-healing RAG (ChromaDB), вебхуки (HMAC), платежи (Stripe + ЮKassa)
 
 ## Требования
 
@@ -255,3 +256,100 @@ Super Admin по умолчанию: `admin@medinsight.com` / `change_me_super_a
 | `ENCRYPTION_KEY_PATH` | Путь к ключу (default: secrets/encryption_key.txt) |
 | `SUPER_ADMIN_EMAIL` | Email суперадмина |
 | `SUPER_ADMIN_PASSWORD` | Пароль суперадмина |
+
+## Фаза 4: Self-Healing RAG + Вебхуки + Платежи
+
+### Self-Healing RAG (самообучение)
+
+Агенты `parser`, `extractor`, `predictor`, `summarizer` обёрнуты в декоратор
+`@with_self_healing(...)`. При исключении система ищет похожие ошибки в базе
+знаний и применяет известное решение (retry с backoff, context overlay,
+fuzzy-matching), затем повторяет вызов.
+
+- **Хранилище:** SQL-таблица `error_fixes` (durable) + ChromaDB как индекс
+  семантической близости. Если `chromadb`/эмбеддинги недоступны — используется
+  keyword-fallback (Jaccard-overlap), система продолжает работать.
+- **Seed-fixes:** `app/services/self_healing/seed_fixes.json` загружаются на
+  старте (типовые ошибки: ParserError, KeyError, OpenAI rate limit,
+  UnicodeDecodeError).
+- **Периодическое обучение:** Celery Beat `learn_from_failures` каждые 6 часов
+  анализирует «застрявшие» ошибки и генерирует новые решения через GPT.
+
+Admin API (super_admin):
+
+```
+GET    /api/admin/self-healing/stats
+GET    /api/admin/self-healing/fixes
+POST   /api/admin/self-healing/seed-fixes
+POST   /api/admin/self-healing/confirm/{fix_id}
+DELETE /api/admin/self-healing/fixes/{fix_id}
+```
+
+### Вебхуки
+
+События: `analysis.completed`, `prediction.ready`, `patient.updated`.
+Доставка подписывается `HMAC-SHA256` (заголовок `X-Webhook-Signature`),
+3 повтора с экспоненциальной задержкой; после 5 сбоев вебхук авто-отключается.
+
+```
+POST   /api/webhooks/register
+GET    /api/webhooks
+PUT    /api/webhooks/{id}
+DELETE /api/webhooks/{id}
+POST   /api/webhooks/{id}/test
+```
+
+Проверка подписи получателем:
+
+```python
+import hmac, hashlib
+expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+assert hmac.compare_digest(expected, request.headers["X-Webhook-Signature"])
+```
+
+### Платежи (Stripe + ЮKassa)
+
+Тарифы: **Freemium** (5 анализов/мес), **Pro** (100/мес, $19.99 / 1990 ₽),
+**Enterprise** (без лимита, $99.99 / 9990 ₽). Лимит проверяется middleware
+`UsageLimitMiddleware` перед каждым прогнозом — при превышении возвращается
+`402 Payment Required`.
+
+```
+GET    /api/payments/prices
+POST   /api/payments/create-checkout      # Stripe Checkout
+POST   /api/payments/yookassa/create      # ЮKassa
+GET    /api/payments/subscription
+POST   /api/payments/cancel-subscription
+POST   /webhooks/stripe                    # входящий, без auth (проверка подписи)
+POST   /webhooks/yookassa                  # входящий, без auth
+```
+
+### Тест Фазы 4
+
+```bash
+python scripts/test_phase4.py
+```
+
+Проверяет: self-healing (искусственная ошибка → авто-фикс), вебхуки
+(регистрация → событие → HMAC-доставка), платежи (лимиты Freemium → 402 →
+апгрейд Pro).
+
+### Переменные окружения (Фаза 4)
+
+| Переменная | Описание |
+|------------|----------|
+| `SELF_HEALING_ENABLED` | Включить self-healing RAG |
+| `CHROMA_PERSIST_DIR` | Каталог ChromaDB (default: ./chroma_data) |
+| `SIMILARITY_THRESHOLD` | Порог близости для поиска фиксов (0.75) |
+| `MAX_RETRY_ATTEMPTS` | Попыток применить фикс (2) |
+| `WEBHOOK_ENABLED` | Включить отправку вебхуков |
+| `WEBHOOK_RETRY_COUNT` | Повторов доставки (3) |
+| `WEBHOOK_FAILURE_DEACTIVATE_THRESHOLD` | Сбоев до авто-отключения (5) |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Ключи Stripe |
+| `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_ENTERPRISE` | ID цен Stripe |
+| `YOOKASSA_SHOP_ID` / `YOOKASSA_SECRET_KEY` | Ключи ЮKassa |
+| `FREEMIUM_ANALYSIS_LIMIT` / `PRO_ANALYSIS_LIMIT` / `ENTERPRISE_ANALYSIS_LIMIT` | Месячные лимиты |
+
+> **ChromaDB опционален.** Пакет `chromadb` тянет `onnxruntime` (~200 МБ).
+> Для лёгкого деплоя его можно закомментировать в `requirements.txt` —
+> self-healing продолжит работать через SQL keyword-fallback.

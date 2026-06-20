@@ -318,3 +318,62 @@ def rotate_key(
 ):
     count = rotate_encryption_key(data.new_key)
     return {"status": "rotated", "files_count": count}
+
+
+# --- Phase 4: Self-healing RAG (admin only) --------------------------------
+
+
+@router.get("/self-healing/stats")
+def self_healing_stats(current_user: Annotated[User, Depends(require_admin)]):
+    from app.services.self_healing.vector_store import get_knowledge_base
+
+    kb = get_knowledge_base()
+    if kb is None:
+        return {"enabled": False, "total_fixes": 0}
+    stats = kb.get_stats()
+    stats["enabled"] = True
+    return stats
+
+
+@router.get("/self-healing/fixes")
+def self_healing_list(current_user: Annotated[User, Depends(require_admin)]):
+    from app.services.self_healing.vector_store import get_knowledge_base
+
+    kb = get_knowledge_base()
+    return kb.list_all() if kb else []
+
+
+@router.post("/self-healing/seed-fixes")
+def self_healing_seed(
+    current_user: Annotated[User, Depends(require_super_admin)],
+    overwrite: bool = Query(False),
+):
+    from app.services.self_healing.vector_store import seed_knowledge_base
+
+    imported, skipped = seed_knowledge_base(overwrite=overwrite)
+    return {"imported": imported, "skipped": skipped}
+
+
+@router.post("/self-healing/confirm/{fix_id}")
+def self_healing_confirm(
+    fix_id: int,
+    current_user: Annotated[User, Depends(require_super_admin)],
+):
+    from app.services.self_healing.vector_store import get_knowledge_base
+
+    kb = get_knowledge_base()
+    if kb is None or not kb.confirm_fix(fix_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fix not found")
+    return {"status": "confirmed", "fix_id": fix_id}
+
+
+@router.delete("/self-healing/fixes/{fix_id}", status_code=status.HTTP_204_NO_CONTENT)
+def self_healing_delete(
+    fix_id: int,
+    current_user: Annotated[User, Depends(require_super_admin)],
+):
+    from app.services.self_healing.vector_store import get_knowledge_base
+
+    kb = get_knowledge_base()
+    if kb is None or not kb.delete_fix(fix_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fix not found")

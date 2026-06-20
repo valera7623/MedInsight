@@ -10,7 +10,12 @@ celery_app = Celery(
     "medinsight",
     broker=settings.REDIS_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["app.tasks.parse_task", "app.tasks.predict_task"],
+    include=[
+        "app.tasks.parse_task",
+        "app.tasks.predict_task",
+        "app.tasks.learn_task",
+        "app.tasks.webhook_task",
+    ],
 )
 
 celery_app.conf.update(
@@ -27,7 +32,15 @@ celery_app.conf.update(
     broker_transport_options={"socket_connect_timeout": 2, "socket_timeout": 2},
 )
 
-celery_app.conf.beat_schedule = {}
+if settings.SELF_HEALING_ENABLED:
+    celery_app.conf.beat_schedule = {
+        "learn-from-failures-every-6h": {
+            "task": "app.tasks.learn_task.learn_from_failures",
+            "schedule": 6 * 60 * 60.0,  # every 6 hours
+        },
+    }
+else:
+    celery_app.conf.beat_schedule = {}
 
 
 def redis_available() -> bool:

@@ -28,7 +28,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
 
 COPY . .
 
-RUN mkdir -p storage data
+RUN mkdir -p storage data chroma_data secrets
 
 EXPOSE 8000
 

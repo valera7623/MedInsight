@@ -89,6 +89,44 @@
       </div>
     </div>
 
+    <div class="predictions-section">
+      <h2>Подписка и тариф</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="sub-plan">—</div>
+          <div class="stat-label">Текущий тариф</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="sub-usage">—</div>
+          <div class="stat-label">Анализов использовано</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="sub-remaining">—</div>
+          <div class="stat-label">Осталось в этом месяце</div>
+        </div>
+      </div>
+      <div id="plans-list" class="header-actions" style="flex-wrap:wrap;gap:0.75rem;margin-top:1rem"></div>
+      <p id="subscription-msg" style="color:#64748b;font-size:0.85rem;margin-top:0.5rem"></p>
+    </div>
+
+    <div class="recent-section">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h2>Вебхуки (интеграции)</h2>
+        <button class="btn btn-secondary btn-sm" id="add-webhook-btn">+ Добавить вебхук</button>
+      </div>
+      <form id="webhook-form" class="hidden" style="margin:0.75rem 0;display:flex;gap:0.5rem;flex-wrap:wrap">
+        <input type="url" id="webhook-url" placeholder="https://example.com/hook" required style="flex:1;min-width:240px">
+        <input type="text" id="webhook-secret" placeholder="secret (опционально)" style="min-width:160px">
+        <button type="submit" class="btn btn-primary btn-sm">Сохранить</button>
+      </form>
+      <table class="data-table" id="webhooks-table">
+        <thead>
+          <tr><th>URL</th><th>События</th><th>Статус</th><th>Сбоев</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
     <div class="recent-section">
       <h2>Недавние пациенты</h2>
       <table class="data-table" id="recent-patients-table">

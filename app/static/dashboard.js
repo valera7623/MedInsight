@@ -252,6 +252,135 @@ async function loadDashboard() {
 
   bindPatientActionButtons(() => loadDashboard());
   loadPredictionsDashboard();
+  loadSubscription();
+  loadWebhooks();
+}
+
+// --- Phase 4: Subscription + Webhooks ---
+
+async function loadSubscription() {
+  const planEl = document.getElementById('sub-plan');
+  if (!planEl) return;
+  try {
+    const res = await apiFetch('/api/payments/subscription');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Ошибка подписки');
+    planEl.textContent = data.plan_type;
+    document.getElementById('sub-usage').textContent = `${data.reports_used} / ${data.reports_limit}`;
+    document.getElementById('sub-remaining').textContent = data.reports_remaining;
+    await renderPlans(data.plan_type);
+  } catch (err) {
+    console.error('Subscription error:', err);
+  }
+}
+
+async function renderPlans(currentPlan) {
+  const wrap = document.getElementById('plans-list');
+  if (!wrap) return;
+  const res = await apiFetch('/api/payments/prices');
+  const data = await res.json();
+  if (!res.ok) return;
+  const providers = data.providers || {};
+  wrap.innerHTML = '';
+  data.plans.forEach((p) => {
+    if (p.plan_type === 'freemium' || p.plan_type === currentPlan) return;
+    const priceRub = (p.price_rub / 100).toFixed(0);
+    const box = document.createElement('div');
+    box.className = 'stat-card';
+    box.style.cssText = 'text-align:left;min-width:220px';
+    let buttons = '';
+    if (providers.stripe) buttons += `<button class="btn btn-primary btn-sm" data-plan="${p.plan_type}" data-provider="stripe">Stripe</button> `;
+    if (providers.yookassa) buttons += `<button class="btn btn-secondary btn-sm" data-plan="${p.plan_type}" data-provider="yookassa">ЮKassa</button>`;
+    if (!buttons) buttons = '<span style="color:#94a3b8;font-size:0.8rem">Платёжный провайдер не настроен</span>';
+    box.innerHTML = `<strong>${p.name}</strong><br>${p.analysis_limit} анализов/мес<br>${priceRub} ₽ / $${(p.price_usd / 100).toFixed(2)}<div style="margin-top:0.5rem">${buttons}</div>`;
+    wrap.appendChild(box);
+  });
+  wrap.querySelectorAll('button[data-plan]').forEach((btn) => {
+    btn.addEventListener('click', () => upgradePlan(btn.dataset.provider, btn.dataset.plan));
+  });
+}
+
+async function upgradePlan(provider, planType) {
+  const msg = document.getElementById('subscription-msg');
+  const path = provider === 'stripe' ? '/api/payments/create-checkout' : '/api/payments/yookassa/create';
+  try {
+    const res = await apiFetch(path, { method: 'POST', body: JSON.stringify({ plan_type: planType }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Ошибка создания платежа');
+    const url = data.checkout_url || data.confirmation_url;
+    if (url) window.location.href = url;
+    else if (msg) msg.textContent = 'Платёж создан, но URL не получен.';
+  } catch (err) {
+    if (msg) msg.textContent = err.message;
+  }
+}
+
+async function loadWebhooks() {
+  const tbody = document.querySelector('#webhooks-table tbody');
+  if (!tbody) return;
+  try {
+    const res = await apiFetch('/api/webhooks');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Ошибка вебхуков');
+    tbody.innerHTML = data.length
+      ? ''
+      : '<tr><td colspan="5" style="text-align:center;color:#64748b">Вебхуки не настроены</td></tr>';
+    data.forEach((w) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis">${w.url}</td>
+        <td>${(w.events || []).join(', ')}</td>
+        <td>${w.is_active ? 'активен' : 'отключён'}</td>
+        <td>${w.failure_count}</td>
+        <td>
+          <button class="btn btn-secondary btn-sm wh-test" data-id="${w.id}">Тест</button>
+          <button class="btn btn-danger btn-sm wh-del" data-id="${w.id}">Удалить</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll('.wh-test').forEach((b) => b.addEventListener('click', () => testWebhook(b.dataset.id)));
+    tbody.querySelectorAll('.wh-del').forEach((b) => b.addEventListener('click', () => deleteWebhook(b.dataset.id)));
+  } catch (err) {
+    console.error('Webhooks error:', err);
+  }
+}
+
+function setupWebhookForm() {
+  const addBtn = document.getElementById('add-webhook-btn');
+  const form = document.getElementById('webhook-form');
+  if (!addBtn || !form) return;
+  addBtn.addEventListener('click', () => form.classList.toggle('hidden'));
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const url = document.getElementById('webhook-url').value;
+    const secret = document.getElementById('webhook-secret').value;
+    try {
+      const res = await apiFetch('/api/webhooks/register', {
+        method: 'POST',
+        body: JSON.stringify({ url, secret: secret || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(formatApiError(data.detail) || 'Ошибка регистрации');
+      form.reset();
+      form.classList.add('hidden');
+      loadWebhooks();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+async function testWebhook(id) {
+  const res = await apiFetch(`/api/webhooks/${id}/test`, { method: 'POST' });
+  const data = await res.json();
+  alert(data.delivered ? 'Вебхук доставлен ✓' : 'Доставка не удалась (проверьте URL)');
+  loadWebhooks();
+}
+
+async function deleteWebhook(id) {
+  if (!confirm('Удалить вебхук?')) return;
+  await apiFetch(`/api/webhooks/${id}`, { method: 'DELETE' });
+  loadWebhooks();
 }
 
 async function loadPredictionsDashboard() {
@@ -479,6 +608,7 @@ function initDashboard() {
   setupModals();
   setupPatientForm(() => loadDashboard());
   setupUploadForm(() => loadDashboard());
+  setupWebhookForm();
 
   document.getElementById('new-patient-btn').addEventListener('click', () => openModal('patient-modal'));
   document.getElementById('upload-doc-btn').addEventListener('click', async () => {

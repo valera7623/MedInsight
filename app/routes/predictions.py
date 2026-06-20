@@ -118,6 +118,15 @@ def start_prediction(
     db.commit()
     db.refresh(job)
 
+    # Consume one analysis credit for the tenant (Phase 4 billing).
+    if tenant_id is not None:
+        try:
+            from app.services.payment.usage_tracker import increment_usage
+
+            increment_usage(tenant_id)
+        except Exception as exc:
+            logger.warning("Usage increment failed for tenant %s: %s", tenant_id, exc)
+
     def _run_sync() -> None:
         from app.services.predictor import predict_risk
 
@@ -133,6 +142,19 @@ def start_prediction(
         }
         job.completed_at = datetime.utcnow()
         db.commit()
+        try:
+            from app.tasks.webhook_task import fire_event
+
+            fire_event(
+                "prediction.ready",
+                tenant_id,
+                patient_id=patient_id,
+                analysis_id=job.id,
+                prediction_id=prediction.id,
+                result=prediction.prediction,
+            )
+        except Exception as exc:
+            logger.warning("Webhook dispatch failed (sync predict): %s", exc)
 
     if not redis_available():
         logger.info("Redis unavailable — running sync prediction for job %s", job.id)

@@ -1,0 +1,68 @@
+[
+  {
+    "error_text": "pandas.errors.ParserError Error tokenizing data Expected fields delimiter mismatch csv",
+    "error_type": "parser.ParserError",
+    "agent_name": "parser",
+    "stack_trace": "ParserError: Error tokenizing data",
+    "solution_prompt": "Повторить разбор документа с альтернативными разделителями и кодировкой",
+    "solution_code": {"action": "context_overlay", "params": {"alt_separator": ";", "encoding": "utf-8"}},
+    "was_successful": true,
+    "success_count": 3,
+    "fail_count": 0
+  },
+  {
+    "error_text": "KeyError diagnosis key not found in parsed data dictionary",
+    "error_type": "extractor.KeyError",
+    "agent_name": "extractor",
+    "stack_trace": "KeyError: 'diagnosis'",
+    "solution_prompt": "Найти ближайший подходящий ключ через fuzzy matching",
+    "solution_code": {"action": "fuzzy_column_match", "params": {"_missing_key": "diagnosis"}},
+    "was_successful": true,
+    "success_count": 2,
+    "fail_count": 0
+  },
+  {
+    "error_text": "OpenAI API error rate limit timeout connection ProxyAPI 429 503",
+    "error_type": "openai.RateLimitError",
+    "agent_name": "predictor",
+    "stack_trace": "RateLimitError: rate limit exceeded",
+    "solution_prompt": "Подождать и повторить запрос с экспоненциальной задержкой",
+    "solution_code": {"action": "retry_exponential_backoff", "params": {"base_delay": 2.0}},
+    "was_successful": true,
+    "success_count": 4,
+    "fail_count": 1
+  },
+  {
+    "error_text": "UnicodeDecodeError utf-8 codec cannot decode byte invalid start byte encoding",
+    "error_type": "UnicodeDecodeError",
+    "agent_name": "parser",
+    "stack_trace": "UnicodeDecodeError: 'utf-8' codec can't decode",
+    "solution_prompt": "Повторить чтение документа с кодировкой cp1251 или latin-1",
+    "solution_code": {"action": "context_overlay", "params": {"encoding": "cp1251"}},
+    "was_successful": true,
+    "success_count": 2,
+    "fail_count": 0
+  },
+  {
+    "error_text": "OpenAI API error summarizer timeout httpx connection reset ProxyAPI",
+    "error_type": "openai.APIError",
+    "agent_name": "summarizer",
+    "stack_trace": "APIError: connection error",
+    "solution_prompt": "Повторить генерацию резюме с экспоненциальной задержкой",
+    "solution_code": {"action": "retry_exponential_backoff", "params": {"base_delay": 1.5}},
+    "was_successful": true,
+    "success_count": 2,
+    "fail_count": 0
+  },
+  {
+    "error_text": "predictor empty features no diagnoses medications insufficient data",
+    "error_type": "predictor.ValueError",
+    "agent_name": "predictor",
+    "stack_trace": "ValueError: insufficient clinical data",
+    "solution_prompt": "Повторить прогноз с rule-based fallback при недостатке данных",
+    "solution_code": {"action": "retry_simple", "params": {}},
+    "was_successful": true,
+    "success_count": 1,
+    "fail_count": 0
+  }
+]

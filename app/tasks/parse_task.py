@@ -6,16 +6,23 @@ from app.models import AnalysisJob, Document
 from app.services.encryption import decrypt_file
 from app.services.extractor import extract_entities
 from app.services.parser import parse_document, parse_document_from_bytes
+from app.services.self_healing import with_self_healing
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
 
-def _parse_doc(doc: Document) -> str:
+@with_self_healing("parser")
+def _parse_doc(doc: Document, *, document_id: int | None = None, tenant_id: int | None = None) -> str:
     if doc.is_encrypted or doc.file_path.endswith(".age"):
         content = decrypt_file(doc.file_path)
         return parse_document_from_bytes(content, doc.filename)
     return parse_document(doc.file_path)
+
+
+@with_self_healing("extractor")
+def _extract(text: str, *, document_id: int | None = None, tenant_id: int | None = None) -> dict:
+    return extract_entities(text)
 
 
 @celery_app.task(bind=True, name="app.tasks.parse_task.parse_document_task")
@@ -36,8 +43,8 @@ def parse_document_task(self, job_id: int, document_id: int) -> dict:
         doc.status = "processing"
         db.commit()
 
-        text = _parse_doc(doc)
-        parsed = extract_entities(text)
+        text = _parse_doc(doc, document_id=document_id, tenant_id=doc.tenant_id)
+        parsed = _extract(text, document_id=document_id, tenant_id=doc.tenant_id)
         doc.parsed_data = parsed
         doc.status = "parsed"
         doc.parsed_at = datetime.utcnow()
@@ -46,6 +53,20 @@ def parse_document_task(self, job_id: int, document_id: int) -> dict:
         job.result = {"document_id": document_id, "parsed_data": parsed}
         job.completed_at = datetime.utcnow()
         db.commit()
+
+        try:
+            from app.tasks.webhook_task import fire_event
+
+            fire_event(
+                "analysis.completed",
+                job.tenant_id,
+                patient_id=job.patient_id,
+                analysis_id=job.id,
+                document_id=document_id,
+                result={"diagnoses": parsed.get("diagnoses", []), "medications": parsed.get("medications", [])},
+            )
+        except Exception as hook_exc:  # webhook failure must not fail the job
+            logger.warning("Webhook dispatch failed for job %s: %s", job_id, hook_exc)
 
         logger.info("Document %s parsed successfully (job %s)", document_id, job_id)
         return {"status": "completed", "document_id": document_id}
