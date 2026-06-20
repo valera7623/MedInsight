@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.auth import hash_password, require_admin, require_super_admin
 from app.config import settings
 from app.database import get_db
-from app.models import AuditLog, Document, Patient, Prediction, Tenant, User
+from app.models import AnalysisJob, AuditLog, Document, Patient, Prediction, Tenant, User
 from app.services.access import ROLES, is_super_admin
 from app.services.audit import log_audit
 from app.services.encryption import rotate_encryption_key
@@ -272,6 +272,54 @@ def block_user(
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.post("/users/{user_id}/unblock", response_model=UserAdminResponse)
+def unblock_user(
+    user_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(require_admin)],
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if not is_super_admin(current_user) and user.tenant_id != current_user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    user.is_blocked = False
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(require_admin)],
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if user.role == "super_admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete super admin")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete yourself")
+    if not is_super_admin(current_user) and user.tenant_id != current_user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    # Reassign the user's clinical records to the acting admin to avoid orphans.
+    new_owner_id = current_user.id
+    for model in (Patient, Document, Prediction):
+        db.query(model).filter(model.user_id == user_id).update(
+            {model.user_id: new_owner_id}, synchronize_session=False
+        )
+    db.query(AnalysisJob).filter(AnalysisJob.user_id == user_id).update(
+        {AnalysisJob.user_id: new_owner_id}, synchronize_session=False
+    )
+
+    db.delete(user)
+    db.commit()
 
 
 @router.get("/audit", response_model=list[AuditLogResponse])

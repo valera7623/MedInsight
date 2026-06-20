@@ -31,7 +31,7 @@
       <h2>Пользователи</h2>
       <table class="data-table" id="users-table">
         <thead>
-          <tr><th>ID</th><th>Email</th><th>ФИО</th><th>Роль</th><th>Статус</th></tr>
+          <tr><th>ID</th><th>Email</th><th>ФИО</th><th>Роль</th><th>Статус</th><th>Действия</th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -50,10 +50,67 @@
 
   <script src="/static/dashboard.js"></script>
   <script>
+    let currentAdmin = null;
+
+    async function loadUsers() {
+      const users = await apiFetch('/api/admin/users');
+      const udata = await users.json();
+      const utbody = document.querySelector('#users-table tbody');
+      utbody.innerHTML = udata.map(u => {
+        const isSuper = u.role === 'super_admin';
+        const isSelf = currentAdmin && u.id === currentAdmin.id;
+        let actions = '';
+        if (!isSuper && !isSelf) {
+          actions += u.is_blocked
+            ? `<button class="btn btn-secondary btn-sm" data-act="unblock" data-id="${u.id}">Активировать</button>`
+            : `<button class="btn btn-secondary btn-sm" data-act="block" data-id="${u.id}">Деактивировать</button>`;
+          actions += ` <button class="btn btn-danger btn-sm" data-act="delete" data-id="${u.id}" data-email="${u.email}">Удалить</button>`;
+        } else {
+          actions = '<span style="color:#94a3b8">—</span>';
+        }
+        return `
+          <tr>
+            <td>${u.id}</td>
+            <td>${u.email}</td>
+            <td>${u.full_name}</td>
+            <td>${u.role}</td>
+            <td>${u.is_blocked ? 'заблокирован' : 'активен'}</td>
+            <td>${actions}</td>
+          </tr>`;
+      }).join('');
+
+      utbody.querySelectorAll('button[data-act]').forEach(btn => {
+        btn.addEventListener('click', () => handleUserAction(btn.dataset.act, btn.dataset.id, btn.dataset.email));
+      });
+    }
+
+    async function handleUserAction(action, userId, email) {
+      try {
+        if (action === 'delete') {
+          if (!confirm(`Удалить пользователя ${email}? Его пациенты и документы будут переназначены на вас.`)) return;
+          const res = await apiFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+          if (!res.ok && res.status !== 204) {
+            const d = await res.json().catch(() => ({}));
+            throw new Error(d.detail || 'Ошибка удаления');
+          }
+        } else {
+          const res = await apiFetch(`/api/admin/users/${userId}/${action}`, { method: 'POST' });
+          if (!res.ok) {
+            const d = await res.json().catch(() => ({}));
+            throw new Error(d.detail || 'Ошибка операции');
+          }
+        }
+        await loadUsers();
+      } catch (err) {
+        alert(err.message || 'Ошибка');
+      }
+    }
+
     async function loadAdmin() {
       if (!requireAuth()) return;
       setupLogout();
       const me = await fetchCurrentUser();
+      currentAdmin = me;
       if (me.role !== 'admin' && me.role !== 'super_admin') {
         alert('Доступ запрещён');
         window.location.href = '/';
@@ -69,18 +126,7 @@
         <p>Tenant'ов: ${h.tenants_count}, пользователей: ${h.users_count}, пациентов: ${h.patients_count}</p>
       `;
 
-      const users = await apiFetch('/api/admin/users');
-      const udata = await users.json();
-      const utbody = document.querySelector('#users-table tbody');
-      utbody.innerHTML = udata.map(u => `
-        <tr>
-          <td>${u.id}</td>
-          <td>${u.email}</td>
-          <td>${u.full_name}</td>
-          <td>${u.role}</td>
-          <td>${u.is_blocked ? 'заблокирован' : 'активен'}</td>
-        </tr>
-      `).join('');
+      await loadUsers();
 
       const audit = await apiFetch('/api/admin/audit?limit=50');
       const adata = await audit.json();
