@@ -2,9 +2,8 @@ services:
   app:
     container_name: medinsight-app
     restart: unless-stopped
-    ports:
-      - "${APP_PORT:-8000}:8000"
-      - "80:8000"
+    # Port mapping (incl. :80) is defined in the base docker-compose.yml so the
+    # domain works under any `docker compose up`, dev or prod.
     environment:
       DATABASE_URL: sqlite:////app/data/medinsight.db
       STORAGE_PATH: /app/storage
