@@ -23,16 +23,6 @@ services:
       CHROMA_PERSIST_DIR: /app/chroma_data
     ports:
       - "${APP_PORT:-8000}:8000"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.medinsight.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.medinsight.entrypoints=websecure"
-      - "traefik.http.routers.medinsight.tls.certresolver=letsencrypt"
-      - "traefik.http.services.medinsight.loadbalancer.server.port=8000"
-      - "traefik.http.routers.medinsight-http.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.medinsight-http.entrypoints=web"
-      - "traefik.http.routers.medinsight-http.middlewares=medinsight-https"
-      - "traefik.http.middlewares.medinsight-https.redirectscheme.scheme=https"
     volumes:
       - ./storage:/app/storage
       - ./secrets:/app/secrets
@@ -96,12 +86,10 @@ services:
     restart: unless-stopped
     profiles:
       - production
-    environment:
-      # Pin Docker API version; Traefik's default is too old for this daemon.
-      DOCKER_API_VERSION: "1.44"
     command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
+      # File provider (no Docker socket — avoids API version negotiation issues)
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
@@ -112,8 +100,10 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik:/etc/traefik/dynamic:ro
       - traefik-certs:/letsencrypt
+    depends_on:
+      - app
     networks:
       - medinsight-net
 
