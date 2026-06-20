@@ -69,10 +69,8 @@ services:
       - .env
     environment:
       DATABASE_URL: sqlite:////app/data/medinsight.db
-    command: ["bash", "scripts/start_celery_beat.sh"]
-    environment:
-      DATABASE_URL: sqlite:////app/data/medinsight.db
       CHROMA_PERSIST_DIR: /app/chroma_data
+    command: ["bash", "scripts/start_celery_beat.sh"]
     volumes:
       - medinsight-data:/app/data
       - medinsight-chroma:/app/chroma_data
