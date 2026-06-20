@@ -1,0 +1,41 @@
+---
+description: Always commit and deploy to the VPS after code changes
+alwaysApply: true
+---
+
+# Auto Commit & Deploy
+
+After making any code change in this repository, ALWAYS commit and deploy to the
+production VPS — do not wait to be asked each time.
+
+## Workflow
+
+1. **Commit** the change to `main` with a clear Conventional-Commits message.
+2. **Push**: `git push origin main` (the VPS deploy pulls from `origin/main`).
+3. **Deploy on the VPS** over SSH (host alias `medinsight-vps`, user `smdg`,
+   `186.246.3.65`):
+
+```bash
+ssh medinsight-vps 'cd ~/medinsight \
+  && git fetch origin main && git reset --hard origin/main \
+  && chmod +x deploy.sh scripts/*.sh \
+  && nohup ./deploy.sh production > deploy.log 2>&1 &'
+```
+
+4. **Verify** after the build finishes:
+
+```bash
+ssh medinsight-vps 'cd ~/medinsight \
+  && docker compose -f docker-compose.yml -f docker-compose.prod.yml ps \
+  && curl -s localhost:8000/health/ready'
+```
+
+## Notes
+
+- The app dir on the VPS is `~/medinsight` (`/home/smdg/medinsight`).
+- `.env` on the VPS is NOT in git; when adding new env vars, append them to the
+  VPS `.env` (config defaults also cover missing vars).
+- The Docker build can take several minutes; run `deploy.sh` in the background
+  and poll `deploy.log` instead of blocking.
+- Never commit secrets (`.env`, `secrets/`).
+- Deploy/push/SSH steps require approval; surface the approval rather than skipping the deploy.
