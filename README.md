@@ -188,9 +188,15 @@ curl -X POST http://localhost:8000/api/analytics/insights/1 \
 
 ## Роли
 
-- `doctor` — стандартный доступ
-- `researcher` — стандартный доступ
-- `admin` — может удалять пациентов
+- `super_admin` — все клиники, управление системой
+- `admin` — полный доступ в своей клинике
+- `head_of_department` — все пациенты своего отделения
+- `doctor` — свои пациенты + чтение пациентов своего отделения
+- `nurse` — чтение пациентов своего отделения
+- `researcher` — анонимизированные данные
+- `viewer` — только просмотр
+
+Подробнее — раздел «Разграничение доступа по отделениям».
 
 ## Лицензия
 
@@ -211,9 +217,14 @@ MIT
 |------|-------|
 | `super_admin` | Все tenant'ы, управление системой |
 | `admin` | Полный доступ в своей клинике, пользователи, аудит |
-| `doctor` | Свои пациенты (CRUD), просмотр всех пациентов клиники |
+| `head_of_department` | Все пациенты своего отделения (CRUD) |
+| `doctor` | Свои пациенты (CRUD) + чтение пациентов своего отделения |
+| `nurse` | Чтение пациентов своего отделения |
 | `researcher` | Анонимизированные данные клиники |
 | `viewer` | Только просмотр |
+
+> Флаг `can_see_all_patients=true` у пользователя снимает ограничение по
+> отделению — он видит всех пациентов клиники независимо от роли.
 
 ### Шифрование (age)
 
@@ -232,7 +243,13 @@ python scripts/generate_encryption_key.py
 |-------|------|----------|
 | POST | `/api/admin/tenants` | Создать клинику (super_admin) |
 | GET | `/api/admin/tenants` | Список клиник |
-| POST | `/api/admin/users` | Создать пользователя |
+| POST | `/api/admin/users` | Создать пользователя (с `department_id`, `can_see_all_patients`) |
+| GET | `/api/admin/users` | Список пользователей |
+| PUT | `/api/admin/users/{id}/role` | Изменить роль |
+| POST | `/api/admin/users/{id}/block` | Деактивировать пользователя |
+| POST | `/api/admin/users/{id}/unblock` | Активировать пользователя |
+| DELETE | `/api/admin/users/{id}` | Удалить (записи переназначаются на админа) |
+| POST/GET/PUT/DELETE | `/api/admin/departments` | Управление отделениями |
 | GET | `/api/admin/audit` | Журнал аудита |
 | GET | `/api/admin/health` | Системное здоровье |
 | POST | `/api/admin/encryption/rotate` | Ротация ключа (super_admin) |
@@ -353,3 +370,75 @@ python scripts/test_phase4.py
 > **ChromaDB опционален.** Пакет `chromadb` тянет `onnxruntime` (~200 МБ).
 > Для лёгкого деплоя его можно закомментировать в `requirements.txt` —
 > self-healing продолжит работать через SQL keyword-fallback.
+
+## Разграничение доступа по отделениям
+
+Доступ к пациентам ограничивается отделением (`Department`).
+
+### Модель данных
+
+```
+TENANT 1—* DEPARTMENT 1—* USER
+TENANT 1—* PATIENT *—1 DEPARTMENT
+USER (attending_doctor_id) 1—* PATIENT
+```
+
+- **Department**: `id`, `tenant_id`, `name`, `head_doctor_id?`
+- **User**: `+ department_id?`, `+ can_see_all_patients` (default `false`)
+- **Patient**: `+ department_id` (обязателен при создании), `+ attending_doctor_id?`
+
+### Правила видимости пациентов
+
+| Роль | Что видит |
+|------|-----------|
+| `super_admin` | Все пациенты всех клиник |
+| `admin` | Все пациенты своей клиники |
+| `head_of_department` | Все пациенты своего отделения |
+| `doctor` | Свои пациенты + все пациенты своего отделения (чтение) |
+| `nurse` | Чтение пациентов своего отделения |
+| `researcher` | Анонимизированные данные (без ПДн) |
+
+Создавать/менять пациентов могут `super_admin`, `admin`, `head_of_department`,
+`doctor`. Ограничение распространяется и на документы/прогнозы пациента, а
+дашборд скоупится по доступным пациентам (есть фильтр `?department_id=`).
+
+### Управление отделениями
+
+```
+POST   /api/admin/departments      # {"name": "...", "tenant_id"?, "head_doctor_id"?}
+GET    /api/admin/departments
+PUT    /api/admin/departments/{id}
+DELETE /api/admin/departments/{id}  # пациенты/сотрудники открепляются
+```
+
+Создать стандартный набор отделений для тенанта:
+
+```bash
+docker compose exec app python scripts/seed_departments.py default
+```
+
+> При создании пациента **обязательно** указывать `department_id`. У сотрудников
+> (`doctor`/`nurse`/`head_of_department`) задавайте `department_id`, иначе они
+> не увидят пациентов отделения. Пациенты без отделения видны только админам.
+
+## HTTPS (production)
+
+В production трафик проксирует **Traefik** (порты 80/443) с автоматическим
+сертификатом **Let's Encrypt** для `${DOMAIN}` и редиректом HTTP→HTTPS.
+
+- Маршрутизация — через файловый провайдер `traefik/dynamic.yml` (без Docker
+  socket: на новых демонах Traefik не согласует версию Docker API).
+- Приложение слушает только `8000`; порты 80/443 занимает Traefik.
+- В `.env` задайте `DOMAIN` и `ACME_EMAIL`.
+
+```bash
+./deploy.sh production   # поднимает app + redis + celery + traefik (профиль production)
+```
+
+Деплой автоматизирован через GitHub Actions (`.github/workflows/deploy.yml`):
+push в `main` → тесты → SSH-деплой на VPS (`./deploy.sh production`).
+
+## Мобильная адаптация
+
+На экранах ≤768px навигация сворачивается в «гамбургер»-меню (выезжающая
+панель со скрытыми страницами), таблицы получают горизонтальный скролл.
