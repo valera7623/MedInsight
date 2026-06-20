@@ -347,7 +347,13 @@ body {
   .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
 
   /* Mobile nav: hamburger toggles a stacked dropdown of the hidden pages */
-  .navbar { flex-wrap: wrap; gap: 0.5rem; padding: 0 1rem; }
+  .navbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    height: auto;
+    min-height: 56px;
+  }
   .nav-brand { order: 1; flex: 1; }
   .nav-toggle { display: block; order: 2; }
   .navbar > #logout-btn { order: 3; }
@@ -358,12 +364,24 @@ body {
     display: none;
     flex-direction: column;
     gap: 0.25rem;
-    padding: 0.5rem 0;
+    /* full-bleed panel with its own solid background */
+    margin: 0.5rem -1rem -0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--card-bg);
     border-top: 1px solid var(--border);
   }
   .navbar.nav-open .nav-links { display: flex; }
-  .nav-links a { padding: 0.6rem 0.5rem; border-radius: 6px; }
-  .nav-links a:hover, .nav-links a.active { background: var(--bg, #f1f5f9); }
+  .nav-links a {
+    color: var(--text);
+    font-size: 0.95rem;
+    padding: 0.7rem 0.5rem;
+    border-radius: 6px;
+  }
+  .nav-links a:hover, .nav-links a.active {
+    background: var(--bg);
+    color: var(--primary);
+    font-weight: 600;
+  }
 
   .data-table { display: block; overflow-x: auto; white-space: nowrap; }
   .header-actions { width: 100%; }
