@@ -74,6 +74,17 @@ body {
 }
 .nav-links a:hover, .nav-links a.active { color: var(--primary); font-weight: 500; }
 
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--text, #1e293b);
+  padding: 0.25rem 0.5rem;
+}
+
 /* Layout */
 .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
 
@@ -319,4 +330,26 @@ body {
 @media (max-width: 768px) {
   .stats-grid, .charts-grid, .form-row, .risk-grid { grid-template-columns: 1fr; }
   .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+
+  /* Mobile nav: hamburger toggles a stacked dropdown of the hidden pages */
+  .navbar { flex-wrap: wrap; gap: 0.5rem; padding: 0 1rem; }
+  .nav-brand { order: 1; flex: 1; }
+  .nav-toggle { display: block; order: 2; }
+  .navbar > #logout-btn { order: 3; }
+  .nav-links {
+    order: 4;
+    flex-basis: 100%;
+    width: 100%;
+    display: none;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--border);
+  }
+  .navbar.nav-open .nav-links { display: flex; }
+  .nav-links a { padding: 0.6rem 0.5rem; border-radius: 6px; }
+  .nav-links a:hover, .nav-links a.active { background: var(--bg, #f1f5f9); }
+
+  .data-table { display: block; overflow-x: auto; white-space: nowrap; }
+  .header-actions { width: 100%; }
 }

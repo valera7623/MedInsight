@@ -62,6 +62,28 @@ function setupLogout() {
   }
 }
 
+function setupNav() {
+  const toggle = document.getElementById('nav-toggle');
+  const navbar = document.querySelector('.navbar');
+  if (!toggle || !navbar) return;
+
+  const close = () => {
+    navbar.classList.remove('nav-open');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.textContent = '☰';
+  };
+
+  toggle.addEventListener('click', () => {
+    const open = navbar.classList.toggle('nav-open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.textContent = open ? '✕' : '☰';
+  });
+
+  navbar.querySelectorAll('.nav-links a').forEach((a) => a.addEventListener('click', close));
+}
+
+document.addEventListener('DOMContentLoaded', setupNav);
+
 function formatApiError(detail) {
   if (Array.isArray(detail)) {
     return detail.map((d) => d.msg || JSON.stringify(d)).join(', ');
