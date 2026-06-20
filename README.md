@@ -99,8 +99,9 @@ OPENAI_MODEL=gpt-4o-mini
 
 | Метод | Путь | Описание |
 |-------|------|----------|
-| POST | `/api/auth/register` | Регистрация |
-| POST | `/api/auth/login` | Вход, получение JWT |
+| POST | `/api/auth/register` | Регистрация (rate limit: 5/час) |
+| POST | `/api/auth/login` | Вход, получение JWT (rate limit: 10/мин) |
+| POST | `/api/auth/request-reset` | Запрос сброса пароля (rate limit: 3/час) |
 
 ### Пациенты (JWT required)
 
@@ -442,3 +443,121 @@ push в `main` → тесты → SSH-деплой на VPS (`./deploy.sh produc
 
 На экранах ≤768px навигация сворачивается в «гамбургер»-меню (выезжающая
 панель со скрытыми страницами), таблицы получают горизонтальный скролл.
+
+## Фаза 5: Production-ready (Healthchecks, Rate Limiting, Graceful Shutdown)
+
+### Healthchecks
+
+Эндпоинты для Docker/Kubernetes probe и мониторинга:
+
+| Метод | Путь | Назначение | Коды ответа |
+|-------|------|------------|-------------|
+| GET | `/health` | Базовая проверка процесса | `200` `{"status":"ok","version":"1.0.0"}` |
+| GET | `/health/live` | **Liveness** probe (жив ли процесс) | `200` `{"status":"alive"}` |
+| GET | `/health/ready` | **Readiness** probe (готов ли принимать трафик) | `200` всё ОК / `503` есть проблема |
+| GET | `/metrics` | Prometheus-метрики | `200` (text/plain) |
+
+`/health/ready` проверяет зависимости и возвращает детали по каждой:
+
+- **database** — `SELECT 1` (обязательная; падение → `503`)
+- **redis** — `PING` (обязательная; падение → `503`)
+- **celery** — `control.ping(timeout=2)` (опциональная; деградация, не `503`)
+- **chromadb** — `list_collections()` если `SELF_HEALING_ENABLED=true` (опциональная)
+
+Пример ответа `503`:
+
+```json
+{
+  "status": "unavailable",
+  "version": "1.0.0",
+  "checks": {
+    "database": {"ok": true, "detail": "ok", "required": true},
+    "redis": {"ok": false, "detail": "ping failed", "required": true},
+    "celery": {"ok": true, "detail": "1 worker(s)", "required": false}
+  }
+}
+```
+
+Docker healthcheck (в `docker-compose.yml` для сервиса `app`):
+
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+```
+
+`celery_worker`, `celery_beat` и `traefik` стартуют только после того, как
+`app` и `redis` стали `healthy` (`depends_on: condition: service_healthy`).
+
+### Rate Limiting
+
+Защита от брутфорса/DDoS через **sliding window counter** на Redis
+(ключ `rate_limit:{ip}:{endpoint}`, sorted set с временными метками). При
+превышении возвращается `429 Too Many Requests` с заголовком `Retry-After`.
+
+| Эндпоинт | Лимит | Переменная |
+|----------|-------|------------|
+| `POST /api/auth/register` | 5 запросов / час | `RATE_LIMIT_REGISTER_PER_HOUR` |
+| `POST /api/auth/login` | 10 запросов / минуту | `RATE_LIMIT_LOGIN_PER_MINUTE` |
+| `POST /api/auth/request-reset` | 3 запроса / час | `RATE_LIMIT_RESET_PER_HOUR` |
+
+- IP клиента определяется с учётом reverse-proxy (`X-Forwarded-For` / `X-Real-IP`).
+- **Fail-open**: если Redis недоступен или `RATE_LIMIT_ENABLED=false`, запросы
+  пропускаются — сбой инфраструктуры не блокирует пользователей.
+- Декоратор многоразовый: `@rate_limit(limit=5, period=3600, name="...")`
+  (handler должен принимать `request: Request`).
+- Метрика `rate_limit_exceeded_total{endpoint, ip_hash}` инкрементируется при
+  каждом отказе (IP хэшируется для приватности).
+
+### Graceful Shutdown
+
+При получении `SIGTERM` / `SIGINT` (`docker stop`, deploy, Ctrl+C) приложение
+завершается аккуратно. Логика вынесена в `ShutdownManager`
+(`app/core/shutdown.py`): обработчики выполняются последовательно, каждый со
+своим таймаутом, сбой одного не прерывает остальные, вся цепочка защищена
+`asyncio.shield`.
+
+Порядок шагов (каждый логируется в консоль):
+
+1. **drain_requests** — дождаться завершения текущих запросов
+   (до `GRACEFUL_SHUTDOWN_TIMEOUT` сек, по умолчанию 30).
+2. **revoke_celery_tasks** — отменить активные задачи Celery (`revoke(terminate=True)`).
+3. **close_database** — `engine.dispose()`.
+4. **close_redis** — закрыть пул соединений Redis.
+5. **close_chromadb** — очистить системный кэш ChromaDB.
+6. **close_executor** — `ThreadPoolExecutor.shutdown(wait=True)`.
+
+Регистрация в `app/main.py` через `lifespan`; обработчик идемпотентен (повторный
+вызов из lifespan/сигнала безопасен).
+
+### Prometheus-метрики
+
+Доступны на `GET /metrics` (no-op, если `prometheus-client` не установлен):
+
+- `rate_limit_exceeded_total{endpoint, ip_hash}` — Counter отказов rate limiting.
+- `health_status{component}` — Gauge готовности зависимости (`1`/`0`),
+  компоненты: `database`, `redis`, `celery`, `chromadb`, `overall`.
+
+### Тест Фазы 5
+
+```bash
+scripts/test_health.sh                  # локально (http://localhost:8000)
+scripts/test_health.sh https://your-domain
+```
+
+Скрипт проверяет `/health`, `/health/live`, `/health/ready` и делает 11 запросов
+к `/api/auth/login` — последний должен вернуть `429`.
+
+### Переменные окружения (Фаза 5)
+
+```env
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_LOGIN_PER_MINUTE=10
+RATE_LIMIT_REGISTER_PER_HOUR=5
+RATE_LIMIT_RESET_PER_HOUR=3
+GRACEFUL_SHUTDOWN_TIMEOUT=30
+APP_VERSION=1.0.0
+```

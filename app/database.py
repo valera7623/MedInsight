@@ -45,6 +45,15 @@ def get_db():
         db.close()
 
 
+def close_db_connection() -> None:
+    """Dispose the SQLAlchemy engine and its connection pool (graceful shutdown)."""
+    try:
+        engine.dispose()
+        logger.info("Database engine disposed")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Error disposing database engine: %s", exc)
+
+
 def _add_column_if_missing(conn, table: str, column: str, col_type: str, default: str | None = None):
     inspector = inspect(engine)
     if table not in inspector.get_table_names():

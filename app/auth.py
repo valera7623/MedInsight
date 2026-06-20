@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
+from app.middleware.rate_limit import rate_limit
 from app.models import Tenant, User
 from app.services.access import ROLES, is_super_admin, require_role
 from app.services.audit import log_audit
@@ -147,8 +148,18 @@ def list_public_tenants(db: Annotated[Session, Depends(get_db)]):
     return db.query(Tenant).filter(Tenant.is_active.is_(True)).order_by(Tenant.name).all()
 
 
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+    subdomain: str | None = None
+
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register(data: UserRegister, db: Annotated[Session, Depends(get_db)]):
+@rate_limit(
+    limit=settings.RATE_LIMIT_REGISTER_PER_HOUR,
+    period=3600,
+    name="auth_register",
+)
+def register(request: Request, data: UserRegister, db: Annotated[Session, Depends(get_db)]):
     if data.role not in VALID_REGISTER_ROLES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role for self-registration")
 
@@ -178,6 +189,11 @@ def register(data: UserRegister, db: Annotated[Session, Depends(get_db)]):
 
 
 @router.post("/login", response_model=TokenResponse)
+@rate_limit(
+    limit=settings.RATE_LIMIT_LOGIN_PER_MINUTE,
+    period=60,
+    name="auth_login",
+)
 def login(data: UserLogin, request: Request, db: Annotated[Session, Depends(get_db)]):
     tenant = resolve_tenant_for_auth(db, data.subdomain)
 
@@ -210,6 +226,43 @@ def login(data: UserLogin, request: Request, db: Annotated[Session, Depends(get_
         tenant_id=user.tenant_id,
         role=user.role,
     )
+
+
+@router.post("/request-reset", status_code=status.HTTP_202_ACCEPTED)
+@rate_limit(
+    limit=settings.RATE_LIMIT_RESET_PER_HOUR,
+    period=3600,
+    name="auth_request_reset",
+)
+def request_reset(
+    request: Request,
+    data: PasswordResetRequest,
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Initiate a password reset.
+
+    Always returns a generic 202 response regardless of whether the email
+    exists, to avoid account enumeration. Rate limited to throttle abuse.
+    """
+    tenant = resolve_tenant_for_auth(db, data.subdomain)
+    query = db.query(User).filter(User.email == data.email)
+    if tenant is not None:
+        query = query.filter(User.tenant_id == tenant.id)
+    user = query.first()
+    if user:
+        log_audit(
+            db,
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            action="password_reset_requested",
+            resource_type="user",
+            resource_id=user.id,
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+        )
+        # NOTE: actual reset-email dispatch is wired in the notification layer.
+
+    return {"detail": "If the email exists, reset instructions have been sent."}
 
 
 @router.get("/me", response_model=UserResponse)

@@ -70,5 +70,17 @@ class Settings(BaseSettings):
     ENTERPRISE_PRICE_RUB: int = 999000  # kopecks (9990 ₽)
     ENTERPRISE_PRICE_USD: int = 9999  # cents ($99.99)
 
+    # Phase 5: Rate Limiting
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_LOGIN_PER_MINUTE: int = 10
+    RATE_LIMIT_REGISTER_PER_HOUR: int = 5
+    RATE_LIMIT_RESET_PER_HOUR: int = 3
+
+    # Phase 5: Graceful Shutdown
+    GRACEFUL_SHUTDOWN_TIMEOUT: int = 30
+
+    # Phase 5: App version (exposed via /health)
+    APP_VERSION: str = "1.0.0"
+
 
 settings = Settings()
