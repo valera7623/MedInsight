@@ -1,41 +1,40 @@
 ---
-description: Always commit and deploy to the VPS after code changes
+description: Всегда коммитить и деплоить через GitHub Actions после изменений кода
 alwaysApply: true
 ---
 
-# Auto Commit & Deploy
+# Авто-коммит и деплой через GitHub Actions
 
-After making any code change in this repository, ALWAYS commit and deploy to the
-production VPS — do not wait to be asked each time.
+После любого изменения кода в репозитории ВСЕГДА коммить и деплой — не ждать
+отдельной просьбы каждый раз. Деплой выполняется через GitHub Actions, а НЕ
+ручным SSH на VPS.
 
-## Workflow
+## Рабочий процесс
 
-1. **Commit** the change to `main` with a clear Conventional-Commits message.
-2. **Push**: `git push origin main` (the VPS deploy pulls from `origin/main`).
-3. **Deploy on the VPS** over SSH (host alias `medinsight-vps`, user `smdg`,
-   `186.246.3.65`):
-
-```bash
-ssh medinsight-vps 'cd ~/medinsight \
-  && git fetch origin main && git reset --hard origin/main \
-  && chmod +x deploy.sh scripts/*.sh \
-  && nohup ./deploy.sh production > deploy.log 2>&1 &'
-```
-
-4. **Verify** after the build finishes:
+1. **Коммит** в `main` с понятным сообщением (Conventional Commits).
+2. **Push**: `git push origin main` — это запускает workflow
+   `.github/workflows/deploy.yml` (job `test` → job `deploy` по SSH на VPS).
+3. **Отслеживание** запуска через `gh`:
 
 ```bash
-ssh medinsight-vps 'cd ~/medinsight \
-  && docker compose -f docker-compose.yml -f docker-compose.prod.yml ps \
-  && curl -s localhost:8000/health/ready'
+gh run list --workflow=deploy.yml --limit 1
+gh run watch --exit-status   # дождаться завершения, вернёт ненулевой код при ошибке
 ```
 
-## Notes
+4. **Проверка после успешного деплоя** (опционально, если нужен прод-смоук):
 
-- The app dir on the VPS is `~/medinsight` (`/home/smdg/medinsight`).
-- `.env` on the VPS is NOT in git; when adding new env vars, append them to the
-  VPS `.env` (config defaults also cover missing vars).
-- The Docker build can take several minutes; run `deploy.sh` in the background
-  and poll `deploy.log` instead of blocking.
-- Never commit secrets (`.env`, `secrets/`).
-- Deploy/push/SSH steps require approval; surface the approval rather than skipping the deploy.
+```bash
+ssh medinsight-vps 'curl -s localhost:8000/health/ready'
+```
+
+## Заметки
+
+- Репозиторий: `valera7623/MedInsight`. Деплой только из ветки `main`.
+- Workflow сам делает на VPS `git reset --hard origin/main` и `./deploy.sh production`.
+- Прод-секреты (`SECRET_KEY`, `APP_PORT`, `CORS_ORIGINS`) берутся из GitHub Secrets;
+  новые переменные окружения добавляй и в `.env.example`, и при необходимости в
+  Secrets / на VPS вручную.
+- Если workflow упал — смотреть логи: `gh run view --log-failed`.
+- Никогда не коммитить секреты (`.env`, `secrets/`).
+- Прямой SSH-деплой использовать только как запасной вариант, если Actions недоступен.
+- `git push` в `main` требует подтверждения — показывай запрос на подтверждение, а не пропускай деплой.
