@@ -173,6 +173,24 @@ function openModal(id) {
   document.getElementById(id).classList.remove('hidden');
 }
 
+async function loadDepartments(selectId, { includeAll = false } = {}) {
+  const select = document.getElementById(selectId);
+  if (!select) return [];
+  try {
+    const res = await apiFetch('/api/admin/departments');
+    const data = await res.json();
+    if (!res.ok) return [];
+    const head = includeAll
+      ? '<option value="">Все отделения</option>'
+      : '<option value="">— Выберите отделение —</option>';
+    select.innerHTML = head + data.map((d) => `<option value="${d.id}">${d.name}</option>`).join('');
+    return data;
+  } catch (e) {
+    console.error('departments', e);
+    return [];
+  }
+}
+
 function setupPatientForm(onSuccess) {
   const form = document.getElementById('patient-form');
   if (!form) return;
@@ -182,12 +200,20 @@ function setupPatientForm(onSuccess) {
     const errEl = document.getElementById('patient-error');
     errEl.classList.add('hidden');
 
+    const departmentId = document.getElementById('p-department').value;
+    if (!departmentId) {
+      errEl.textContent = 'Выберите отделение';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
     const payload = {
       first_name: document.getElementById('p-first-name').value,
       last_name: document.getElementById('p-last-name').value,
       birth_date: document.getElementById('p-birth-date').value,
       gender: document.getElementById('p-gender').value,
       phone: document.getElementById('p-phone').value,
+      department_id: parseInt(departmentId, 10),
     };
     const middleName = document.getElementById('p-middle-name').value.trim();
     if (middleName) payload.middle_name = middleName;
@@ -241,8 +267,14 @@ function riskClass(value) {
   return `risk-${riskLevel(value)}`;
 }
 
+function currentDeptFilter() {
+  const el = document.getElementById('dept-filter');
+  return el && el.value ? `?department_id=${el.value}` : '';
+}
+
 async function loadDashboard() {
-  const res = await apiFetch('/api/analytics/dashboard');
+  const q = currentDeptFilter();
+  const res = await apiFetch(`/api/analytics/dashboard${q}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || 'Ошибка загрузки дашборда');
 
@@ -408,7 +440,7 @@ async function loadPredictionsDashboard() {
   if (!statEl) return;
 
   try {
-    const res = await apiFetch('/api/analytics/dashboard/predictions');
+    const res = await apiFetch(`/api/analytics/dashboard/predictions${currentDeptFilter()}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Ошибка загрузки прогнозов');
 
@@ -630,14 +662,24 @@ function initDashboard() {
   setupUploadForm(() => loadDashboard());
   setupWebhookForm();
 
-  document.getElementById('new-patient-btn').addEventListener('click', () => openModal('patient-modal'));
+  document.getElementById('new-patient-btn').addEventListener('click', async () => {
+    await loadDepartments('p-department');
+    openModal('patient-modal');
+  });
   document.getElementById('upload-doc-btn').addEventListener('click', async () => {
     await loadPatientsForSelect('upload-patient');
     openModal('upload-modal');
   });
 
+  const deptFilter = document.getElementById('dept-filter');
+  if (deptFilter) deptFilter.addEventListener('change', () => loadDashboard());
+
   fetchCurrentUser()
-    .then(() => { showAdminNav(); return loadDashboard(); })
+    .then(async () => {
+      showAdminNav();
+      await loadDepartments('dept-filter', { includeAll: true });
+      return loadDashboard();
+    })
     .catch(err => console.error(err));
 }
 
@@ -869,7 +911,10 @@ function initPatientsPage() {
   setupModals();
   setupPatientForm(() => loadPatientsList(patientsPage));
 
-  document.getElementById('new-patient-btn').addEventListener('click', () => openModal('patient-modal'));
+  document.getElementById('new-patient-btn').addEventListener('click', async () => {
+    await loadDepartments('p-department');
+    openModal('patient-modal');
+  });
   document.getElementById('prev-page').addEventListener('click', () => loadPatientsList(patientsPage - 1));
   document.getElementById('next-page').addEventListener('click', () => loadPatientsList(patientsPage + 1));
 

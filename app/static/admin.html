@@ -29,10 +29,24 @@
     </div>
 
     <div class="section-card">
+      <h2>Отделения</h2>
+      <form id="dept-form" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
+        <input type="text" id="dept-name" placeholder="Название отделения" required style="flex:1;min-width:220px">
+        <button type="submit" class="btn btn-primary btn-sm">+ Создать отделение</button>
+      </form>
+      <table class="data-table" id="departments-table">
+        <thead>
+          <tr><th>ID</th><th>Название</th><th>Зав. отделением (ID)</th><th>Действия</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-card">
       <h2>Пользователи</h2>
       <table class="data-table" id="users-table">
         <thead>
-          <tr><th>ID</th><th>Email</th><th>ФИО</th><th>Роль</th><th>Статус</th><th>Действия</th></tr>
+          <tr><th>ID</th><th>Email</th><th>ФИО</th><th>Роль</th><th>Отдел</th><th>Статус</th><th>Действия</th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -69,12 +83,16 @@
         } else {
           actions = '<span style="color:#94a3b8">—</span>';
         }
+        const deptLabel = u.can_see_all_patients
+          ? 'все'
+          : (u.department_id != null ? `#${u.department_id}` : '—');
         return `
           <tr>
             <td>${u.id}</td>
             <td>${u.email}</td>
             <td>${u.full_name}</td>
             <td>${u.role}</td>
+            <td>${deptLabel}</td>
             <td>${u.is_blocked ? 'заблокирован' : 'активен'}</td>
             <td>${actions}</td>
           </tr>`;
@@ -107,6 +125,50 @@
       }
     }
 
+    async function loadDepartmentsAdmin() {
+      const tbody = document.querySelector('#departments-table tbody');
+      if (!tbody) return;
+      const res = await apiFetch('/api/admin/departments');
+      const data = await res.json();
+      if (!res.ok) return;
+      tbody.innerHTML = data.length
+        ? data.map(d => `
+            <tr>
+              <td>${d.id}</td>
+              <td>${d.name}</td>
+              <td>${d.head_doctor_id != null ? d.head_doctor_id : '—'}</td>
+              <td><button class="btn btn-danger btn-sm dept-del" data-id="${d.id}" data-name="${d.name}">Удалить</button></td>
+            </tr>`).join('')
+        : '<tr><td colspan="4" style="text-align:center;color:#64748b">Отделений нет</td></tr>';
+      tbody.querySelectorAll('.dept-del').forEach(b => b.addEventListener('click', () => deleteDepartment(b.dataset.id, b.dataset.name)));
+    }
+
+    async function deleteDepartment(id, name) {
+      if (!confirm(`Удалить отделение «${name}»? Пациенты и сотрудники отделения будут откреплены.`)) return;
+      const res = await apiFetch(`/api/admin/departments/${id}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 204) {
+        const d = await res.json().catch(() => ({}));
+        alert(d.detail || 'Ошибка удаления');
+        return;
+      }
+      await loadDepartmentsAdmin();
+    }
+
+    function setupDeptForm() {
+      const form = document.getElementById('dept-form');
+      if (!form) return;
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('dept-name').value.trim();
+        if (!name) return;
+        const res = await apiFetch('/api/admin/departments', { method: 'POST', body: JSON.stringify({ name }) });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { alert(formatApiError(d.detail) || 'Ошибка создания'); return; }
+        form.reset();
+        await loadDepartmentsAdmin();
+      });
+    }
+
     async function loadAdmin() {
       if (!requireAuth()) return;
       setupLogout();
@@ -127,6 +189,8 @@
         <p>Tenant'ов: ${h.tenants_count}, пользователей: ${h.users_count}, пациентов: ${h.patients_count}</p>
       `;
 
+      setupDeptForm();
+      await loadDepartmentsAdmin();
       await loadUsers();
 
       const audit = await apiFetch('/api/admin/audit?limit=50');

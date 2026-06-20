@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -36,5 +36,6 @@ def dashboard(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
+    department_id: int | None = Query(None),
 ):
-    return get_dashboard_data(db, current_user, get_request_tenant_id(request))
+    return get_dashboard_data(db, current_user, get_request_tenant_id(request), department_id)

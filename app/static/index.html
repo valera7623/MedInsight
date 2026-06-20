@@ -24,6 +24,7 @@
     <header class="page-header">
       <h1>Дашборд</h1>
       <div class="header-actions">
+        <select id="dept-filter" title="Фильтр по отделению"></select>
         <button class="btn btn-primary" id="new-patient-btn">+ Новый пациент</button>
         <button class="btn btn-secondary" id="upload-doc-btn">Загрузить документ</button>
       </div>
@@ -188,6 +189,10 @@
             <label>Email</label>
             <input type="email" id="p-email">
           </div>
+        </div>
+        <div class="form-group">
+          <label>Отделение</label>
+          <select id="p-department" required></select>
         </div>
         <div id="patient-error" class="error-message hidden"></div>
         <div class="modal-actions">

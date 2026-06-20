@@ -7,10 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
-from app.auth import hash_password, require_admin, require_super_admin
+from app.auth import get_current_user, hash_password, require_admin, require_super_admin
 from app.config import settings
 from app.database import get_db
-from app.models import AnalysisJob, AuditLog, Document, Patient, Prediction, Tenant, User
+from app.models import AnalysisJob, AuditLog, Department, Document, Patient, Prediction, Tenant, User
 from app.services.access import ROLES, is_super_admin
 from app.services.audit import log_audit
 from app.services.encryption import rotate_encryption_key
@@ -47,6 +47,8 @@ class UserCreate(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)
     role: str = Field(default="doctor")
     tenant_id: int | None = None
+    department_id: int | None = None
+    can_see_all_patients: bool = False
 
 
 class UserAdminResponse(BaseModel):
@@ -55,7 +57,30 @@ class UserAdminResponse(BaseModel):
     full_name: str
     role: str
     tenant_id: int | None
+    department_id: int | None
+    can_see_all_patients: bool
     is_blocked: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class DepartmentCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    head_doctor_id: int | None = None
+    tenant_id: int | None = None
+
+
+class DepartmentUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    head_doctor_id: int | None = None
+
+
+class DepartmentResponse(BaseModel):
+    id: int
+    tenant_id: int
+    name: str
+    head_doctor_id: int | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -204,12 +229,19 @@ def create_user(
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
 
+    if data.department_id is not None:
+        dept = db.query(Department).filter(Department.id == data.department_id).first()
+        if not dept or (tenant_id is not None and dept.tenant_id != tenant_id):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid department for tenant")
+
     user = User(
         tenant_id=tenant_id,
+        department_id=data.department_id,
         email=data.email,
         password_hash=hash_password(data.password),
         full_name=data.full_name,
         role=data.role,
+        can_see_all_patients=data.can_see_all_patients,
     )
     db.add(user)
     db.commit()
@@ -319,6 +351,91 @@ def delete_user(
     )
 
     db.delete(user)
+    db.commit()
+
+
+def _resolve_admin_tenant(current_user: User, requested_tenant_id: int | None) -> int:
+    if is_super_admin(current_user):
+        if requested_tenant_id is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="tenant_id required")
+        return requested_tenant_id
+    if current_user.tenant_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No tenant")
+    return current_user.tenant_id
+
+
+@router.post("/departments", response_model=DepartmentResponse, status_code=status.HTTP_201_CREATED)
+def create_department(
+    data: DepartmentCreate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(require_admin)],
+):
+    tenant_id = _resolve_admin_tenant(current_user, data.tenant_id)
+    dept = Department(tenant_id=tenant_id, name=data.name, head_doctor_id=data.head_doctor_id)
+    db.add(dept)
+    db.commit()
+    db.refresh(dept)
+    return dept
+
+
+@router.get("/departments", response_model=list[DepartmentResponse])
+def list_departments(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    tenant_id: int | None = Query(None),
+):
+    query = db.query(Department)
+    if is_super_admin(current_user):
+        if tenant_id is not None:
+            query = query.filter(Department.tenant_id == tenant_id)
+    elif current_user.tenant_id is not None:
+        query = query.filter(Department.tenant_id == current_user.tenant_id)
+    else:
+        return []
+    return query.order_by(Department.name).all()
+
+
+def _get_department_owned(db: Session, dept_id: int, current_user: User) -> Department:
+    dept = db.query(Department).filter(Department.id == dept_id).first()
+    if not dept:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
+    if not is_super_admin(current_user) and dept.tenant_id != current_user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    return dept
+
+
+@router.put("/departments/{dept_id}", response_model=DepartmentResponse)
+def update_department(
+    dept_id: int,
+    data: DepartmentUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(require_admin)],
+):
+    dept = _get_department_owned(db, dept_id, current_user)
+    if data.name is not None:
+        dept.name = data.name
+    if data.head_doctor_id is not None:
+        dept.head_doctor_id = data.head_doctor_id
+    db.commit()
+    db.refresh(dept)
+    return dept
+
+
+@router.delete("/departments/{dept_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_department(
+    dept_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(require_admin)],
+):
+    dept = _get_department_owned(db, dept_id, current_user)
+    # Detach references so we don't orphan rows.
+    db.query(Patient).filter(Patient.department_id == dept_id).update(
+        {Patient.department_id: None}, synchronize_session=False
+    )
+    db.query(User).filter(User.department_id == dept_id).update(
+        {User.department_id: None}, synchronize_session=False
+    )
+    db.delete(dept)
     db.commit()
 
 

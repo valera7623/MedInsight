@@ -13,7 +13,7 @@ from app.config import settings
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
 from app.models import AnalysisJob, Document, Patient, User
-from app.services.access import can_upload_document, effective_tenant_id, is_super_admin
+from app.services.access import can_upload_document, can_view_patient, effective_tenant_id, is_super_admin
 from app.services.audit import log_audit
 from app.services.encryption import EncryptionError, decrypt_file, encrypt_bytes, ensure_encryption_key
 from app.services.extractor import extract_entities
@@ -58,6 +58,9 @@ def _get_document_or_404(
         query = query.filter(Document.tenant_id == tid)
     doc = query.first()
     if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    # Department-level access: the user must be allowed to see the patient.
+    if doc.patient is not None and not can_view_patient(user, doc.patient):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     return doc
 
@@ -143,6 +146,8 @@ async def upload_document(
     patient = patient_query.first()
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+    if not can_view_patient(current_user, patient):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Patient outside your scope")
 
     tenant_id = patient.tenant_id
 
@@ -210,17 +215,13 @@ def list_patient_documents(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     tenant_id = effective_tenant_id(current_user, get_request_tenant_id(request))
-    patient = (
-        db.query(Patient)
-        .filter(Patient.id == patient_id, Patient.tenant_id == tenant_id)
-        .first()
-    )
-    if not patient:
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not patient or not can_view_patient(current_user, patient):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
 
     return (
         db.query(Document)
-        .filter(Document.patient_id == patient_id, Document.tenant_id == tenant_id)
+        .filter(Document.patient_id == patient_id, Document.tenant_id == patient.tenant_id)
         .order_by(Document.created_at.desc())
         .all()
     )

@@ -3,7 +3,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -11,7 +11,7 @@ from app.auth import get_current_user
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
 from app.models import AnalysisJob, Patient, Prediction, User
-from app.services.access import can_predict, effective_tenant_id
+from app.services.access import can_predict, can_view_patient, effective_tenant_id, patients_query
 from app.services.summarizer import generate_insights
 from app.tasks.celery_app import redis_available
 from app.tasks.predict_task import predict_risk_task
@@ -78,7 +78,7 @@ def _get_patient_or_404(db: Session, patient_id: int, user: User, request: Reque
     if tid is not None:
         query = query.filter(Patient.tenant_id == tid)
     patient = query.first()
-    if not patient:
+    if not patient or not can_view_patient(user, patient):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
     return patient
 
@@ -248,12 +248,23 @@ def predictions_dashboard(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
+    department_id: int | None = Query(None),
 ):
-    tid = effective_tenant_id(current_user, get_request_tenant_id(request))
-    query = db.query(Prediction)
-    if tid is not None:
-        query = query.filter(Prediction.tenant_id == tid)
-    predictions = query.order_by(Prediction.created_at.desc()).all()
+    # Scope predictions to the patients this user is allowed to see.
+    pq = patients_query(db, current_user, get_request_tenant_id(request))
+    if department_id is not None:
+        pq = pq.filter(Patient.department_id == department_id)
+    accessible_ids = [p.id for p in pq.all()]
+    if not accessible_ids:
+        return PredictionsDashboardResponse(
+            high_risk_patients=[], risk_by_department={}, monthly_trends={"labels": [], "readmission": [], "complication": []}
+        )
+    predictions = (
+        db.query(Prediction)
+        .filter(Prediction.patient_id.in_(accessible_ids))
+        .order_by(Prediction.created_at.desc())
+        .all()
+    )
 
     latest_by_patient: dict[int, Prediction] = {}
     for pred in predictions:

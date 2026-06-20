@@ -24,21 +24,35 @@ class Tenant(Base):
     audit_logs: Mapped[list["AuditLog"]] = relationship("AuditLog", back_populates="tenant")
 
 
+class Department(Base):
+    __tablename__ = "departments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    head_doctor_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (UniqueConstraint("tenant_id", "email", name="uq_user_tenant_email"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     tenant_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=True, index=True)
+    department_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
     email: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="doctor")
+    can_see_all_patients: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     tenant: Mapped["Tenant | None"] = relationship("Tenant", back_populates="users")
-    patients: Mapped[list["Patient"]] = relationship("Patient", back_populates="owner")
+    patients: Mapped[list["Patient"]] = relationship(
+        "Patient", back_populates="owner", foreign_keys="Patient.user_id"
+    )
     documents: Mapped[list["Document"]] = relationship("Document", back_populates="owner")
     predictions: Mapped[list["Prediction"]] = relationship("Prediction", back_populates="owner")
     analysis_jobs: Mapped[list["AnalysisJob"]] = relationship("AnalysisJob", back_populates="owner")
@@ -51,6 +65,8 @@ class Patient(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    department_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
+    attending_doctor_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     middle_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -64,7 +80,7 @@ class Patient(Base):
     )
 
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="patients")
-    owner: Mapped["User"] = relationship("User", back_populates="patients")
+    owner: Mapped["User"] = relationship("User", back_populates="patients", foreign_keys="Patient.user_id")
     documents: Mapped[list["Document"]] = relationship(
         "Document", back_populates="patient", cascade="all, delete-orphan"
     )

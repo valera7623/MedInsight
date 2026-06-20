@@ -3,20 +3,23 @@ from collections import Counter
 from sqlalchemy.orm import Session
 
 from app.models import Document, Patient, User
-from app.services.access import effective_tenant_id
+from app.services.access import patients_query
 
 
-def get_dashboard_data(db: Session, user: User, tenant_id: int | None = None) -> dict:
-    tid = effective_tenant_id(user, tenant_id)
-
-    patients_q = db.query(Patient)
-    documents_q = db.query(Document)
-    if tid is not None:
-        patients_q = patients_q.filter(Patient.tenant_id == tid)
-        documents_q = documents_q.filter(Document.tenant_id == tid)
+def get_dashboard_data(
+    db: Session, user: User, tenant_id: int | None = None, department_id: int | None = None
+) -> dict:
+    patients_q = patients_query(db, user, tenant_id)
+    if department_id is not None:
+        patients_q = patients_q.filter(Patient.department_id == department_id)
 
     patients = patients_q.all()
-    documents = documents_q.all()
+    patient_ids = [p.id for p in patients]
+
+    if patient_ids:
+        documents = db.query(Document).filter(Document.patient_id.in_(patient_ids)).all()
+    else:
+        documents = []
 
     diagnoses_counter: Counter = Counter()
     medications_counter: Counter = Counter()

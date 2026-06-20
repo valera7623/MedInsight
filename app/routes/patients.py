@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
-from app.models import Document, Patient, User
+from app.models import Department, Document, Patient, User
 from app.services.access import (
     anonymize_patient,
     can_create_patient,
@@ -31,6 +31,8 @@ class PatientCreate(BaseModel):
     gender: str = Field(pattern="^(M|F|O)$")
     phone: str = Field(min_length=1, max_length=50)
     email: EmailStr | None = None
+    department_id: int
+    attending_doctor_id: int | None = None
 
 
 class PatientUpdate(BaseModel):
@@ -41,12 +43,16 @@ class PatientUpdate(BaseModel):
     gender: str | None = Field(default=None, pattern="^(M|F|O)$")
     phone: str | None = Field(default=None, min_length=1, max_length=50)
     email: EmailStr | None = None
+    department_id: int | None = None
+    attending_doctor_id: int | None = None
 
 
 class PatientResponse(BaseModel):
     id: int
     tenant_id: int
     user_id: int
+    department_id: int | None = None
+    attending_doctor_id: int | None = None
     first_name: str
     last_name: str
     middle_name: str | None
@@ -100,7 +106,32 @@ def create_patient(
     if tenant_id is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant required")
 
-    patient = Patient(tenant_id=tenant_id, user_id=current_user.id, **data.model_dump())
+    # Department is mandatory and must belong to the patient's tenant.
+    dept = db.query(Department).filter(Department.id == data.department_id).first()
+    if not dept or dept.tenant_id != tenant_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid department for tenant")
+
+    # Department-scoped roles may only create patients within their own department.
+    if current_user.role in ("doctor", "head_of_department") and not getattr(
+        current_user, "can_see_all_patients", False
+    ):
+        if current_user.department_id is not None and current_user.department_id != data.department_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot create patients outside your department",
+            )
+
+    attending_doctor_id = data.attending_doctor_id
+    if attending_doctor_id is None and current_user.role in ("doctor", "head_of_department"):
+        attending_doctor_id = current_user.id
+
+    payload = data.model_dump(exclude={"attending_doctor_id"})
+    patient = Patient(
+        tenant_id=tenant_id,
+        user_id=current_user.id,
+        attending_doctor_id=attending_doctor_id,
+        **payload,
+    )
     db.add(patient)
     db.commit()
     db.refresh(patient)

@@ -71,9 +71,15 @@ def run_migrations():
 
         if "users" in tables:
             _add_column_if_missing(conn, "users", "is_blocked", "BOOLEAN", "0")
+            _add_column_if_missing(conn, "users", "department_id", "INTEGER")
+            _add_column_if_missing(conn, "users", "can_see_all_patients", "BOOLEAN", "0")
 
         if "documents" in tables:
             _add_column_if_missing(conn, "documents", "is_encrypted", "BOOLEAN", "0")
+
+        if "patients" in tables:
+            _add_column_if_missing(conn, "patients", "department_id", "INTEGER")
+            _add_column_if_missing(conn, "patients", "attending_doctor_id", "INTEGER")
 
         # Backfill NULL tenant_id for legacy rows
         if "users" in tables and "tenants" in tables:
