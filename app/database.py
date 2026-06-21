@@ -1,12 +1,14 @@
 import logging
+import time
 from pathlib import Path
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+sql_logger = logging.getLogger("app.database.sql")
 
 
 def sqlite_db_path(url: str) -> Path | None:
@@ -31,6 +33,30 @@ connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith(
 
 engine = create_engine(settings.DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@event.listens_for(engine, "before_cursor_execute")
+def _sql_before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    conn.info.setdefault("_query_start", []).append(time.perf_counter())
+
+
+@event.listens_for(engine, "after_cursor_execute")
+def _sql_after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    stack = conn.info.get("_query_start")
+    if not stack:
+        return
+    duration_ms = (time.perf_counter() - stack.pop()) * 1000
+    # Collapse whitespace so the statement stays on one structured-log line.
+    compact = " ".join(statement.split())
+    if len(compact) > 500:
+        compact = compact[:500] + "…"
+    threshold = settings.LOG_SLOW_QUERY_MS
+    if threshold and duration_ms >= threshold:
+        sql_logger.warning(
+            "Slow SQL query: %.1fms | %s", duration_ms, compact, extra={"duration_ms": round(duration_ms, 1)}
+        )
+    else:
+        sql_logger.debug("SQL query: %.1fms | %s", duration_ms, compact)
 
 
 class Base(DeclarativeBase):

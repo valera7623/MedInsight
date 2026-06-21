@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Annotated, Callable
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import bcrypt
 from jose import JWTError, jwt
@@ -14,6 +14,7 @@ from app.middleware.rate_limit import rate_limit
 from app.models import Tenant, User
 from app.services.access import ROLES, is_super_admin, require_role
 from app.services.audit import log_audit
+from app.services.email import get_email_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer(auto_error=False)
@@ -77,6 +78,13 @@ def create_access_token(user: User) -> str:
         "role": user.role,
         "exp": expire,
     }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def create_email_token(email: str, purpose: str, expire_hours: int) -> str:
+    """Signed, short-lived token for email verification / password reset links."""
+    expire = datetime.utcnow() + timedelta(hours=expire_hours)
+    payload = {"sub": email, "type": purpose, "exp": expire}
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
@@ -159,7 +167,12 @@ class PasswordResetRequest(BaseModel):
     period=3600,
     name="auth_register",
 )
-def register(request: Request, data: UserRegister, db: Annotated[Session, Depends(get_db)]):
+def register(
+    request: Request,
+    data: UserRegister,
+    background_tasks: BackgroundTasks,
+    db: Annotated[Session, Depends(get_db)],
+):
     if data.role not in VALID_REGISTER_ROLES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role for self-registration")
 
@@ -185,6 +198,13 @@ def register(request: Request, data: UserRegister, db: Annotated[Session, Depend
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    if settings.EMAIL_VERIFICATION_ENABLED:
+        token = create_email_token(user.email, "verify", settings.EMAIL_VERIFICATION_EXPIRE_HOURS)
+        background_tasks.add_task(
+            get_email_service().send_verification_email, user.email, token, settings.FRONTEND_URL
+        )
+
     return user
 
 
@@ -237,6 +257,7 @@ def login(data: UserLogin, request: Request, db: Annotated[Session, Depends(get_
 def request_reset(
     request: Request,
     data: PasswordResetRequest,
+    background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
 ):
     """Initiate a password reset.
@@ -260,7 +281,10 @@ def request_reset(
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
         )
-        # NOTE: actual reset-email dispatch is wired in the notification layer.
+        token = create_email_token(user.email, "reset", settings.EMAIL_PASSWORD_RESET_EXPIRE_HOURS)
+        background_tasks.add_task(
+            get_email_service().send_password_reset_email, user.email, token, settings.FRONTEND_URL
+        )
 
     return {"detail": "If the email exists, reset instructions have been sent."}
 

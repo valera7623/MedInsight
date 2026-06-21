@@ -82,5 +82,29 @@ class Settings(BaseSettings):
     # Phase 5: App version (exposed via /health)
     APP_VERSION: str = "1.0.0"
 
+    # Phase 6: Email (SMTP)
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "noreply@medinsight.com"
+    SMTP_USE_TLS: bool = True  # STARTTLS on port 587; set False for port 465 + SMTP_USE_SSL
+    SMTP_USE_SSL: bool = False
+    SMTP_TIMEOUT: float = 10.0
+    EMAIL_ENABLED: bool = True
+    EMAIL_VERIFICATION_ENABLED: bool = True
+    EMAIL_VERIFICATION_EXPIRE_HOURS: int = 24
+    EMAIL_PASSWORD_RESET_EXPIRE_HOURS: int = 2
+    EMAIL_PREDICTION_READY_ENABLED: bool = True
+    EMAIL_LIMIT_EXCEEDED_ENABLED: bool = True
+    FRONTEND_URL: str = "https://medinsight.fileguardian.info"
+
+    # Phase 6: Structured logging
+    LOG_LEVEL: str = "INFO"
+    LOG_JSON_FORMAT: bool = True
+    LOG_INCLUDE_REQUEST_ID: bool = True
+    LOG_INCLUDE_USER_ID: bool = True
+    LOG_SLOW_QUERY_MS: float = 500.0  # log SQL slower than this (0 disables)
+
 
 settings = Settings()

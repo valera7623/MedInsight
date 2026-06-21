@@ -19,6 +19,11 @@ pyrage>=1.2.0
 httpx>=0.27.0
 prometheus-client>=0.20.0
 
+# Phase 6: Email notifications + structured JSON logging
+aiosmtplib>=3.0.0
+structlog>=24.1.0
+Jinja2>=3.1.0
+
 # Phase 4: Payments
 stripe>=11.0.0
 yookassa>=3.5.0

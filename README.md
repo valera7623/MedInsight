@@ -561,3 +561,108 @@ RATE_LIMIT_RESET_PER_HOUR=3
 GRACEFUL_SHUTDOWN_TIMEOUT=30
 APP_VERSION=1.0.0
 ```
+
+## Фаза 6: Email-уведомления + JSON-логи
+
+### Email Notifications
+
+Асинхронная отправка писем через SMTP (`aiosmtplib`) с HTML + plain-text
+шаблонами (`app/templates/email/`). Сервис — `app/services/email.py`
+(`EmailService`). Отправка всегда **fail-safe**: при ошибке пишется лог, но
+запрос/задача не падают. Если `EMAIL_ENABLED=false` или не задан `SMTP_HOST` —
+отправка тихо пропускается.
+
+| Событие | Метод | Когда |
+|---------|-------|-------|
+| Подтверждение регистрации | `send_verification_email` | `POST /api/auth/register` |
+| Сброс пароля | `send_password_reset_email` | `POST /api/auth/request-reset` |
+| Прогноз готов | `send_prediction_ready_email` | после `POST /api/analytics/predict/{id}` (sync и Celery) |
+| Превышение лимита | `send_limit_exceeded_email` | `UsageLimitMiddleware` при `402` (раз в 24ч на тенант) |
+
+Письма из HTTP-эндпоинтов отправляются через `BackgroundTasks` (после ответа),
+из Celery-воркера — синхронно через `asyncio.run`. Ссылки строятся от
+`FRONTEND_URL`. Токены верификации/сброса — подписанные JWT с TTL
+(`EMAIL_VERIFICATION_EXPIRE_HOURS`, `EMAIL_PASSWORD_RESET_EXPIRE_HOURS`).
+
+Настройка (`.env`), для Gmail используйте App Password:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM=noreply@medinsight.com
+EMAIL_ENABLED=true
+FRONTEND_URL=https://medinsight.fileguardian.info
+```
+
+Тест (рендер всех шаблонов + проверка JSON-логов; с `--to` — реальная отправка):
+
+```bash
+python scripts/test_email.py
+python scripts/test_email.py --to you@example.com
+```
+
+### Logging (структурированные JSON-логи)
+
+Логирование настроено через **structlog** (`app/utils/logging.py`) и
+охватывает как сам код, так и библиотеки (uvicorn, sqlalchemy, celery) — всё
+идёт одним пайплайном:
+
+- `LOG_JSON_FORMAT=true` — одна JSON-строка на событие (для ELK / Loki).
+- `LOG_JSON_FORMAT=false` — цветной человекочитаемый вывод (для разработки).
+
+`LoggingMiddleware` (`app/middleware/logging.py`) на каждый запрос:
+
+- присваивает/пробрасывает `X-Request-ID` (correlation id);
+- через `contextvars` (`app/utils/request_context.py`) добавляет в каждый лог
+  `request_id`, `user_id`, `tenant_id`, `ip`, `user_agent`;
+- пишет строку `Request completed` с `method`, `path`, `status_code`,
+  `duration_ms`, `response_size`;
+- ошибки логирует с полным stack trace.
+
+Медленные SQL-запросы (> `LOG_SLOW_QUERY_MS`, мс) логируются отдельно
+(`app.database.sql`).
+
+Пример строки лога (JSON):
+
+```json
+{
+  "timestamp": "2026-01-15T10:30:00.123456Z",
+  "level": "info",
+  "logger": "app.middleware.logging",
+  "request_id": "abc-123-def-456",
+  "user_id": 42,
+  "tenant_id": 1,
+  "ip": "192.168.1.1",
+  "user_agent": "Mozilla/5.0...",
+  "method": "POST",
+  "path": "/api/patients",
+  "status_code": 201,
+  "duration_ms": 45,
+  "message": "Request completed"
+}
+```
+
+Как читать логи в Docker:
+
+```bash
+# «сырые» JSON-логи
+docker compose logs -f app
+
+# красиво через jq (фильтр по конкретному request_id)
+docker compose logs -f app | jq -c 'select(.request_id=="abc-123-def-456")'
+
+# только ошибки
+docker compose logs app | jq 'select(.level=="error")'
+```
+
+Переменные окружения (Фаза 6):
+
+```env
+LOG_LEVEL=INFO
+LOG_JSON_FORMAT=true
+LOG_INCLUDE_REQUEST_ID=true
+LOG_INCLUDE_USER_ID=true
+LOG_SLOW_QUERY_MS=500
+```

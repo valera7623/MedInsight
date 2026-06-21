@@ -1,13 +1,35 @@
+import asyncio
 import logging
 from datetime import datetime
 
+from app.config import settings
 from app.database import SessionLocal
-from app.models import AnalysisJob
+from app.models import AnalysisJob, Patient, User
 from app.services.predictor import predict_risk
 from app.services.self_healing import with_self_healing
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+
+def _notify_prediction_ready(db, job: AnalysisJob, prediction_id: int) -> None:
+    """Send the 'prediction ready' email from the (sync) Celery worker."""
+    if not settings.EMAIL_PREDICTION_READY_ENABLED:
+        return
+    try:
+        user = db.query(User).filter(User.id == job.user_id).first()
+        if not user or not user.email:
+            return
+        patient = db.query(Patient).filter(Patient.id == job.patient_id).first()
+        patient_name = f"{patient.last_name} {patient.first_name}".strip() if patient else "пациент"
+
+        from app.services.email import get_email_service
+
+        asyncio.run(
+            get_email_service().send_prediction_ready_email(user.email, patient_name, prediction_id)
+        )
+    except Exception as exc:  # noqa: BLE001 — notifications must not fail the task
+        logger.warning("Prediction-ready email failed for job %s: %s", job.id, exc)
 
 
 @with_self_healing("predictor")
@@ -59,6 +81,8 @@ def predict_risk_task(self, job_id: int) -> dict:
             )
         except Exception as hook_exc:
             logger.warning("Webhook dispatch failed for prediction job %s: %s", job_id, hook_exc)
+
+        _notify_prediction_ready(db, job, prediction.id)
 
         logger.info("Prediction completed for patient %s (job %s)", job.patient_id, job_id)
         return {"status": "completed", "prediction_id": prediction.id}

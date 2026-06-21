@@ -17,14 +17,16 @@ from app.core.redis import close_redis_connection
 from app.core.shutdown import shutdown_manager
 from app.database import Base, bootstrap_system, close_db_connection, engine, run_migrations
 from app.middleware.audit import AuditMiddleware
+from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
 from app.routes import admin, analytics, documents, export, health, patients, payments, predictions, users, webhooks
+from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
 from app.webhooks import yookassa as yookassa_webhook
 from app.auth import router as auth_router
 from fastapi.staticfiles import StaticFiles
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+configure_logging()
 logger = logging.getLogger(__name__)
 
 # Tracks in-flight requests so shutdown can drain them before closing resources.
@@ -204,18 +206,19 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def track_and_log_requests(request: Request, call_next):
+async def track_inflight_requests(request: Request, call_next):
+    """Count in-flight requests so graceful shutdown can drain them."""
     async with _inflight_lock:
         _inflight["count"] += 1
-    start = time.time()
     try:
-        response = await call_next(request)
+        return await call_next(request)
     finally:
         async with _inflight_lock:
             _inflight["count"] -= 1
-    duration_ms = (time.time() - start) * 1000
-    logger.info("%s %s -> %s (%.1fms)", request.method, request.url.path, response.status_code, duration_ms)
-    return response
+
+
+# Outermost middleware: assigns X-Request-ID, binds log context, logs each request.
+app.add_middleware(LoggingMiddleware)
 
 
 app.include_router(health.router)

@@ -3,15 +3,17 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.config import settings
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
 from app.models import AnalysisJob, Patient, Prediction, User
 from app.services.access import can_predict, can_view_patient, effective_tenant_id, patients_query
+from app.services.email import get_email_service
 from app.services.summarizer import generate_insights
 from app.tasks.celery_app import redis_available
 from app.tasks.predict_task import predict_risk_task
@@ -98,6 +100,7 @@ def _get_job_or_404(db: Session, job_id: int, user: User, request: Request) -> A
 def start_prediction(
     patient_id: int,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -106,6 +109,8 @@ def start_prediction(
 
     patient = _get_patient_or_404(db, patient_id, current_user, request)
     tenant_id = patient.tenant_id
+    patient_name = f"{patient.last_name} {patient.first_name}".strip()
+    notify_email = current_user.email
 
     job = AnalysisJob(
         tenant_id=tenant_id,
@@ -155,6 +160,14 @@ def start_prediction(
             )
         except Exception as exc:
             logger.warning("Webhook dispatch failed (sync predict): %s", exc)
+
+        if settings.EMAIL_PREDICTION_READY_ENABLED and notify_email:
+            background_tasks.add_task(
+                get_email_service().send_prediction_ready_email,
+                notify_email,
+                patient_name,
+                job.result["prediction_id"],
+            )
 
     if not redis_available():
         logger.info("Redis unavailable — running sync prediction for job %s", job.id)
