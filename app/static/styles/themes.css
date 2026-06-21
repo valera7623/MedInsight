@@ -1,0 +1,237 @@
+/* MedInsight — Theme tokens (light / dark / system) */
+
+:root {
+  color-scheme: light;
+
+  /* Backgrounds */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f4f6;
+  --bg-tertiary: #e5e7eb;
+  --bg-card: #ffffff;
+  --bg-input: #f9fafb;
+  --bg-hover: #f3f4f6;
+  --bg-active: #e5e7eb;
+  --bg-modal: rgba(0, 0, 0, 0.5);
+
+  /* Text */
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-tertiary: #9ca3af;
+  --text-inverse: #ffffff;
+
+  /* Borders */
+  --border-primary: #e5e7eb;
+  --border-secondary: #d1d5db;
+  --border-focus: #3b82f6;
+
+  /* Accents */
+  --accent-primary: #3b82f6;
+  --accent-secondary: #2563eb;
+  --accent-success: #22c55e;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+  --accent-info: #06b6d4;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+
+  /* Scrollbar */
+  --scrollbar-track: #f1f1f1;
+  --scrollbar-thumb: #c1c1c1;
+
+  /* Sidebar */
+  --sidebar-bg: #1e293b;
+  --sidebar-text: #f1f5f9;
+  --sidebar-hover: #334155;
+  --sidebar-active: #3b82f6;
+
+  /* Legacy aliases (used across existing CSS) */
+  --primary: var(--accent-primary);
+  --primary-dark: var(--accent-secondary);
+  --secondary: var(--text-secondary);
+  --success: var(--accent-success);
+  --danger: var(--accent-danger);
+  --bg: var(--bg-secondary);
+  --card-bg: var(--bg-card);
+  --text: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --border: var(--border-primary);
+  --radius: 8px;
+  --shadow: var(--shadow-sm);
+
+  /* Chart.js tokens */
+  --chart-text: var(--text-secondary);
+  --chart-grid: var(--border-primary);
+  --chart-bar: rgba(59, 130, 246, 0.7);
+  --chart-bar-border: rgba(59, 130, 246, 1);
+  --chart-danger: rgba(239, 68, 68, 0.7);
+  --chart-danger-line: rgba(239, 68, 68, 1);
+  --chart-primary-line: rgba(37, 99, 235, 1);
+
+  /* Semantic surfaces */
+  --surface-error: #fef2f2;
+  --surface-info: #eff6ff;
+  --surface-warning: #fef9c3;
+  --surface-success: #dcfce7;
+  --text-warning: #a16207;
+  --text-warning-strong: #ca8a04;
+  --auth-gradient-start: #1e3a5f;
+  --auth-gradient-end: #2563eb;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-card: #1e293b;
+  --bg-input: #1e293b;
+  --bg-hover: #334155;
+  --bg-active: #475569;
+  --bg-modal: rgba(0, 0, 0, 0.8);
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-inverse: #0f172a;
+
+  --border-primary: #334155;
+  --border-secondary: #475569;
+  --border-focus: #60a5fa;
+
+  --accent-primary: #60a5fa;
+  --accent-secondary: #3b82f6;
+  --accent-success: #4ade80;
+  --accent-warning: #fbbf24;
+  --accent-danger: #f87171;
+  --accent-info: #22d3ee;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+
+  --scrollbar-track: #1e293b;
+  --scrollbar-thumb: #475569;
+
+  --sidebar-bg: #0f172a;
+  --sidebar-text: #f1f5f9;
+  --sidebar-hover: #1e293b;
+  --sidebar-active: #60a5fa;
+
+  --chart-text: var(--text-secondary);
+  --chart-grid: var(--border-primary);
+  --chart-bar: rgba(96, 165, 250, 0.75);
+  --chart-bar-border: rgba(96, 165, 250, 1);
+  --chart-danger: rgba(248, 113, 113, 0.75);
+  --chart-danger-line: rgba(248, 113, 113, 1);
+  --chart-primary-line: rgba(96, 165, 250, 1);
+
+  --surface-error: rgba(127, 29, 29, 0.35);
+  --surface-info: rgba(30, 58, 138, 0.35);
+  --surface-warning: rgba(113, 63, 18, 0.35);
+  --surface-success: rgba(20, 83, 45, 0.35);
+  --text-warning: #fbbf24;
+  --text-warning-strong: #fbbf24;
+  --auth-gradient-start: #0f172a;
+  --auth-gradient-end: #1e3a8a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --bg-card: #1e293b;
+    --bg-input: #1e293b;
+    --bg-hover: #334155;
+    --bg-active: #475569;
+    --bg-modal: rgba(0, 0, 0, 0.8);
+
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-tertiary: #64748b;
+    --text-inverse: #0f172a;
+
+    --border-primary: #334155;
+    --border-secondary: #475569;
+    --border-focus: #60a5fa;
+
+    --accent-primary: #60a5fa;
+    --accent-secondary: #3b82f6;
+    --accent-success: #4ade80;
+    --accent-warning: #fbbf24;
+    --accent-danger: #f87171;
+    --accent-info: #22d3ee;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+
+    --scrollbar-track: #1e293b;
+    --scrollbar-thumb: #475569;
+
+    --sidebar-bg: #0f172a;
+    --sidebar-text: #f1f5f9;
+    --sidebar-hover: #1e293b;
+    --sidebar-active: #60a5fa;
+
+    --chart-bar: rgba(96, 165, 250, 0.75);
+    --chart-bar-border: rgba(96, 165, 250, 1);
+    --chart-danger: rgba(248, 113, 113, 0.75);
+    --chart-danger-line: rgba(248, 113, 113, 1);
+    --chart-primary-line: rgba(96, 165, 250, 1);
+
+    --surface-error: rgba(127, 29, 29, 0.35);
+    --surface-info: rgba(30, 58, 138, 0.35);
+    --surface-warning: rgba(113, 63, 18, 0.35);
+    --surface-success: rgba(20, 83, 45, 0.35);
+    --text-warning: #fbbf24;
+    --text-warning-strong: #fbbf24;
+    --auth-gradient-start: #0f172a;
+    --auth-gradient-end: #1e3a8a;
+  }
+}
+
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body,
+.navbar,
+.stat-card,
+.chart-card,
+.data-table,
+.modal-content,
+.auth-card,
+.btn,
+.form-group input,
+.form-group select,
+.theme-toggle-btn {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+}

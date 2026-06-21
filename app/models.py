@@ -57,6 +57,29 @@ class User(Base):
     predictions: Mapped[list["Prediction"]] = relationship("Prediction", back_populates="owner")
     analysis_jobs: Mapped[list["AnalysisJob"]] = relationship("AnalysisJob", back_populates="owner")
     audit_logs: Mapped[list["AuditLog"]] = relationship("AuditLog", back_populates="user")
+    preferences: Mapped["UserPreference | None"] = relationship(
+        "UserPreference", back_populates="user", uselist=False
+    )
+
+
+class UserPreference(Base):
+    """Per-user UI preferences (Phase 11: Dark Mode)."""
+
+    __tablename__ = "preferences"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), unique=True, nullable=False, index=True
+    )
+    theme: Mapped[str] = mapped_column(String(20), nullable=False, default="light")
+    system_theme: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    settings: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="preferences")
 
 
 class Patient(Base):

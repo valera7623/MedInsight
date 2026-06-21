@@ -250,6 +250,58 @@ let diagnosesChart = null;
 let medicationsChart = null;
 let deptRiskChart = null;
 let trendsChart = null;
+let lastBarChartData = { diagnoses: null, medications: null };
+let lastDeptRiskData = null;
+let lastTrendsData = null;
+
+function chartColors() {
+  if (window.ThemeManager) return window.ThemeManager.chartColors();
+  return {
+    text: '#64748b',
+    grid: '#e2e8f0',
+    bar: 'rgba(37, 99, 235, 0.7)',
+    barBorder: 'rgba(37, 99, 235, 1)',
+    danger: 'rgba(220, 38, 38, 0.7)',
+    dangerLine: 'rgba(220, 38, 38, 1)',
+    primaryLine: 'rgba(37, 99, 235, 1)',
+  };
+}
+
+function chartScaleOptions(extra = {}) {
+  const c = chartColors();
+  let scales;
+  if (window.ThemeManager) {
+    scales = { ...window.ThemeManager.chartScaleOptions() };
+  } else {
+    scales = {
+      x: { ticks: { color: c.text, maxRotation: 45 }, grid: { color: c.grid } },
+      y: { beginAtZero: true, ticks: { color: c.text }, grid: { color: c.grid } },
+    };
+  }
+  if (extra.yMax !== undefined) {
+    scales.y = { ...scales.y, max: extra.yMax };
+  }
+  if (extra.yStep !== undefined) {
+    scales.y = {
+      ...scales.y,
+      ticks: { ...(scales.y?.ticks || {}), stepSize: extra.yStep },
+    };
+  }
+  return scales;
+}
+
+function refreshChartsForTheme() {
+  if (lastBarChartData.diagnoses) {
+    renderBarChart('diagnoses-chart', lastBarChartData.diagnoses, diagnosesChart, (c) => { diagnosesChart = c; });
+  }
+  if (lastBarChartData.medications) {
+    renderBarChart('medications-chart', lastBarChartData.medications, medicationsChart, (c) => { medicationsChart = c; });
+  }
+  if (lastDeptRiskData) renderDeptRiskChart(lastDeptRiskData);
+  if (lastTrendsData) renderTrendsChart(lastTrendsData);
+}
+
+window.addEventListener('themechange', refreshChartsForTheme);
 
 function riskLevel(value) {
   if (value < 40) return 'low';
@@ -284,6 +336,8 @@ async function loadDashboard() {
 
   renderBarChart('diagnoses-chart', data.diagnoses, diagnosesChart, (c) => { diagnosesChart = c; });
   renderBarChart('medications-chart', data.medications, medicationsChart, (c) => { medicationsChart = c; });
+  lastBarChartData.diagnoses = data.diagnoses;
+  lastBarChartData.medications = data.medications;
 
   const tbody = document.querySelector('#recent-patients-table tbody');
   tbody.innerHTML = '';
@@ -343,7 +397,7 @@ async function renderPlans(currentPlan) {
     let buttons = '';
     if (providers.stripe) buttons += `<button class="btn btn-primary btn-sm" data-plan="${p.plan_type}" data-provider="stripe">Stripe</button> `;
     if (providers.yookassa) buttons += `<button class="btn btn-secondary btn-sm" data-plan="${p.plan_type}" data-provider="yookassa">ЮKassa</button>`;
-    if (!buttons) buttons = '<span style="color:#94a3b8;font-size:0.8rem">Платёжный провайдер не настроен</span>';
+    if (!buttons) buttons = '<span class="text-muted-inline">Платёжный провайдер не настроен</span>';
     box.innerHTML = `<strong>${p.name}</strong><br>${p.analysis_limit} анализов/мес<br>${priceRub} ₽ / $${(p.price_usd / 100).toFixed(2)}<div style="margin-top:0.5rem">${buttons}</div>`;
     wrap.appendChild(box);
   });
@@ -376,7 +430,7 @@ async function loadWebhooks() {
     if (!res.ok) throw new Error(data.detail || 'Ошибка вебхуков');
     tbody.innerHTML = data.length
       ? ''
-      : '<tr><td colspan="5" style="text-align:center;color:#64748b">Вебхуки не настроены</td></tr>';
+      : '<tr><td colspan="5" class="text-center-muted">Вебхуки не настроены</td></tr>';
     data.forEach((w) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -450,7 +504,7 @@ async function loadPredictionsDashboard() {
     if (tbody) {
       tbody.innerHTML = '';
       if (data.high_risk_patients.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b">Нет данных — сгенерируйте прогнозы для пациентов</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center-muted">Нет данных — сгенерируйте прогнозы для пациентов</td></tr>';
       }
       data.high_risk_patients.forEach(p => {
         const tr = document.createElement('tr');
@@ -467,6 +521,8 @@ async function loadPredictionsDashboard() {
 
     renderDeptRiskChart(data.risk_by_department);
     renderTrendsChart(data.monthly_trends);
+    lastDeptRiskData = data.risk_by_department;
+    lastTrendsData = data.monthly_trends;
   } catch (err) {
     console.error('Predictions dashboard error:', err);
   }
@@ -476,6 +532,7 @@ function renderDeptRiskChart(deptData) {
   const canvas = document.getElementById('dept-risk-chart');
   if (!canvas) return;
 
+  const c = chartColors();
   const entries = Object.entries(deptData);
   const labels = entries.map(([dept]) => dept);
   const readmission = entries.map(([, v]) => v.readmission_avg);
@@ -491,18 +548,19 @@ function renderDeptRiskChart(deptData) {
         {
           label: 'Реадмиссия',
           data: readmission.length ? readmission : [0],
-          backgroundColor: 'rgba(220, 38, 38, 0.7)',
+          backgroundColor: c.danger,
         },
         {
           label: 'Осложнения',
           data: complication.length ? complication : [0],
-          backgroundColor: 'rgba(37, 99, 235, 0.7)',
+          backgroundColor: c.bar,
         },
       ],
     },
     options: {
       responsive: true,
-      scales: { y: { beginAtZero: true, max: 100 } },
+      plugins: { legend: { labels: { color: c.text } } },
+      scales: chartScaleOptions({ yMax: 100 }),
     },
   });
 }
@@ -511,6 +569,7 @@ function renderTrendsChart(trends) {
   const canvas = document.getElementById('trends-chart');
   if (!canvas) return;
 
+  const c = chartColors();
   const labels = trends.labels || [];
   if (trendsChart) trendsChart.destroy();
 
@@ -522,25 +581,27 @@ function renderTrendsChart(trends) {
         {
           label: 'Реадмиссия',
           data: trends.readmission || [],
-          borderColor: 'rgba(220, 38, 38, 1)',
+          borderColor: c.dangerLine,
           tension: 0.3,
         },
         {
           label: 'Осложнения',
           data: trends.complication || [],
-          borderColor: 'rgba(37, 99, 235, 1)',
+          borderColor: c.primaryLine,
           tension: 0.3,
         },
       ],
     },
     options: {
       responsive: true,
-      scales: { y: { beginAtZero: true, max: 100 } },
+      plugins: { legend: { labels: { color: c.text } } },
+      scales: chartScaleOptions({ yMax: 100 }),
     },
   });
 }
 
 function renderBarChart(canvasId, dataObj, existingChart, setChart) {
+  const c = chartColors();
   const entries = Object.entries(dataObj).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const labels = entries.map(e => e[0]);
   const values = entries.map(e => e[1]);
@@ -554,8 +615,8 @@ function renderBarChart(canvasId, dataObj, existingChart, setChart) {
       labels,
       datasets: [{
         data: values,
-        backgroundColor: 'rgba(37, 99, 235, 0.7)',
-        borderColor: 'rgba(37, 99, 235, 1)',
+        backgroundColor: c.bar,
+        borderColor: c.barBorder,
         borderWidth: 1,
         borderRadius: 4,
       }],
@@ -563,10 +624,7 @@ function renderBarChart(canvasId, dataObj, existingChart, setChart) {
     options: {
       responsive: true,
       plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, ticks: { stepSize: 1 } },
-        x: { ticks: { maxRotation: 45 } },
-      },
+      scales: chartScaleOptions({ yStep: 1 }),
     },
   });
   setChart(chart);

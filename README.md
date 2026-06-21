@@ -823,6 +823,45 @@ python -m app.bot.main
 Тест: `python scripts/test_telegram_bot.py` (офлайн); live —
 `python scripts/test_telegram_bot.py --send-test`.
 
+## Фаза 11: Dark Mode (тёмная тема)
+
+Полноценная светлая/тёмная тема через CSS-переменные (`static/styles/themes.css`).
+Все страницы используют токены `--bg-*`, `--text-*`, `--accent-*` вместо
+hardcoded цветов. Переключатель ☀️/🌙 — в хедере (или на странице входа).
+
+### Переключение
+
+1. Нажмите кнопку темы в navbar → переключение `light` ↔ `dark`.
+2. Выбор сохраняется в `localStorage` (`theme`) и синхронизируется с БД:
+   `PUT /api/preferences/theme` с телом `{"theme":"dark"}` (JWT).
+3. При первом входе тема подгружается с сервера (`GET /api/preferences`).
+
+Поддерживается режим **system** (следовать `prefers-color-scheme`) через API;
+переключатель в UI циклично меняет light/dark.
+
+### API
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| `GET` | `/api/preferences` | Настройки пользователя |
+| `PUT` | `/api/preferences` | Обновить theme и/или settings |
+| `PUT` | `/api/preferences/theme` | Обновить только тему |
+
+Значения `theme`: `light`, `dark`, `system`.
+
+### Chart.js
+
+Графики на дашборде автоматически перекрашиваются при событии `themechange`
+(слушатель в `dashboard.js`, цвета из CSS-переменных `--chart-*`).
+
+### Переменные окружения
+
+```env
+DEFAULT_THEME=light   # light | dark | system — для новых пользователей
+```
+
+Тест: `python scripts/test_theme.py`.
+
 ## Фаза 8: Резервное копирование (Backup & Restore)
 
 Автоматический и ручной бэкап БД (SQLite) и `storage/`, восстановление и ротация.

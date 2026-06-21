@@ -103,6 +103,9 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_COMMAND_RATE_LIMIT: int = 30  # commands per minute per Telegram user
     TELEGRAM_LINK_CODE_TTL: int = 600  # seconds (10 min) for account linking code
 
+    # Phase 11: Dark mode default for new users (light | dark | system)
+    DEFAULT_THEME: str = "light"
+
     # Phase 9: OpenTelemetry (distributed tracing)
     OTEL_ENABLED: bool = False
     OTEL_SERVICE_NAME: str = "medinsight"

@@ -19,7 +19,7 @@ from app.database import Base, bootstrap_system, close_db_connection, engine, ru
 from app.middleware.audit import AuditMiddleware
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
-from app.routes import admin, admin_backup, analytics, documents, export, export_excel, health, patients, payments, predictions, telegram, users, webhooks
+from app.routes import admin, admin_backup, analytics, documents, export, export_excel, health, patients, payments, predictions, preferences, telegram, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
@@ -256,6 +256,7 @@ app.include_router(users.router, prefix="/api")
 app.include_router(webhooks.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
 app.include_router(telegram.router, prefix="/api")
+app.include_router(preferences.router, prefix="/api")
 # Inbound payment provider webhooks (no /api prefix, no auth — verified by signature)
 app.include_router(stripe_webhook.router)
 app.include_router(yookassa_webhook.router)
