@@ -115,9 +115,9 @@
         if (action === 'delete') {
           if (!confirm(`Удалить пользователя ${email}? Его пациенты и документы будут переназначены на вас.`)) return;
           const res = await apiFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
-          if (!res.ok && res.status !== 204) {
+          if (!res.ok) {
             const d = await res.json().catch(() => ({}));
-            throw new Error(d.detail || 'Ошибка удаления');
+            throw new Error(formatApiError(d.detail) || 'Ошибка удаления');
           }
         } else {
           const res = await apiFetch(`/api/admin/users/${userId}/${action}`, { method: 'POST' });

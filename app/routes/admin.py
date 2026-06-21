@@ -10,7 +10,21 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user, hash_password, require_admin, require_super_admin
 from app.config import settings
 from app.database import get_db
-from app.models import AnalysisJob, AuditLog, Department, Document, Patient, Prediction, Tenant, User
+from app.models import (
+    AnalysisJob,
+    AuditLog,
+    Department,
+    DicomStudy,
+    Document,
+    Patient,
+    Payment,
+    Prediction,
+    Subscription,
+    TelegramUser,
+    Tenant,
+    User,
+    UserPreference,
+)
 from app.services.access import ROLES, is_super_admin
 from app.services.audit import log_audit
 from app.services.encryption import rotate_encryption_key
@@ -358,6 +372,7 @@ def unblock_user(
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: int,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_admin)],
 ):
@@ -371,18 +386,56 @@ def delete_user(
     if not is_super_admin(current_user) and user.tenant_id != current_user.tenant_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    # Reassign the user's clinical records to the acting admin to avoid orphans.
     new_owner_id = current_user.id
-    for model in (Patient, Document, Prediction):
+
+    # Reassign NOT NULL user_id references to the acting admin.
+    for model in (Patient, Document, Prediction, AnalysisJob, DicomStudy):
         db.query(model).filter(model.user_id == user_id).update(
             {model.user_id: new_owner_id}, synchronize_session=False
         )
-    db.query(AnalysisJob).filter(AnalysisJob.user_id == user_id).update(
-        {AnalysisJob.user_id: new_owner_id}, synchronize_session=False
+
+    # Clear nullable user references.
+    db.query(Patient).filter(Patient.attending_doctor_id == user_id).update(
+        {Patient.attending_doctor_id: None}, synchronize_session=False
+    )
+    db.query(Department).filter(Department.head_doctor_id == user_id).update(
+        {Department.head_doctor_id: None}, synchronize_session=False
+    )
+    db.query(AuditLog).filter(AuditLog.user_id == user_id).update(
+        {AuditLog.user_id: None}, synchronize_session=False
+    )
+    db.query(Subscription).filter(Subscription.user_id == user_id).update(
+        {Subscription.user_id: None}, synchronize_session=False
+    )
+    db.query(Payment).filter(Payment.user_id == user_id).update(
+        {Payment.user_id: None}, synchronize_session=False
+    )
+
+    # Remove rows that block user deletion.
+    db.query(TelegramUser).filter(TelegramUser.user_id == user_id).delete(synchronize_session=False)
+    db.query(UserPreference).filter(UserPreference.user_id == user_id).delete(synchronize_session=False)
+
+    log_audit(
+        db,
+        user_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+        action="delete",
+        resource_type="user",
+        resource_id=user_id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        details={"deleted_email": user.email, "reassigned_to": new_owner_id},
     )
 
     db.delete(user)
-    db.commit()
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot delete user: {exc}",
+        ) from exc
 
 
 def _resolve_admin_tenant(current_user: User, requested_tenant_id: int | None) -> int:
