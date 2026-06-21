@@ -738,6 +738,91 @@ heartbeat, тосты, индикатор `🟢/🔴` (элемент `#ws-statu
 
 Тест: `python scripts/test_websocket.py`.
 
+## Фаза 10: Telegram Bot (уведомления)
+
+Telegram-бот для push-уведомлений о событиях MedInsight: готовность прогноза,
+завершение анализа документов, превышение лимитов, новый пациент. Модуль —
+`app/bot/`, API привязки — `app/routes/telegram.py`.
+
+### Подключение
+
+1. Создайте бота через [@BotFather](https://t.me/BotFather), получите токен.
+2. В `.env`:
+
+```env
+TELEGRAM_BOT_TOKEN=123456:ABCdef...
+TELEGRAM_BOT_ENABLED=true
+# опционально webhook вместо polling:
+# TELEGRAM_BOT_WEBHOOK_URL=https://your-domain/telegram/webhook
+# TELEGRAM_BOT_WEBHOOK_SECRET=random-secret
+```
+
+3. Запустите сервис бота:
+
+```bash
+docker compose up -d telegram_bot
+# или локально:
+python -m app.bot.main
+```
+
+### Привязка аккаунта
+
+1. Пользователь отправляет боту `/start`.
+2. Бот выдаёт **6-значный код** (действует 10 мин, хранится в Redis).
+3. На сайте MedInsight (настройки профиля) пользователь вводит код:
+   `POST /api/telegram/link` с телом `{"code": "123456"}` (JWT обязателен).
+4. После привязки доступны команды `/menu`, `/settings`, `/status`.
+
+### Команды бота
+
+| Команда | Описание |
+|---------|----------|
+| `/start` | Приветствие, код привязки |
+| `/menu` | Главное меню (inline-кнопки) |
+| `/settings` | Включить/выключить типы уведомлений |
+| `/subscribe` | Подписаться на все события |
+| `/unsubscribe` | Отключить все уведомления |
+| `/status` | Статус привязки и подписок |
+| `/help` | Справка |
+
+### API
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| `POST` | `/api/telegram/link` | Привязать Telegram по коду |
+| `GET` | `/api/telegram/status` | Статус привязки и подписок |
+| `POST` | `/api/telegram/subscribe` | Обновить список событий |
+| `DELETE` | `/api/telegram/link` | Отвязать Telegram |
+
+События подписки: `prediction.ready`, `analysis.completed`, `limit.exceeded`,
+`patient.created`.
+
+### Интеграция
+
+Уведомления отправляются из:
+
+- `app/tasks/predict_task.py` — прогноз готов;
+- `app/tasks/parse_task.py` — анализ документа завершён;
+- `app/middleware/usage_limit.py` — лимит анализов превышен;
+- `app/routes/patients.py` — новый пациент (если подписан).
+
+Сервис отправки: `app/bot/services/notification_service.py`
+(`TelegramNotificationService`). Fail-safe: ошибки Telegram не ломают основной
+поток.
+
+### Безопасность
+
+- Привязка только через одноразовый код + авторизованный API-запрос.
+- Токен бота **не логируется**.
+- Rate limiting команд бота через Redis (`TELEGRAM_BOT_COMMAND_RATE_LIMIT`, по
+  умолчанию 30/мин на пользователя).
+
+Тот же `TELEGRAM_BOT_TOKEN` используется для алертов бэкапов (`TELEGRAM_CHAT_ID`
+в Фазе 8) — это отдельный admin-чат, не пользовательские уведомления.
+
+Тест: `python scripts/test_telegram_bot.py` (офлайн); live —
+`python scripts/test_telegram_bot.py --send-test`.
+
 ## Фаза 8: Резервное копирование (Backup & Restore)
 
 Автоматический и ручной бэкап БД (SQLite) и `storage/`, восстановление и ротация.

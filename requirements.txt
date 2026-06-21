@@ -40,6 +40,9 @@ opentelemetry-instrumentation-requests>=0.49b0
 opentelemetry-instrumentation-httpx>=0.49b0
 websockets>=12.0
 
+# Phase 10: Telegram bot notifications (3.13.1 conflicts with pydantic>=2.13; use 3.29+)
+aiogram>=3.29.0,<3.30
+
 # Phase 4: Payments
 stripe>=11.0.0
 yookassa>=3.5.0

@@ -1,0 +1,1 @@
+"""MedInsight Telegram notification bot."""

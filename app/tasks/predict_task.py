@@ -32,6 +32,28 @@ def _notify_prediction_ready(db, job: AnalysisJob, prediction_id: int) -> None:
         logger.warning("Prediction-ready email failed for job %s: %s", job.id, exc)
 
 
+def _telegram_prediction_ready(db, job: AnalysisJob, prediction) -> None:
+    """Send Telegram notification for a completed prediction."""
+    if not settings.TELEGRAM_BOT_ENABLED:
+        return
+    try:
+        patient = db.query(Patient).filter(Patient.id == job.patient_id).first()
+        patient_name = f"{patient.last_name} {patient.first_name}".strip() if patient else "пациент"
+        pred = prediction.prediction or {}
+        from app.bot.services.notification_service import get_notification_service
+
+        get_notification_service().send_prediction_ready_sync(
+            user_id=job.user_id,
+            patient_name=patient_name,
+            prediction_id=prediction.id,
+            patient_id=job.patient_id,
+            risk=round(float(pred.get("readmission_risk", 0))),
+            confidence=round(float(prediction.confidence_score or 0), 2),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Telegram prediction notification failed for job %s: %s", job.id, exc)
+
+
 def _ws_prediction_ready(job: AnalysisJob, prediction) -> None:
     """Push real-time WebSocket events for a completed prediction."""
     try:
@@ -110,6 +132,7 @@ def predict_risk_task(self, job_id: int) -> dict:
             logger.warning("Webhook dispatch failed for prediction job %s: %s", job_id, hook_exc)
 
         _notify_prediction_ready(db, job, prediction.id)
+        _telegram_prediction_ready(db, job, prediction)
         _ws_prediction_ready(job, prediction)
 
         logger.info("Prediction completed for patient %s (job %s)", job.patient_id, job_id)

@@ -92,9 +92,16 @@ class Settings(BaseSettings):
     BACKUP_ENCRYPTION_ENABLED: bool = False
     BACKUP_ENCRYPTION_KEY: str = ""
     BACKUP_ALERT_MAX_AGE_HOURS: int = 48
-    # Optional Telegram alerting for backup health
+    # Optional Telegram alerting for backup health (same bot token as notifications)
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_CHAT_ID: str = ""
+
+    # Phase 10: Telegram bot (user notifications)
+    TELEGRAM_BOT_ENABLED: bool = False
+    TELEGRAM_BOT_WEBHOOK_URL: str = ""
+    TELEGRAM_BOT_WEBHOOK_SECRET: str = ""
+    TELEGRAM_BOT_COMMAND_RATE_LIMIT: int = 30  # commands per minute per Telegram user
+    TELEGRAM_LINK_CODE_TTL: int = 600  # seconds (10 min) for account linking code
 
     # Phase 9: OpenTelemetry (distributed tracing)
     OTEL_ENABLED: bool = False

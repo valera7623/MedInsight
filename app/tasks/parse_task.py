@@ -1,8 +1,9 @@
 import logging
 from datetime import datetime
 
+from app.config import settings
 from app.database import SessionLocal
-from app.models import AnalysisJob, Document
+from app.models import AnalysisJob, Document, Patient
 from app.services.encryption import decrypt_file
 from app.services.extractor import extract_entities
 from app.services.parser import parse_document, parse_document_from_bytes
@@ -10,6 +11,30 @@ from app.services.self_healing import with_self_healing
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+
+def _telegram_analysis_completed(db, job: AnalysisJob, doc: Document, parsed: dict) -> None:
+    if not settings.TELEGRAM_BOT_ENABLED:
+        return
+    try:
+        patient = db.query(Patient).filter(Patient.id == job.patient_id).first()
+        patient_name = f"{patient.last_name} {patient.first_name}".strip() if patient else "пациент"
+        diagnoses = parsed.get("diagnoses") or []
+        summary = ", ".join(str(d) for d in diagnoses[:3]) if diagnoses else "данные извлечены"
+        if len(diagnoses) > 3:
+            summary += "…"
+
+        from app.bot.services.notification_service import get_notification_service
+
+        get_notification_service().send_analysis_completed_sync(
+            user_id=job.user_id,
+            patient_name=patient_name,
+            analysis_id=job.id,
+            result_summary=summary,
+            patient_id=job.patient_id,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Telegram analysis notification failed for job %s: %s", job.id, exc)
 
 
 @with_self_healing("parser")
@@ -85,6 +110,8 @@ def parse_document_task(self, job_id: int, document_id: int) -> dict:
             )
         except Exception as ws_exc:  # noqa: BLE001
             logger.debug("WS document.parsed event failed for job %s: %s", job_id, ws_exc)
+
+        _telegram_analysis_completed(db, job, doc, parsed)
 
         logger.info("Document %s parsed successfully (job %s)", document_id, job_id)
         return {"status": "completed", "document_id": document_id}

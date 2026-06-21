@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.auth import get_current_user
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
@@ -137,6 +138,20 @@ def create_patient(
     db.add(patient)
     db.commit()
     db.refresh(patient)
+
+    if settings.TELEGRAM_BOT_ENABLED:
+        try:
+            from app.bot.services.notification_service import get_notification_service
+
+            name = f"{patient.last_name} {patient.first_name}".strip()
+            get_notification_service().send_patient_created_sync(
+                user_id=current_user.id,
+                patient_name=name,
+                patient_id=patient.id,
+            )
+        except Exception:  # noqa: BLE001 — notifications must not fail the request
+            pass
+
     return _serialize_patient(patient, current_user)
 
 

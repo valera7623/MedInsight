@@ -103,6 +103,29 @@ services:
     networks:
       - medinsight-net
 
+  telegram_bot:
+    build:
+      context: .
+      args:
+        INSTALL_SPACY_MODEL: "0"
+    container_name: medinsight-telegram-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: sqlite:////app/data/medinsight.db
+      TELEGRAM_BOT_ENABLED: "true"
+    command: ["python", "-m", "app.bot.main"]
+    volumes:
+      - medinsight-data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    networks:
+      - medinsight-net
+
   traefik:
     image: traefik:v3.5
     container_name: medinsight-traefik
