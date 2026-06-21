@@ -8,6 +8,7 @@ stack trace and re-raised so FastAPI's error handling still applies.
 
 from __future__ import annotations
 
+import re
 import time
 import uuid
 
@@ -26,6 +27,10 @@ from app.utils.request_context import (
 logger = get_logger("app.middleware.logging")
 
 CORRELATION_ID_HEADER = "X-Request-ID"
+
+# Noisy probe/asset paths: still get a request_id + X-Request-ID header, but
+# successful responses are not logged (errors >= 400 still are).
+_QUIET_PATHS = re.compile(r"^/(health|metrics|favicon\.ico)")
 
 
 def _client_ip(request: Request) -> str | None:
@@ -97,6 +102,12 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         resolved_user = getattr(getattr(request.state, "user", None), "id", None) or get_user_id()
 
         response.headers[CORRELATION_ID_HEADER] = request_id
+
+        # Mute successful health/metrics probes to keep logs clean; still log
+        # any 4xx/5xx so real problems on these paths remain visible.
+        if _QUIET_PATHS.match(request.url.path) and response.status_code < 400:
+            clear_request_context()
+            return response
 
         response_size = response.headers.get("content-length")
         log = logger.bind(

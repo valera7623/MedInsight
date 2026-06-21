@@ -624,6 +624,11 @@ python scripts/test_email.py --to you@example.com
 Медленные SQL-запросы (> `LOG_SLOW_QUERY_MS`, мс) логируются отдельно
 (`app.database.sql`).
 
+Успешные пробы (`/health*`, `/metrics`, `/favicon.ico`) **не логируются**, чтобы
+не зашумлять логи healthcheck'ами Docker/K8s — при этом им всё равно
+присваивается `request_id` и возвращается заголовок `X-Request-ID`. Ответы
+`4xx/5xx` на этих путях логируются всегда (чтобы реальные проблемы были видны).
+
 Пример строки лога (JSON):
 
 ```json
