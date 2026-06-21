@@ -12,6 +12,7 @@ from tenacity import (
 )
 
 from app.config import settings
+from app.utils.tracing import add_span_attributes, get_tracer
 
 logger = logging.getLogger(__name__)
 
@@ -58,29 +59,47 @@ async def chat_completion_json(
 
     model_name = model or settings.OPENAI_MODEL
 
-    try:
-        response = await client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            response_format={"type": "json_object"},
-            temperature=0.2,
-        )
-    except APIStatusError as exc:
-        if exc.status_code in (401, 404):
-            logger.error("ProxyAPI auth/routing error (HTTP %s)", exc.status_code)
-        elif exc.status_code == 429:
-            logger.warning("ProxyAPI rate limit (HTTP 429), retrying...")
-        elif exc.status_code >= 500:
-            logger.warning("ProxyAPI server error (HTTP %s), retrying...", exc.status_code)
-        if not _is_retryable(exc):
-            raise OpenAIClientError(f"ProxyAPI error: HTTP {exc.status_code}") from exc
-        raise
-
-    content = response.choices[0].message.content
-    if not content:
-        raise OpenAIClientError("Empty response from GPT")
+    tracer = get_tracer("medinsight.openai")
+    span_cm = tracer.start_as_current_span("openai_call") if tracer is not None else None
+    if span_cm is not None:
+        span_cm.__enter__()
+        add_span_attributes(model=model_name)
 
     try:
-        return json.loads(content)
-    except json.JSONDecodeError as exc:
-        raise OpenAIClientError("Invalid JSON in GPT response") from exc
+        try:
+            response = await client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                response_format={"type": "json_object"},
+                temperature=0.2,
+            )
+        except APIStatusError as exc:
+            if exc.status_code in (401, 404):
+                logger.error("ProxyAPI auth/routing error (HTTP %s)", exc.status_code)
+            elif exc.status_code == 429:
+                logger.warning("ProxyAPI rate limit (HTTP 429), retrying...")
+            elif exc.status_code >= 500:
+                logger.warning("ProxyAPI server error (HTTP %s), retrying...", exc.status_code)
+            if not _is_retryable(exc):
+                raise OpenAIClientError(f"ProxyAPI error: HTTP {exc.status_code}") from exc
+            raise
+
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            add_span_attributes(
+                prompt_tokens=getattr(usage, "prompt_tokens", None),
+                completion_tokens=getattr(usage, "completion_tokens", None),
+                total_tokens=getattr(usage, "total_tokens", None),
+            )
+
+        content = response.choices[0].message.content
+        if not content:
+            raise OpenAIClientError("Empty response from GPT")
+
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise OpenAIClientError("Invalid JSON in GPT response") from exc
+    finally:
+        if span_cm is not None:
+            span_cm.__exit__(None, None, None)

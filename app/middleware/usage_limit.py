@@ -31,6 +31,17 @@ class UsageLimitMiddleware(BaseHTTPMiddleware):
                 logger.info("Tenant %s exceeded analysis limit", tenant_id)
                 if settings.EMAIL_LIMIT_EXCEEDED_ENABLED:
                     asyncio.create_task(_notify_limit_exceeded(tenant_id))
+                try:
+                    from app.services.payment.usage_tracker import get_remaining
+                    from app.websocket.events import EVENT_LIMIT_EXCEEDED, publish_event
+
+                    publish_event(
+                        EVENT_LIMIT_EXCEEDED,
+                        {"tenant_id": tenant_id, "remaining": get_remaining(tenant_id)},
+                        tenant_id=tenant_id,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("WS limit.exceeded event failed: %s", exc)
                 return JSONResponse(
                     status_code=402,
                     content={

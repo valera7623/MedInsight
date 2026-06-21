@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Document, Patient, Prediction
 from app.services.openai_client import OpenAIClientError, chat_completion_json
+from app.utils.tracing import trace_span
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,7 @@ async def _gpt_prediction(features: dict) -> dict:
     return result
 
 
+@trace_span("predictor_agent", {"agent": "predictor"})
 def predict_risk(
     db: Session,
     patient_id: int,

@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import Any
 
 from app.config import settings
+from app.utils.tracing import trace_span
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +167,7 @@ def _extract_medications(text: str) -> list[str]:
     return sorted(found, key=str.lower)
 
 
+@trace_span("extractor_agent", {"agent": "extractor"})
 def extract_entities(text: str) -> dict:
     nlp = get_nlp()
     dates = _extract_dates_regex(text)

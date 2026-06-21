@@ -639,6 +639,105 @@ EXPORT_TEMP_DIR=./storage/exports
 
 Тест: `python scripts/test_export.py` (проверяет генерацию .xlsx и логику пагинации).
 
+## Фаза 9: OpenTelemetry (трассировка) + WebSocket (real-time)
+
+### OpenTelemetry (Distributed Tracing)
+
+Распределённая трассировка через OpenTelemetry → OTLP (gRPC) → Collector → Jaeger.
+Полностью **опциональна**: при `OTEL_ENABLED=false` или отсутствии пакетов — no-op.
+
+Инструментируются: FastAPI (спан на запрос), SQLAlchemy (`db.statement`),
+Redis, Celery (parent→child), HTTP-клиенты (requests/httpx), вызовы OpenAI
+(`model`, `prompt_tokens`, `completion_tokens`, `total_tokens`). Агенты обёрнуты
+в `@trace_span` (`app/utils/tracing.py`): `parser_agent`, `extractor_agent`,
+`predictor_agent`, `summarizer_agent`.
+
+Запуск стенда наблюдаемости (Jaeger UI + Collector) и включение трассировки:
+
+```bash
+# 1) поднять Jaeger + OTel Collector (profile observability)
+docker compose --profile observability up -d jaeger otel-collector
+# 2) включить в .env и перезапустить app/celery
+#    OTEL_ENABLED=true
+./deploy.sh production
+# 3) Jaeger UI: http://<host>:16686  (service = medinsight)
+```
+
+Параметры (`.env`): `OTEL_ENABLED`, `OTEL_SERVICE_NAME`,
+`OTEL_EXPORTER_OTLP_ENDPOINT` (по умолчанию `http://otel-collector:4317`),
+`OTEL_TRACES_SAMPLER_ARG` (доля сэмплинга, 0.1 = 10%), `OTEL_DEPLOYMENT_ENVIRONMENT`.
+Конфиг коллектора — `otel-collector-config.yml` (OTLP → Jaeger). Пропагация —
+W3C Trace Context (`traceparent`).
+
+Кастомный спан в своём коде:
+
+```python
+from app.utils.tracing import trace_span, add_span_attributes
+
+@trace_span("my_op", {"agent": "custom"})
+def do_work(...):
+    add_span_attributes(patient_id=42)
+    ...
+```
+
+### WebSocket (Real-time Notifications)
+
+Мгновенные уведомления через WebSocket. Доставка между процессами
+(Celery worker → API) идёт через Redis pub/sub: `publish_event(...)` публикует
+конверт в канал, фоновый listener в API рассылает его нужным соединениям.
+
+События: `prediction.ready`, `analysis.completed`, `limit.exceeded`,
+`document.parsed`, `patient.updated`.
+
+Подключение (JWT в query-параметре):
+
+```
+wss://medinsight.fileguardian.info/ws/<client_id>?token=<JWT>
+```
+
+Протокол (JSON):
+
+```jsonc
+// подписка / отписка
+{"action":"subscribe","events":["prediction.ready","analysis.completed"]}
+{"action":"unsubscribe","events":["prediction.ready"]}
+{"action":"ping"}                      // → {"event":"pong"}
+// сервер шлёт heartbeat каждые WEBSOCKET_HEARTBEAT_INTERVAL сек: {"event":"ping"}
+```
+
+Формат события:
+
+```json
+{
+  "event": "prediction.ready",
+  "data": {"patient_id": 42, "prediction_id": 123, "type": "readmission", "risk": 42, "confidence": 0.85},
+  "timestamp": "2026-01-15T10:30:00Z",
+  "user_id": 42, "tenant_id": 1, "department_id": null
+}
+```
+
+Клиент: `static/websocket.js` (`MedInsightSocket`) — авто-reconnect с backoff,
+heartbeat, тосты, индикатор `🟢/🔴` (элемент `#ws-status`):
+
+```html
+<script src="/static/websocket.js"></script>
+<script>
+  const sock = new MedInsightSocket({ onEvent: (e) => console.log('event', e) });
+  sock.connect();
+</script>
+```
+
+Безопасность: аутентификация по JWT; пользователь получает только события,
+адресованные его `user_id` / `tenant_id` / `department_id`; глобальный лимит
+соединений `WEBSOCKET_MAX_CONNECTIONS`. Параметры: `WEBSOCKET_ENABLED`,
+`WEBSOCKET_HEARTBEAT_INTERVAL`, `WEBSOCKET_MAX_CONNECTIONS`, `WEBSOCKET_AUTH_TIMEOUT`.
+
+Метрики (`/metrics`): `websocket_connections_total`,
+`websocket_messages_sent_total`, `websocket_messages_received_total`,
+`otel_spans_exported_total`, `otel_spans_dropped_total`.
+
+Тест: `python scripts/test_websocket.py`.
+
 ## Фаза 8: Резервное копирование (Backup & Restore)
 
 Автоматический и ручной бэкап БД (SQLite) и `storage/`, восстановление и ротация.

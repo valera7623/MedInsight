@@ -96,6 +96,20 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_CHAT_ID: str = ""
 
+    # Phase 9: OpenTelemetry (distributed tracing)
+    OTEL_ENABLED: bool = False
+    OTEL_SERVICE_NAME: str = "medinsight"
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://otel-collector:4317"
+    OTEL_TRACES_SAMPLER: str = "parentbased_traceidratio"
+    OTEL_TRACES_SAMPLER_ARG: float = 0.1
+    OTEL_DEPLOYMENT_ENVIRONMENT: str = "production"
+
+    # Phase 9: WebSocket (real-time notifications)
+    WEBSOCKET_ENABLED: bool = True
+    WEBSOCKET_HEARTBEAT_INTERVAL: int = 30
+    WEBSOCKET_MAX_CONNECTIONS: int = 1000
+    WEBSOCKET_AUTH_TIMEOUT: int = 10
+
     # Phase 5: Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 10

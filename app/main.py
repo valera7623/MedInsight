@@ -20,6 +20,7 @@ from app.middleware.audit import AuditMiddleware
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
 from app.routes import admin, admin_backup, analytics, documents, export, export_excel, health, patients, payments, predictions, users, webhooks
+from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
 from app.webhooks import yookassa as yookassa_webhook
@@ -28,6 +29,14 @@ from fastapi.staticfiles import StaticFiles
 
 configure_logging()
 logger = logging.getLogger(__name__)
+
+# Initialise OpenTelemetry early (no-op unless OTEL_ENABLED + packages present).
+try:
+    from app.telemetry.setup import setup_telemetry
+
+    setup_telemetry()
+except Exception as exc:  # noqa: BLE001
+    logger.warning("Telemetry setup error: %s", exc)
 
 # Tracks in-flight requests so shutdown can drain them before closing resources.
 _inflight = {"count": 0}
@@ -175,6 +184,15 @@ async def lifespan(app: FastAPI):
     _register_shutdown_handlers(executor)
     _install_signal_handlers()
 
+    # Start the WebSocket Redis fan-in listener (cross-process event delivery).
+    if settings.WEBSOCKET_ENABLED:
+        from app.websocket.connection_manager import manager
+        from app.websocket.events import run_event_listener
+
+        ws_task = asyncio.create_task(run_event_listener(manager))
+        app.state.ws_listener = ws_task
+        shutdown_manager.register_handler("ws_listener", lambda: ws_task.cancel(), timeout=3)
+
     logger.info(
         "MedInsight v%s started. Storage: %s, DB: %s",
         settings.APP_VERSION,
@@ -240,6 +258,16 @@ app.include_router(payments.router, prefix="/api")
 # Inbound payment provider webhooks (no /api prefix, no auth — verified by signature)
 app.include_router(stripe_webhook.router)
 app.include_router(yookassa_webhook.router)
+# Real-time WebSocket notifications (no /api prefix)
+app.include_router(websocket_route.router)
+
+# Instrument FastAPI + libraries for OpenTelemetry (no-op unless enabled).
+try:
+    from app.telemetry.setup import instrument_all
+
+    instrument_all(app, engine)
+except Exception as exc:  # noqa: BLE001
+    logger.warning("Telemetry instrumentation error: %s", exc)
 
 static_dir = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")

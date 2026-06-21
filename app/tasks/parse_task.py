@@ -68,6 +68,24 @@ def parse_document_task(self, job_id: int, document_id: int) -> dict:
         except Exception as hook_exc:  # webhook failure must not fail the job
             logger.warning("Webhook dispatch failed for job %s: %s", job_id, hook_exc)
 
+        try:
+            from app.websocket.events import EVENT_DOCUMENT_PARSED, publish_event
+
+            publish_event(
+                EVENT_DOCUMENT_PARSED,
+                {
+                    "document_id": document_id,
+                    "patient_id": job.patient_id,
+                    "status": "parsed",
+                    "diagnoses": parsed.get("diagnoses", []),
+                    "medications": parsed.get("medications", []),
+                },
+                user_id=job.user_id,
+                tenant_id=job.tenant_id,
+            )
+        except Exception as ws_exc:  # noqa: BLE001
+            logger.debug("WS document.parsed event failed for job %s: %s", job_id, ws_exc)
+
         logger.info("Document %s parsed successfully (job %s)", document_id, job_id)
         return {"status": "completed", "document_id": document_id}
 

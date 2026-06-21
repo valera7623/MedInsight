@@ -171,6 +171,35 @@ def start_prediction(
                 job.result["prediction_id"],
             )
 
+        try:
+            from app.websocket.events import (
+                EVENT_ANALYSIS_COMPLETED,
+                EVENT_PREDICTION_READY,
+                publish_event,
+            )
+
+            pred_data = prediction.prediction or {}
+            publish_event(
+                EVENT_PREDICTION_READY,
+                {
+                    "patient_id": patient_id,
+                    "prediction_id": prediction.id,
+                    "type": prediction.type,
+                    "risk": round(float(pred_data.get("readmission_risk", 0))),
+                    "confidence": round(float(prediction.confidence_score or 0), 2),
+                },
+                user_id=current_user.id,
+                tenant_id=tenant_id,
+            )
+            publish_event(
+                EVENT_ANALYSIS_COMPLETED,
+                {"patient_id": patient_id, "analysis_id": job.id, "type": "predict"},
+                user_id=current_user.id,
+                tenant_id=tenant_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("WS prediction event failed: %s", exc)
+
     if not redis_available():
         logger.info("Redis unavailable — running sync prediction for job %s", job.id)
         _run_sync()

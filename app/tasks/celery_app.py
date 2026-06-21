@@ -70,6 +70,17 @@ if settings.BACKUP_ENABLED:
     })
 
 
+if settings.OTEL_ENABLED:
+    try:
+        from app.telemetry.setup import setup_telemetry
+        from app.telemetry.celery import instrument_celery
+
+        setup_telemetry()
+        instrument_celery()
+    except Exception:  # noqa: BLE001 — tracing is optional
+        pass
+
+
 def redis_available() -> bool:
     """Fast check whether the Redis broker is reachable.
 

@@ -32,6 +32,33 @@ def _notify_prediction_ready(db, job: AnalysisJob, prediction_id: int) -> None:
         logger.warning("Prediction-ready email failed for job %s: %s", job.id, exc)
 
 
+def _ws_prediction_ready(job: AnalysisJob, prediction) -> None:
+    """Push real-time WebSocket events for a completed prediction."""
+    try:
+        from app.websocket.events import (
+            EVENT_ANALYSIS_COMPLETED,
+            EVENT_PREDICTION_READY,
+            publish_event,
+        )
+
+        pred = prediction.prediction or {}
+        data = {
+            "patient_id": job.patient_id,
+            "prediction_id": prediction.id,
+            "type": prediction.type,
+            "risk": round(float(pred.get("readmission_risk", 0))),
+            "confidence": round(float(prediction.confidence_score or 0), 2),
+        }
+        publish_event(EVENT_PREDICTION_READY, data, user_id=job.user_id, tenant_id=job.tenant_id)
+        publish_event(
+            EVENT_ANALYSIS_COMPLETED,
+            {"patient_id": job.patient_id, "analysis_id": job.id, "type": "predict"},
+            user_id=job.user_id, tenant_id=job.tenant_id,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("WS prediction event failed for job %s: %s", job.id, exc)
+
+
 @with_self_healing("predictor")
 def _run_prediction(db, *, patient_id: int, user_id: int, analysis_id: int, tenant_id: int | None):
     return predict_risk(db, patient_id=patient_id, user_id=user_id, analysis_id=analysis_id, tenant_id=tenant_id)
@@ -83,6 +110,7 @@ def predict_risk_task(self, job_id: int) -> dict:
             logger.warning("Webhook dispatch failed for prediction job %s: %s", job_id, hook_exc)
 
         _notify_prediction_ready(db, job, prediction.id)
+        _ws_prediction_ready(job, prediction)
 
         logger.info("Prediction completed for patient %s (job %s)", job.patient_id, job_id)
         return {"status": "completed", "prediction_id": prediction.id}

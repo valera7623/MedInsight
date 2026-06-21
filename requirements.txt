@@ -27,6 +27,19 @@ Jinja2>=3.1.0
 # Phase 7: Excel export
 openpyxl>=3.1.0
 
+# Phase 9: OpenTelemetry (distributed tracing) + WebSocket
+opentelemetry-api>=1.28.0
+opentelemetry-sdk>=1.28.0
+opentelemetry-exporter-otlp>=1.28.0
+opentelemetry-semantic-conventions>=0.49b0
+opentelemetry-instrumentation-fastapi>=0.49b0
+opentelemetry-instrumentation-sqlalchemy>=0.49b0
+opentelemetry-instrumentation-redis>=0.49b0
+opentelemetry-instrumentation-celery>=0.49b0
+opentelemetry-instrumentation-requests>=0.49b0
+opentelemetry-instrumentation-httpx>=0.49b0
+websockets>=12.0
+
 # Phase 4: Payments
 stripe>=11.0.0
 yookassa>=3.5.0

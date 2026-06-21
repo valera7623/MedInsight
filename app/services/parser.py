@@ -6,6 +6,8 @@ from pathlib import Path
 from docx import Document as DocxDocument
 from PyPDF2 import PdfReader
 
+from app.utils.tracing import trace_span
+
 logger = logging.getLogger(__name__)
 
 SUPPORTED_EXTENSIONS = {".docx", ".pdf"}
@@ -40,6 +42,7 @@ def parse_document_from_bytes(content: bytes, filename: str) -> str:
         return parse_document(tmp.name)
 
 
+@trace_span("parser_agent", {"agent": "parser"})
 def parse_document(file_path: str) -> str:
     path = Path(file_path)
     suffix = path.suffix.lower()

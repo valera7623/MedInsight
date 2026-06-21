@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.models import Patient, Prediction
 from app.services.openai_client import OpenAIClientError, chat_completion_json
 from app.services.predictor import _collect_patient_features, _rule_based_prediction
+from app.utils.tracing import trace_span
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ async def _gpt_insights(features: dict, predictions: list[dict]) -> dict:
     return result
 
 
+@trace_span("summarizer_agent", {"agent": "summarizer"})
 def generate_insights(db: Session, patient_id: int, user_id: int) -> dict:
     import asyncio
 

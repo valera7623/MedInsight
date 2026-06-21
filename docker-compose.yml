@@ -131,10 +131,50 @@ services:
     networks:
       - medinsight-net
 
+  # --- Observability (OpenTelemetry tracing). Opt-in profile to keep the
+  #     default footprint small: `docker compose --profile observability up -d`.
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: medinsight-jaeger
+    restart: unless-stopped
+    profiles:
+      - observability
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: badger
+      BADGER_EPHEMERAL: "false"
+      BADGER_DIRECTORY_VALUE: /badger/data
+      BADGER_DIRECTORY_KEY: /badger/key
+    ports:
+      - "16686:16686"  # Jaeger UI
+    volumes:
+      - jaeger-data:/badger
+    networks:
+      - medinsight-net
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    container_name: medinsight-otel-collector
+    restart: unless-stopped
+    profiles:
+      - observability
+    command: ["--config", "/etc/otel-collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # collector self-metrics
+    depends_on:
+      - jaeger
+    networks:
+      - medinsight-net
+
 volumes:
   medinsight-data:
   medinsight-chroma:
   medinsight-backups:
+  jaeger-data:
   traefik-certs:
 
 networks:

@@ -85,6 +85,32 @@ backup_age_days = Gauge(
     "Age in days of the most recent successful backup",
 )
 
+# --- Phase 9: WebSocket + OpenTelemetry metrics ---
+websocket_connections_total = Gauge(
+    "websocket_connections_total",
+    "Number of currently open WebSocket connections",
+)
+
+websocket_messages_sent_total = Counter(
+    "websocket_messages_sent_total",
+    "WebSocket messages pushed to clients",
+)
+
+websocket_messages_received_total = Counter(
+    "websocket_messages_received_total",
+    "WebSocket messages received from clients",
+)
+
+otel_spans_exported_total = Counter(
+    "otel_spans_exported_total",
+    "Spans successfully exported to the OTLP collector",
+)
+
+otel_spans_dropped_total = Counter(
+    "otel_spans_dropped_total",
+    "Spans dropped (export failure / sampling buffer overflow)",
+)
+
 
 def render_metrics() -> bytes:
     return generate_latest()
