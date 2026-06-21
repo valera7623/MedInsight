@@ -1,0 +1,88 @@
+site_name: MedInsight Documentation
+site_description: Клиническая аналитика — руководства для пользователей, администраторов и разработчиков
+site_url: https://medinsight.fileguardian.info/docs/
+repo_url: https://github.com/valera7623/MedInsight
+repo_name: valera7623/MedInsight
+
+theme:
+  name: material
+  language: ru
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Тёмная тема
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Светлая тема
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - content.code.copy
+    - toc.follow
+
+plugins:
+  - search
+  - mermaid2
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Главная: index.md
+  - Руководство пользователя:
+      - user-guide/getting-started.md
+      - user-guide/patients.md
+      - user-guide/documents.md
+      - user-guide/dicom.md
+      - user-guide/analytics.md
+      - user-guide/predictions.md
+  - Руководство администратора:
+      - admin-guide/deployment.md
+      - admin-guide/configuration.md
+      - admin-guide/backup.md
+      - admin-guide/monitoring.md
+  - Руководство разработчика:
+      - developer-guide/architecture.md
+      - developer-guide/database-schema.md
+      - developer-guide/agents.md
+      - developer-guide/self-healing.md
+  - API:
+      - api/index.md
+      - api/auth.md
+      - api/patients.md
+      - api/documents.md
+      - api/dicom.md
+      - api/analytics.md
+      - api/predictions.md
+  - Деплой:
+      - deployment/docker.md
+      - deployment/vps.md
+      - deployment/ci-cd.md
+      - deployment/environment-variables.md
+  - Дополнительно:
+      - misc/changelog.md
+      - misc/roadmap.md
+      - misc/faq.md
+      - misc/glossary.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/valera7623/MedInsight
