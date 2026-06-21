@@ -42,6 +42,11 @@ docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" down
 docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" build --build-arg INSTALL_SPACY_MODEL=0
 docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" up -d
 
+if [ "$MODE" = "production" ] && [ -x scripts/docker_cleanup.sh ]; then
+  echo "Pruning stopped containers and unused images from previous builds..."
+  bash scripts/docker_cleanup.sh deploy
+fi
+
 echo "Waiting for app startup..."
 sleep 5
 
