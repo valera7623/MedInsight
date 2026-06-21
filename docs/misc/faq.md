@@ -99,6 +99,14 @@ pip install -r requirements-docs.txt
 mkdocs serve
 ```
 
+### Где документация на проде?
+
+```
+https://fileguardian.com.ru/help/
+```
+
+Ссылка «Документация» есть в меню приложения и на странице входа. API Swagger — `/docs`.
+
 ## Контакты
 
 - GitHub Issues: [valera7623/MedInsight](https://github.com/valera7623/MedInsight/issues)

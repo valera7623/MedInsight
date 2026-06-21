@@ -11,7 +11,7 @@ from app.services.audit import log_audit
 logger = logging.getLogger(__name__)
 
 AUDITED_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
-SKIP_PATHS = re.compile(r"^/(health|static|docs|openapi|login|favicon)")
+SKIP_PATHS = re.compile(r"^/(health|static|docs|openapi|login|favicon|help)")
 
 
 ACTION_MAP = {

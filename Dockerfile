@@ -33,6 +33,9 @@ RUN pip install --no-cache-dir --retries 5 --timeout 300 -r requirements.txt \
 
 COPY . .
 
+RUN pip install --no-cache-dir --retries 3 --timeout 120 -r requirements-docs.txt \
+    && mkdocs build
+
 RUN mkdir -p storage data chroma_data secrets
 
 EXPOSE 8000

@@ -277,6 +277,20 @@ except Exception as exc:  # noqa: BLE001
 static_dir = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
+docs_site_dir = Path(__file__).parent.parent / "site"
+if docs_site_dir.is_dir():
+    app.mount(
+        "/help",
+        StaticFiles(directory=str(docs_site_dir), html=True),
+        name="help",
+    )
+    logger.info("Documentation site mounted at /help/")
+else:
+    logger.warning(
+        "Documentation site not found at %s (mkdocs build skipped?)",
+        docs_site_dir,
+    )
+
 
 @app.get("/metrics")
 def metrics():

@@ -31,7 +31,12 @@ mkdocs build
 
 ## Интерактивная API-документация
 
-FastAPI Swagger UI: `/docs` на работающем сервере.
+| URL | Описание |
+|-----|----------|
+| `/docs` | Swagger UI (OpenAPI) |
+| `/help/` | Руководства пользователя, админа, разработчика (MkDocs) |
+
+На проде: `https://fileguardian.com.ru/help/`
 
 ## Языки
 

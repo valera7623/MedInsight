@@ -11,4 +11,5 @@ storage/*
 .idea
 .vscode
 *.md
+!docs/**/*.md
 scripts/setup-vps-ssh.sh
