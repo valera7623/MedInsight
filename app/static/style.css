@@ -565,6 +565,15 @@ body {
 #dicom-canvas { image-rendering: auto; }
 .dicom-frame-slider { width: 100%; padding: 0.5rem 1rem; background: var(--bg-card); }
 
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.plan-card { text-align: left; }
+.plan-card-actions { margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
 @media (max-width: 768px) {
   .dicom-viewer-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   .dicom-sidebar { max-height: 180px; }

@@ -316,3 +316,8 @@ def dicom_page():
 @app.get("/dicom/viewer/{study_uid}")
 def dicom_viewer_page(study_uid: str):
     return FileResponse(static_dir / "dicom-viewer.html")
+
+
+@app.get("/subscription")
+def subscription_page():
+    return FileResponse(static_dir / "subscription.html")
