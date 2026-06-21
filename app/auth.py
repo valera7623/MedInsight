@@ -59,9 +59,28 @@ class UserResponse(BaseModel):
     full_name: str
     role: str
     tenant_id: int | None
+    department_id: int | None = None
+    department_name: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+def user_to_response(user: User, db: Session) -> UserResponse:
+    dept_name = None
+    if user.department_id:
+        dept = db.query(Department).filter(Department.id == user.department_id).first()
+        dept_name = dept.name if dept else None
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+        tenant_id=user.tenant_id,
+        department_id=user.department_id,
+        department_name=dept_name,
+        created_at=user.created_at,
+    )
 
 
 class TenantPublic(BaseModel):
@@ -258,7 +277,7 @@ def register(
             get_email_service().send_verification_email, user.email, token, settings.FRONTEND_URL
         )
 
-    return user
+    return user_to_response(user, db)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -343,5 +362,8 @@ def request_reset(
 
 
 @router.get("/me", response_model=UserResponse)
-def me(current_user: Annotated[User, Depends(get_current_user)]):
-    return current_user
+def me(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    return user_to_response(current_user, db)

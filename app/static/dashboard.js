@@ -101,7 +101,41 @@ async function fetchCurrentUser() {
     localStorage.setItem('tenant_id', String(data.tenant_id));
   }
   localStorage.setItem('role', data.role);
+  renderUserSessionInfo(currentUser);
   return currentUser;
+}
+
+const ROLE_LABELS = {
+  super_admin: 'Суперадмин',
+  admin: 'Администратор',
+  head_of_department: 'Зав. отделением',
+  doctor: 'Врач',
+  nurse: 'Медсестра',
+  researcher: 'Исследователь',
+  viewer: 'Наблюдатель',
+};
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderUserSessionInfo(user) {
+  const el = document.getElementById('user-session-info');
+  if (!el || !user) return;
+  const roleLabel = ROLE_LABELS[user.role] || user.role;
+  const parts = [
+    `<strong>${escapeHtml(user.full_name)}</strong>`,
+    escapeHtml(roleLabel),
+  ];
+  if (user.department_name) {
+    parts.push(escapeHtml(user.department_name));
+  }
+  el.innerHTML = parts.join(' · ');
+  el.classList.remove('hidden');
 }
 
 function isAdmin() {
