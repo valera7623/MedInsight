@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     ENTERPRISE_PRICE_RUB: int = 999000  # kopecks (9990 ₽)
     ENTERPRISE_PRICE_USD: int = 9999  # cents ($99.99)
 
+    # Billing master switch. When false: no analysis limits, checkout disabled
+    # (testing / maintenance mode). Mirrors ReportAgent's BILLING_ENABLED.
+    BILLING_ENABLED: bool = True
+
     # Phase 5: Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 10

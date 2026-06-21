@@ -562,6 +562,31 @@ GRACEFUL_SHUTDOWN_TIMEOUT=30
 APP_VERSION=1.0.0
 ```
 
+## Отключение биллинга (тестовый режим)
+
+Главный выключатель `BILLING_ENABLED` (по образцу ReportAgent) позволяет
+полностью отключить тарифные ограничения для тестирования/обслуживания.
+
+```env
+# .env
+BILLING_ENABLED=false
+```
+
+При `BILLING_ENABLED=false`:
+
+- лимиты анализов **не проверяются** — `UsageLimitMiddleware` пропускает все
+  запросы, `POST /api/analytics/predict/{id}` не упирается в `402`;
+- использование не инкрементируется (`increment_usage` → no-op);
+- `GET /api/payments/subscription` возвращает `status: "testing"` и
+  безлимитную квоту (`999999`);
+- `GET /api/payments/prices` содержит `"billing_enabled": false`;
+- оплата (`create-checkout`, `yookassa/create`) отвечает `503 Billing is disabled`.
+
+Логика вынесена в `app/services/payment/billing_config.py`
+(`billing_enabled()`, `stripe_checkout_enabled()`, `yookassa_checkout_enabled()`).
+Чтобы применить — поменяйте `BILLING_ENABLED` в `.env` и пересоберите
+(`./deploy.sh` / GitHub Actions).
+
 ## Фаза 6: Email-уведомления + JSON-логи
 
 ### Email Notifications

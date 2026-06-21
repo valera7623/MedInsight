@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import SessionLocal
 from app.models import Subscription
+from app.services.payment.billing_config import TESTING_UNLIMITED, billing_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,9 @@ def set_plan(
 
 def check_analysis_limit(tenant_id: int) -> bool:
     """Return True if the tenant may run another analysis this period."""
+    if not billing_enabled():
+        # Testing / maintenance mode: limits disabled.
+        return True
     db = SessionLocal()
     try:
         sub = get_or_create_subscription(db, tenant_id)
@@ -110,6 +114,9 @@ def check_analysis_limit(tenant_id: int) -> bool:
 
 def increment_usage(tenant_id: int, amount: int = 1) -> int:
     """Increment usage counter. Returns new usage count."""
+    if not billing_enabled():
+        # Don't track usage while billing is disabled.
+        return 0
     db = SessionLocal()
     try:
         sub = get_or_create_subscription(db, tenant_id)
@@ -121,6 +128,8 @@ def increment_usage(tenant_id: int, amount: int = 1) -> int:
 
 
 def get_remaining(tenant_id: int) -> int:
+    if not billing_enabled():
+        return TESTING_UNLIMITED
     db = SessionLocal()
     try:
         sub = get_or_create_subscription(db, tenant_id)

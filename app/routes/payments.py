@@ -16,6 +16,7 @@ from app.middleware.tenant import get_request_tenant_id
 from app.models import Payment, User
 from app.services.access import effective_tenant_id
 from app.services.payment import stripe_client, yookassa_client
+from app.services.payment.billing_config import TESTING_UNLIMITED, billing_enabled
 from app.services.payment.usage_tracker import (
     VALID_PLANS,
     get_or_create_subscription,
@@ -72,6 +73,7 @@ def list_prices():
                 "price_usd": settings.ENTERPRISE_PRICE_USD,
             },
         ],
+        "billing_enabled": billing_enabled(),
         "providers": {
             "stripe": stripe_client.is_configured(),
             "yookassa": yookassa_client.is_configured(),
@@ -85,6 +87,8 @@ def create_checkout(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
 ):
+    if not billing_enabled():
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Billing is disabled")
     tenant_id = _require_tenant(current_user, request)
     if data.plan_type not in {"pro", "enterprise"}:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid plan_type")
@@ -102,6 +106,8 @@ def create_yookassa(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
 ):
+    if not billing_enabled():
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Billing is disabled")
     tenant_id = _require_tenant(current_user, request)
     if data.plan_type not in {"pro", "enterprise"}:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid plan_type")
@@ -117,6 +123,16 @@ def get_subscription(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
+    if not billing_enabled():
+        # Testing / maintenance mode: report unlimited usage, no real subscription.
+        return SubscriptionResponse(
+            plan_type="freemium",
+            status="testing",
+            reports_limit=TESTING_UNLIMITED,
+            reports_used=0,
+            reports_remaining=TESTING_UNLIMITED,
+            current_period_end=None,
+        )
     tenant_id = _require_tenant(current_user, request)
     sub = get_or_create_subscription(db, tenant_id, current_user.id)
     return SubscriptionResponse(
