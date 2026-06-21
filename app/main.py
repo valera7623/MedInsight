@@ -19,7 +19,7 @@ from app.database import Base, bootstrap_system, close_db_connection, engine, ru
 from app.middleware.audit import AuditMiddleware
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
-from app.routes import admin, analytics, documents, export, health, patients, payments, predictions, users, webhooks
+from app.routes import admin, analytics, documents, export, export_excel, health, patients, payments, predictions, users, webhooks
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
 from app.webhooks import yookassa as yookassa_webhook
@@ -153,6 +153,7 @@ async def lifespan(app: FastAPI):
     # --- startup ---
     Path(settings.STORAGE_PATH).mkdir(parents=True, exist_ok=True)
     Path(settings.STORAGE_PATH, "encrypted").mkdir(parents=True, exist_ok=True)
+    Path(settings.EXPORT_TEMP_DIR).mkdir(parents=True, exist_ok=True)
     Path(settings.ENCRYPTION_KEY_PATH).parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
     run_migrations()
@@ -228,6 +229,7 @@ app.include_router(documents.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(predictions.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
+app.include_router(export_excel.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(webhooks.router, prefix="/api")

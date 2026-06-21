@@ -684,16 +684,23 @@ function initDashboard() {
 }
 
 let patientsPage = 1;
-const patientsPageSize = 20;
+let patientsPageSize = 20;
+let patientsSearch = '';
 
 async function loadPatientsList(page = 1) {
-  const res = await apiFetch(`/api/patients?page=${page}&page_size=${patientsPageSize}`);
+  const params = new URLSearchParams({ page, limit: patientsPageSize });
+  if (patientsSearch) params.set('search', patientsSearch);
+  const res = await apiFetch(`/api/patients?${params.toString()}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || 'Ошибка загрузки');
 
-  patientsPage = page;
+  patientsPage = data.page || page;
   const tbody = document.querySelector('#patients-table tbody');
   tbody.innerHTML = '';
+
+  if (!data.items.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b">Ничего не найдено</td></tr>';
+  }
 
   data.items.forEach(p => {
     const tr = document.createElement('tr');
@@ -714,10 +721,93 @@ async function loadPatientsList(page = 1) {
 
   bindPatientActionButtons(() => loadPatientsList(patientsPage));
 
-  const totalPages = Math.ceil(data.total / patientsPageSize) || 1;
-  document.getElementById('page-info').textContent = `Страница ${page} из ${totalPages}`;
-  document.getElementById('prev-page').disabled = page <= 1;
-  document.getElementById('next-page').disabled = page >= totalPages;
+  const totalPages = data.pages || 1;
+  document.getElementById('page-info').textContent = `Страница ${patientsPage} из ${totalPages} (всего ${data.total})`;
+  document.getElementById('prev-page').disabled = !data.prev_page;
+  document.getElementById('next-page').disabled = !data.next_page;
+}
+
+// --- Phase 7: search/limit controls + Excel export ---
+
+function debounce(fn, wait = 300) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), wait);
+  };
+}
+
+function setupPatientsControls() {
+  const searchEl = document.getElementById('patient-search');
+  if (searchEl) {
+    searchEl.addEventListener('input', debounce((e) => {
+      patientsSearch = e.target.value.trim();
+      loadPatientsList(1);
+    }, 300));
+  }
+  const limitEl = document.getElementById('patient-limit');
+  if (limitEl) {
+    limitEl.addEventListener('change', (e) => {
+      patientsPageSize = parseInt(e.target.value, 10) || 20;
+      loadPatientsList(1);
+    });
+  }
+  const exportBtn = document.getElementById('export-patients-btn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      const filters = patientsSearch ? { search: patientsSearch } : {};
+      exportToExcel('patients', filters, [], exportBtn);
+    });
+  }
+}
+
+async function exportToExcel(entity, filters = {}, columns = [], btn = null) {
+  const originalText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Экспорт…'; }
+  try {
+    const res = await apiFetch(`/api/export/${entity}`, {
+      method: 'POST',
+      body: JSON.stringify({ filters, columns }),
+    });
+    const contentType = res.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+      // Large dataset -> async job; poll the download URL until ready.
+      const job = await res.json();
+      if (!res.ok) throw new Error(job.detail || 'Ошибка экспорта');
+      if (btn) btn.textContent = 'Готовим файл…';
+      await pollExportDownload(job.download_url, entity);
+    } else {
+      const blob = await res.blob();
+      downloadBlob(blob, `${entity}_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    }
+  } catch (err) {
+    alert(err.message || 'Ошибка экспорта');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = originalText; }
+  }
+}
+
+async function pollExportDownload(downloadUrl, entity) {
+  for (let i = 0; i < 60; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    const res = await apiFetch(downloadUrl);
+    if (res.ok) {
+      const blob = await res.blob();
+      downloadBlob(blob, `${entity}_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      return;
+    }
+  }
+  alert('Экспорт занимает слишком много времени. Попробуйте позже по ссылке скачивания.');
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 async function pollJobStatus(jobId, onComplete, onError) {
@@ -917,6 +1007,7 @@ function initPatientsPage() {
   });
   document.getElementById('prev-page').addEventListener('click', () => loadPatientsList(patientsPage - 1));
   document.getElementById('next-page').addEventListener('click', () => loadPatientsList(patientsPage + 1));
+  setupPatientsControls();
 
   fetchCurrentUser()
     .then(() => { showAdminNav(); return loadPatientsList(); })

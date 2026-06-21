@@ -24,6 +24,18 @@
       <button class="btn btn-primary" id="new-patient-btn">+ Новый пациент</button>
     </header>
 
+    <div class="list-toolbar" style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem">
+      <input type="search" id="patient-search" placeholder="Поиск по ФИО, телефону, email…"
+             style="flex:1;min-width:220px;padding:0.5rem 0.75rem;border:1px solid #cbd5e1;border-radius:6px">
+      <select id="patient-limit" class="btn btn-secondary btn-sm" style="padding:0.4rem">
+        <option value="10">10</option>
+        <option value="20" selected>20</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+      <button class="btn btn-secondary" id="export-patients-btn">⬇ Экспорт в Excel</button>
+    </div>
+
     <table class="data-table" id="patients-table">
       <thead>
         <tr>

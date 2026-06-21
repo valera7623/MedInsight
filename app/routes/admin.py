@@ -14,6 +14,17 @@ from app.models import AnalysisJob, AuditLog, Department, Document, Patient, Pre
 from app.services.access import ROLES, is_super_admin
 from app.services.audit import log_audit
 from app.services.encryption import rotate_encryption_key
+from app.services.list_queries import (
+    AUDIT_SORT,
+    DEPARTMENT_SEARCH_FIELDS,
+    DEPARTMENT_SORT,
+    USER_SEARCH_FIELDS,
+    USER_SORT,
+    audit_scope,
+    departments_scope,
+    users_scope,
+)
+from app.utils.pagination import PaginationParams, paginate
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -249,19 +260,39 @@ def create_user(
     return user
 
 
-@router.get("/users", response_model=list[UserAdminResponse])
+def _user_dump(u: User) -> dict:
+    return UserAdminResponse.model_validate(u).model_dump(mode="json")
+
+
+@router.get("/users")
 def list_users(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_admin)],
     tenant_id: int | None = Query(None),
+    page: int | None = Query(None, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    search: str | None = Query(None),
+    role: str | None = Query(None),
+    is_active: bool | None = Query(None),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
 ):
-    query = db.query(User)
-    if is_super_admin(current_user):
-        if tenant_id is not None:
-            query = query.filter(User.tenant_id == tenant_id)
-    else:
-        query = query.filter(User.tenant_id == current_user.tenant_id)
-    return query.order_by(User.created_at.desc()).all()
+    query = users_scope(db, current_user, tenant_id)
+    if is_active is not None:
+        query = query.filter(User.is_blocked.is_(not is_active))
+
+    # Back-compat: no pagination/filter params -> plain array (legacy admin UI).
+    if page is None and search is None and role is None and is_active is None:
+        return [_user_dump(u) for u in query.order_by(User.created_at.desc()).all()]
+
+    params = PaginationParams(
+        page=page or 1, limit=limit, search=search, sort_by=sort_by, sort_order=sort_order,
+        filters={"role": role},
+    )
+    return paginate(
+        query, params, model=User, search_fields=USER_SEARCH_FIELDS,
+        allowed_sort=USER_SORT, serializer=_user_dump,
+    )
 
 
 @router.put("/users/{user_id}/role", response_model=UserAdminResponse)
@@ -378,21 +409,34 @@ def create_department(
     return dept
 
 
-@router.get("/departments", response_model=list[DepartmentResponse])
+def _dept_dump(d: Department) -> dict:
+    return DepartmentResponse.model_validate(d).model_dump(mode="json")
+
+
+@router.get("/departments")
 def list_departments(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     tenant_id: int | None = Query(None),
+    page: int | None = Query(None, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    search: str | None = Query(None),
+    sort_by: str = Query("name"),
+    sort_order: str = Query("asc"),
 ):
-    query = db.query(Department)
-    if is_super_admin(current_user):
-        if tenant_id is not None:
-            query = query.filter(Department.tenant_id == tenant_id)
-    elif current_user.tenant_id is not None:
-        query = query.filter(Department.tenant_id == current_user.tenant_id)
-    else:
-        return []
-    return query.order_by(Department.name).all()
+    query = departments_scope(db, current_user, tenant_id)
+
+    # Back-compat: no pagination/search -> plain array (used by dropdowns).
+    if page is None and search is None:
+        return [_dept_dump(d) for d in query.order_by(Department.name).all()]
+
+    params = PaginationParams(
+        page=page or 1, limit=limit, search=search, sort_by=sort_by, sort_order=sort_order,
+    )
+    return paginate(
+        query, params, model=Department, search_fields=DEPARTMENT_SEARCH_FIELDS,
+        allowed_sort=DEPARTMENT_SORT, serializer=_dept_dump,
+    )
 
 
 def _get_department_owned(db: Session, dept_id: int, current_user: User) -> Department:
@@ -439,25 +483,56 @@ def delete_department(
     db.commit()
 
 
-@router.get("/audit", response_model=list[AuditLogResponse])
+def _audit_dump(a: AuditLog) -> dict:
+    return AuditLogResponse.model_validate(a).model_dump(mode="json")
+
+
+def _parse_date(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+@router.get("/audit")
 def list_audit(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_admin)],
     tenant_id: int | None = Query(None),
     action: str | None = Query(None),
+    user_id: int | None = Query(None),
+    from_date: str | None = Query(None),
+    to_date: str | None = Query(None),
+    page: int | None = Query(None, ge=1),
     limit: int = Query(100, ge=1, le=500),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
 ):
-    query = db.query(AuditLog)
-    if is_super_admin(current_user):
-        if tenant_id is not None:
-            query = query.filter(AuditLog.tenant_id == tenant_id)
-    else:
-        query = query.filter(AuditLog.tenant_id == current_user.tenant_id)
-
+    query = audit_scope(db, current_user, tenant_id)
     if action:
         query = query.filter(AuditLog.action == action)
+    if user_id is not None:
+        query = query.filter(AuditLog.user_id == user_id)
+    dt_from = _parse_date(from_date)
+    dt_to = _parse_date(to_date)
+    if dt_from:
+        query = query.filter(AuditLog.created_at >= dt_from)
+    if dt_to:
+        query = query.filter(AuditLog.created_at <= dt_to)
 
-    return query.order_by(AuditLog.created_at.desc()).limit(limit).all()
+    # Back-compat: no pagination params -> plain array capped by limit (legacy UI).
+    if page is None:
+        rows = query.order_by(AuditLog.created_at.desc()).limit(limit).all()
+        return [_audit_dump(a) for a in rows]
+
+    params = PaginationParams(
+        page=page, limit=min(limit, 100), sort_by=sort_by, sort_order=sort_order,
+    )
+    return paginate(query, params, model=AuditLog, allowed_sort=AUDIT_SORT, serializer=_audit_dump)
 
 
 @router.get("/health", response_model=HealthResponse)

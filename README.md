@@ -562,6 +562,83 @@ GRACEFUL_SHUTDOWN_TIMEOUT=30
 APP_VERSION=1.0.0
 ```
 
+## Фаза 7: Пагинация + экспорт в Excel
+
+### Pagination
+
+Универсальная пагинация/поиск/сортировка/фильтрация — `app/utils/pagination.py`
+(`PaginationParams` + `paginate`). Списки возвращают конверт:
+
+```json
+{ "items": [...], "total": 95, "page": 1, "limit": 20, "pages": 5,
+  "next_page": 2, "prev_page": null }
+```
+
+Общие query-параметры: `page` (≥1), `limit` (1..100), `search`, `sort_by`,
+`sort_order` (`asc`|`desc`). Поиск/сортировка/фильтры применяются только к
+реальным колонкам модели (защита от инъекций в `sort_by`/`filters`).
+
+| Эндпоинт | Доп. параметры |
+|----------|----------------|
+| `GET /api/patients` | `search` (ФИО/тел/email), `department_id`, `attending_doctor_id` |
+| `GET /api/documents` | `patient_id`, `document_type`, `status`, `search` |
+| `GET /api/analytics/predictions` | `patient_id`, `type`, `validated` |
+| `GET /api/admin/users` | `search` (email/ФИО), `role`, `is_active` |
+| `GET /api/admin/departments` | `search` (название) |
+| `GET /api/admin/audit` | `user_id`, `action`, `from_date`, `to_date` |
+
+Для `admin/*` и `departments` сохранена обратная совместимость: без параметра
+`page` возвращается простой массив (для старого UI и выпадающих списков); при
+передаче `page` — пагинированный конверт.
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://medinsight.fileguardian.info/api/patients?page=2&limit=50&search=иванов&sort_by=last_name&sort_order=asc"
+```
+
+### Excel Export
+
+Экспорт в `.xlsx` (`openpyxl`) — сервис `app/services/excel_export.py`
+(`ExcelExporter`), эндпоинты `app/routes/export_excel.py`. Стиль: жирные
+заголовки на фоне `#2563eb` белым, автоширина колонок, формат дат
+`YYYY-MM-DD HH:MM:SS`, числа с 2 знаками, закрепление шапки.
+
+| Эндпоинт | Доступ |
+|----------|--------|
+| `POST /api/export/patients` | can_export |
+| `POST /api/export/documents` | can_export |
+| `POST /api/export/predictions` | can_export |
+| `POST /api/export/users` | admin |
+| `POST /api/export/audit` | admin |
+| `GET  /api/export/download/{job_id}` | авторизованный (для async) |
+
+Тело: `{"filters": {...}, "columns": ["id", "full_name", ...]}` (пустой
+`columns` → все колонки сущности). Имя файла: `{entity}_export_YYYY-MM-DD.xlsx`.
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"filters":{"department_id":1},"columns":["id","full_name","birth_date","email"]}' \
+  -o patients.xlsx \
+  https://medinsight.fileguardian.info/api/export/patients
+```
+
+**Большие выгрузки**: при числе строк > `EXPORT_MAX_ROWS` (по умолчанию 10000) и
+доступном Redis экспорт уходит в Celery; эндпоинт отвечает JSON
+`{"status":"processing","job_id":...,"download_url":"/api/export/download/<id>"}`,
+файл сохраняется в `EXPORT_TEMP_DIR` (`storage/exports/`) и скачивается по
+`download_url`, когда готов. Фронтенд (`dashboard.js`) опрашивает ссылку
+автоматически.
+
+Переменные окружения (Фаза 7):
+
+```env
+EXPORT_MAX_ROWS=10000
+EXPORT_MAX_COLUMNS=50
+EXPORT_TEMP_DIR=./storage/exports
+```
+
+Тест: `python scripts/test_export.py` (проверяет генерацию .xlsx и логику пагинации).
+
 ## Отключение биллинга (тестовый режим)
 
 Главный выключатель `BILLING_ENABLED` (по образцу ReportAgent) позволяет

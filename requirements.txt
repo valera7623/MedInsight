@@ -24,6 +24,9 @@ aiosmtplib>=3.0.0
 structlog>=24.1.0
 Jinja2>=3.1.0
 
+# Phase 7: Excel export
+openpyxl>=3.1.0
+
 # Phase 4: Payments
 stripe>=11.0.0
 yookassa>=3.5.0

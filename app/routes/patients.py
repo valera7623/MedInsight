@@ -19,6 +19,8 @@ from app.services.access import (
     effective_tenant_id,
     patients_query,
 )
+from app.services.list_queries import PATIENT_SEARCH_FIELDS, PATIENT_SORT, patients_scope
+from app.utils.pagination import PaginationParams, paginate
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
@@ -138,29 +140,41 @@ def create_patient(
     return _serialize_patient(patient, current_user)
 
 
-@router.get("", response_model=PatientListResponse)
+@router.get("")
 def list_patients(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=100),
+    page_size: int | None = Query(None, ge=1, le=100, description="Алиас limit (совместимость)"),
+    search: str | None = Query(None),
+    department_id: int | None = Query(None),
+    attending_doctor_id: int | None = Query(None),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
 ):
     tid = effective_tenant_id(current_user, get_request_tenant_id(request))
-    query = patients_query(db, current_user, tid)
-    total = query.count()
-    items = (
-        query.order_by(Patient.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-        .all()
-    )
-    return PatientListResponse(
-        items=[_serialize_patient(p, current_user) for p in items],
-        total=total,
+    query = patients_scope(db, current_user, tid)
+    params = PaginationParams(
         page=page,
-        page_size=page_size,
+        limit=page_size or limit,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        filters={"department_id": department_id, "attending_doctor_id": attending_doctor_id},
     )
+    result = paginate(
+        query,
+        params,
+        model=Patient,
+        search_fields=PATIENT_SEARCH_FIELDS,
+        allowed_sort=PATIENT_SORT,
+        serializer=lambda p: _serialize_patient(p, current_user),
+    )
+    # Back-compat alias for older clients that read page_size.
+    result["page_size"] = result["limit"]
+    return result
 
 
 @router.get("/{patient_id}")

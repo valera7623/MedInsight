@@ -14,7 +14,9 @@ from app.middleware.tenant import get_request_tenant_id
 from app.models import AnalysisJob, Patient, Prediction, User
 from app.services.access import can_predict, can_view_patient, effective_tenant_id, patients_query
 from app.services.email import get_email_service
+from app.services.list_queries import PREDICTION_SORT, predictions_scope
 from app.services.summarizer import generate_insights
+from app.utils.pagination import PaginationParams, paginate
 from app.tasks.celery_app import redis_available
 from app.tasks.predict_task import predict_risk_task
 
@@ -199,6 +201,37 @@ def prediction_status(
         status=job.status,
         result=job.result,
         error=job.error_message,
+    )
+
+
+@router.get("/predictions")
+def list_predictions_all(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    patient_id: int | None = Query(None),
+    type: str | None = Query(None),
+    validated: bool | None = Query(None),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
+):
+    tid = effective_tenant_id(current_user, get_request_tenant_id(request))
+    query = predictions_scope(db, current_user, tid)
+    params = PaginationParams(
+        page=page,
+        limit=limit,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        filters={"patient_id": patient_id, "type": type, "validated": validated},
+    )
+    return paginate(
+        query,
+        params,
+        model=Prediction,
+        allowed_sort=PREDICTION_SORT,
+        serializer=lambda p: PredictionResponse.model_validate(p).model_dump(mode="json"),
     )
 
 

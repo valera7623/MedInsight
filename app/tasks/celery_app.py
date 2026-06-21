@@ -15,6 +15,7 @@ celery_app = Celery(
         "app.tasks.predict_task",
         "app.tasks.learn_task",
         "app.tasks.webhook_task",
+        "app.tasks.export_task",
     ],
 )
 

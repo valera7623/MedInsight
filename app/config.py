@@ -74,6 +74,11 @@ class Settings(BaseSettings):
     # (testing / maintenance mode). Mirrors ReportAgent's BILLING_ENABLED.
     BILLING_ENABLED: bool = True
 
+    # Phase 7: Excel export
+    EXPORT_MAX_ROWS: int = 10000  # rows above this go through Celery (async)
+    EXPORT_MAX_COLUMNS: int = 50
+    EXPORT_TEMP_DIR: str = "./storage/exports"
+
     # Phase 5: Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 10

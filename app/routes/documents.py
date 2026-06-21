@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -15,6 +15,8 @@ from app.middleware.tenant import get_request_tenant_id
 from app.models import AnalysisJob, Document, Patient, User
 from app.services.access import can_upload_document, can_view_patient, effective_tenant_id, is_super_admin
 from app.services.audit import log_audit
+from app.services.list_queries import DOCUMENT_SEARCH_FIELDS, DOCUMENT_SORT, documents_scope
+from app.utils.pagination import PaginationParams, paginate
 from app.services.encryption import EncryptionError, decrypt_file, encrypt_bytes, ensure_encryption_key
 from app.services.extractor import extract_entities
 from app.services.parser import SUPPORTED_EXTENSIONS, parse_document, parse_document_from_bytes
@@ -205,6 +207,40 @@ async def upload_document(
     _enqueue_parse(doc, db, current_user.id)
     db.refresh(doc)
     return doc
+
+
+@router.get("")
+def list_documents(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    search: str | None = Query(None),
+    patient_id: int | None = Query(None),
+    document_type: str | None = Query(None),
+    doc_status: str | None = Query(None, alias="status"),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
+):
+    tid = effective_tenant_id(current_user, get_request_tenant_id(request))
+    query = documents_scope(db, current_user, tid)
+    params = PaginationParams(
+        page=page,
+        limit=limit,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        filters={"patient_id": patient_id, "document_type": document_type, "status": doc_status},
+    )
+    return paginate(
+        query,
+        params,
+        model=Document,
+        search_fields=DOCUMENT_SEARCH_FIELDS,
+        allowed_sort=DOCUMENT_SORT,
+        serializer=lambda d: DocumentResponse.model_validate(d).model_dump(),
+    )
 
 
 @router.get("/patient/{patient_id}", response_model=list[DocumentResponse])
