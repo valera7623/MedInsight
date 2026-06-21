@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Annotated, Callable
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import bcrypt
 from jose import JWTError, jwt
@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.middleware.rate_limit import rate_limit
-from app.models import Tenant, User
+from app.models import Department, Tenant, User
 from app.services.access import ROLES, is_super_admin, require_role
 from app.services.audit import log_audit
 from app.services.email import get_email_service
@@ -19,7 +19,16 @@ from app.services.email import get_email_service
 router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer(auto_error=False)
 
-VALID_REGISTER_ROLES = {"doctor", "researcher", "viewer"}
+VALID_REGISTER_ROLES = {
+    "admin",
+    "head_of_department",
+    "doctor",
+    "nurse",
+    "researcher",
+    "viewer",
+}
+REGISTER_DEPARTMENT_REQUIRED = frozenset({"head_of_department", "nurse"})
+REGISTER_DEPARTMENT_OPTIONAL = frozenset({"doctor", "head_of_department", "nurse"})
 
 
 class UserRegister(BaseModel):
@@ -28,6 +37,7 @@ class UserRegister(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)
     role: str = Field(default="doctor")
     subdomain: str | None = None
+    department_id: int | None = None
 
 
 class UserLogin(BaseModel):
@@ -58,6 +68,13 @@ class TenantPublic(BaseModel):
     id: int
     name: str
     subdomain: str
+
+    model_config = {"from_attributes": True}
+
+
+class DepartmentPublic(BaseModel):
+    id: int
+    name: str
 
     model_config = {"from_attributes": True}
 
@@ -156,6 +173,23 @@ def list_public_tenants(db: Annotated[Session, Depends(get_db)]):
     return db.query(Tenant).filter(Tenant.is_active.is_(True)).order_by(Tenant.name).all()
 
 
+@router.get("/departments", response_model=list[DepartmentPublic])
+def list_public_departments(
+    db: Annotated[Session, Depends(get_db)],
+    subdomain: str = Query(..., min_length=1),
+):
+    """Departments for a tenant — used on the registration form (no auth)."""
+    tenant = resolve_tenant_for_auth(db, subdomain)
+    if not tenant:
+        return []
+    return (
+        db.query(Department)
+        .filter(Department.tenant_id == tenant.id)
+        .order_by(Department.name)
+        .all()
+    )
+
+
 class PasswordResetRequest(BaseModel):
     email: EmailStr
     subdomain: str | None = None
@@ -180,6 +214,24 @@ def register(
     if not tenant:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No tenant available")
 
+    if data.role in REGISTER_DEPARTMENT_REQUIRED and not data.department_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="department_id is required for head_of_department and nurse roles",
+        )
+
+    department_id: int | None = None
+    if data.department_id is not None:
+        if data.role not in REGISTER_DEPARTMENT_OPTIONAL:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="department_id is not used for this role",
+            )
+        dept = db.query(Department).filter(Department.id == data.department_id).first()
+        if not dept or dept.tenant_id != tenant.id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid department for tenant")
+        department_id = dept.id
+
     existing = (
         db.query(User)
         .filter(User.tenant_id == tenant.id, User.email == data.email)
@@ -190,6 +242,7 @@ def register(
 
     user = User(
         tenant_id=tenant.id,
+        department_id=department_id,
         email=data.email,
         password_hash=hash_password(data.password),
         full_name=data.full_name,

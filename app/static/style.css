@@ -157,6 +157,7 @@ body {
 }
 
 .text-muted-inline { color: var(--text-tertiary); font-size: 0.875rem; }
+.text-muted { color: var(--text-secondary); font-size: 0.875rem; }
 .text-center-muted { text-align: center; color: var(--text-tertiary); }
 
 /* Stats */

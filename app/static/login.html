@@ -58,9 +58,17 @@
         <label for="reg-role">Роль</label>
         <select id="reg-role">
           <option value="doctor">Врач</option>
+          <option value="nurse">Медсестра</option>
+          <option value="head_of_department">Зав. отделением</option>
+          <option value="admin">Администратор клиники</option>
           <option value="researcher">Исследователь</option>
           <option value="viewer">Наблюдатель</option>
         </select>
+        <p id="reg-role-hint" class="text-muted" style="font-size:0.82rem;margin-top:0.4rem;line-height:1.4"></p>
+      </div>
+      <div class="form-group hidden" id="reg-department-group">
+        <label for="reg-department">Отделение</label>
+        <select id="reg-department"></select>
       </div>
       <div id="register-error" class="error-message hidden"></div>
       <button type="submit" class="btn btn-primary btn-block">Создать аккаунт</button>
@@ -92,6 +100,56 @@
     }
 
     loadTenants();
+
+    const ROLE_HINTS = {
+      doctor: 'Работа с пациентами: создание карточек, документы, прогнозы. Видит своих пациентов и пациентов своего отделения (если указано).',
+      nurse: 'Просмотр пациентов своего отделения, экспорт отчётов. Без создания и редактирования карточек.',
+      head_of_department: 'Полное управление пациентами своего отделения: создание, документы, прогнозы.',
+      admin: 'Полный доступ в клинике: пользователи, отделения, аудит, удаление данных.',
+      researcher: 'Доступ ко всей клинике для анализа, но данные пациентов анонимизированы (без ФИО и контактов). Только чтение.',
+      viewer: 'Просмотр всех пациентов клиники с полными данными (ФИО, контакты) и экспорт. Без создания и изменений.',
+    };
+    const ROLES_NEED_DEPT = new Set(['doctor', 'nurse', 'head_of_department']);
+    const ROLES_DEPT_REQUIRED = new Set(['nurse', 'head_of_department']);
+
+    function updateRoleHint() {
+      const role = document.getElementById('reg-role').value;
+      document.getElementById('reg-role-hint').textContent = ROLE_HINTS[role] || '';
+      const deptGroup = document.getElementById('reg-department-group');
+      const deptSelect = document.getElementById('reg-department');
+      if (ROLES_NEED_DEPT.has(role)) {
+        deptGroup.classList.remove('hidden');
+        deptSelect.required = ROLES_DEPT_REQUIRED.has(role);
+      } else {
+        deptGroup.classList.add('hidden');
+        deptSelect.required = false;
+        deptSelect.value = '';
+      }
+    }
+
+    async function loadDepartmentsForRegister(subdomain) {
+      const sel = document.getElementById('reg-department');
+      sel.innerHTML = '<option value="">— Выберите отделение —</option>';
+      if (!subdomain) return;
+      try {
+        const res = await fetch(`${API}/api/auth/departments?subdomain=${encodeURIComponent(subdomain)}`);
+        const depts = await res.json();
+        depts.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = String(d.id);
+          opt.textContent = d.name;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('departments', e);
+      }
+    }
+
+    document.getElementById('reg-role').addEventListener('change', updateRoleHint);
+    document.getElementById('reg-subdomain').addEventListener('change', (e) => {
+      loadDepartmentsForRegister(e.target.value);
+    });
+    updateRoleHint();
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -131,16 +189,21 @@
       const tenantOpt = document.getElementById('reg-subdomain').selectedOptions[0];
 
       try {
+        const role = document.getElementById('reg-role').value;
+        const body = {
+          email: document.getElementById('reg-email').value,
+          password: document.getElementById('reg-password').value,
+          full_name: document.getElementById('reg-full-name').value,
+          role,
+          subdomain,
+        };
+        const deptId = document.getElementById('reg-department').value;
+        if (deptId) body.department_id = parseInt(deptId, 10);
+
         const res = await fetch(`${API}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: document.getElementById('reg-email').value,
-            password: document.getElementById('reg-password').value,
-            full_name: document.getElementById('reg-full-name').value,
-            role: document.getElementById('reg-role').value,
-            subdomain,
-          }),
+          body: JSON.stringify(body),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Ошибка регистрации');
@@ -170,6 +233,9 @@
       document.getElementById('login-form').classList.add('hidden');
       document.getElementById('register-form').classList.remove('hidden');
       document.querySelector('.auth-footer').classList.add('hidden');
+      const sub = document.getElementById('reg-subdomain').value;
+      loadDepartmentsForRegister(sub);
+      updateRoleHint();
     });
 
     document.getElementById('show-login').addEventListener('click', () => {
