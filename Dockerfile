@@ -17,8 +17,12 @@ COPY requirements.txt requirements-nlp.txt ./
 ARG INSTALL_SPACY_MODEL=0
 ARG SPACY_MODEL_URL=https://github.com/explosion/spacy-models/releases/download/ru_core_news_lg-3.8.0/ru_core_news_lg-3.8.0-py3-none-any.whl
 
-RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir -r requirements-nlp.txt \
+# VPS builds often hit slow PyPI; default pip timeout (15s) is too short for large wheels.
+ENV PIP_DEFAULT_TIMEOUT=300 \
+    PIP_RETRIES=5
+
+RUN pip install --no-cache-dir --retries 5 --timeout 300 -r requirements.txt \
+    && pip install --no-cache-dir --retries 5 --timeout 300 -r requirements-nlp.txt \
     && if [ "$INSTALL_SPACY_MODEL" = "1" ]; then \
          pip install --no-cache-dir --retries 1 --timeout 120 \
            "${SPACY_MODEL_URL}" \
