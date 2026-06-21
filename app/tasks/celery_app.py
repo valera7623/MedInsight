@@ -16,8 +16,20 @@ celery_app = Celery(
         "app.tasks.learn_task",
         "app.tasks.webhook_task",
         "app.tasks.export_task",
+        "app.tasks.backup_task",
     ],
 )
+
+
+def _crontab_from_cron(expr: str):
+    """Build a celery crontab from a 5-field cron string 'm h dom mon dow'."""
+    from celery.schedules import crontab
+
+    parts = (expr or "").split()
+    if len(parts) != 5:
+        return crontab(minute=0, hour=2)  # safe default: daily 02:00
+    minute, hour, dom, mon, dow = parts
+    return crontab(minute=minute, hour=hour, day_of_month=dom, month_of_year=mon, day_of_week=dow)
 
 celery_app.conf.update(
     task_serializer="json",
@@ -33,15 +45,29 @@ celery_app.conf.update(
     broker_transport_options={"socket_connect_timeout": 2, "socket_timeout": 2},
 )
 
+celery_app.conf.beat_schedule = {}
+
 if settings.SELF_HEALING_ENABLED:
-    celery_app.conf.beat_schedule = {
-        "learn-from-failures-every-6h": {
-            "task": "app.tasks.learn_task.learn_from_failures",
-            "schedule": 6 * 60 * 60.0,  # every 6 hours
-        },
+    celery_app.conf.beat_schedule["learn-from-failures-every-6h"] = {
+        "task": "app.tasks.learn_task.learn_from_failures",
+        "schedule": 6 * 60 * 60.0,  # every 6 hours
     }
-else:
-    celery_app.conf.beat_schedule = {}
+
+if settings.BACKUP_ENABLED:
+    celery_app.conf.beat_schedule.update({
+        "backup-full-daily": {
+            "task": "app.tasks.backup_task.scheduled_full_backup",
+            "schedule": _crontab_from_cron(settings.BACKUP_SCHEDULE_FULL),
+        },
+        "backup-db-hourly": {
+            "task": "app.tasks.backup_task.scheduled_db_backup",
+            "schedule": _crontab_from_cron(settings.BACKUP_SCHEDULE_DB),
+        },
+        "backup-cleanup-daily": {
+            "task": "app.tasks.backup_task.backup_cleanup",
+            "schedule": _crontab_from_cron(settings.BACKUP_SCHEDULE_CLEANUP),
+        },
+    })
 
 
 def redis_available() -> bool:

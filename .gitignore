@@ -6,6 +6,10 @@ venv/
 *.db
 storage/*
 !storage/.gitkeep
+!storage/exports/
+storage/exports/*
+!storage/exports/.gitkeep
+backups/
 secrets/*
 !secrets/.gitkeep
 .idea/

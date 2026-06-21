@@ -252,3 +252,23 @@ class Payment(Base):
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class BackupLog(Base):
+    """Record of each backup attempt (Phase 8)."""
+
+    __tablename__ = "backup_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    backup_id: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    type: Mapped[str] = mapped_column(String(20), nullable=False)  # full | db | storage
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")  # pending|completed|failed
+    path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    duration_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    contains_db: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    contains_storage: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    contains_config: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

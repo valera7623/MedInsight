@@ -79,6 +79,23 @@ class Settings(BaseSettings):
     EXPORT_MAX_COLUMNS: int = 50
     EXPORT_TEMP_DIR: str = "./storage/exports"
 
+    # Phase 8: Backup & Restore
+    BACKUP_ENABLED: bool = True
+    BACKUP_DIR: str = "./backups"
+    BACKUP_RETENTION_DAYS: int = 7
+    BACKUP_RETENTION_WEEKS: int = 4
+    BACKUP_RETENTION_MONTHS: int = 12
+    BACKUP_SCHEDULE_FULL: str = "0 2 * * *"   # daily at 02:00
+    BACKUP_SCHEDULE_DB: str = "0 * * * *"     # hourly
+    BACKUP_SCHEDULE_CLEANUP: str = "0 3 * * *"  # daily at 03:00
+    BACKUP_MAX_SIZE_MB: int = 10240  # abort backup if exceeded (10 GB)
+    BACKUP_ENCRYPTION_ENABLED: bool = False
+    BACKUP_ENCRYPTION_KEY: str = ""
+    BACKUP_ALERT_MAX_AGE_HOURS: int = 48
+    # Optional Telegram alerting for backup health
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
+
     # Phase 5: Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 10

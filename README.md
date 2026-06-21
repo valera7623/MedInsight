@@ -639,6 +639,84 @@ EXPORT_TEMP_DIR=./storage/exports
 
 Тест: `python scripts/test_export.py` (проверяет генерацию .xlsx и логику пагинации).
 
+## Фаза 8: Резервное копирование (Backup & Restore)
+
+Автоматический и ручной бэкап БД (SQLite) и `storage/`, восстановление и ротация.
+Сервис — `app/services/backup.py` (`BackupService`), задачи Celery —
+`app/tasks/backup_task.py`, API — `app/routes/admin_backup.py` (только super_admin).
+
+### Что и куда
+
+```
+/backups/
+├── full/       backup_<ts>.tar.gz          # БД + storage + config (.env без секретов) + metadata
+├── db/         backup_<ts>.db.gz           # только БД (sqlite .backup + gzip)
+├── storage/    backup_<ts>.storage.tar.gz  # только файлы
+└── metadata/   backup_<ts>.json            # версия, размеры, sha256-чек-суммы
+```
+
+В Docker `/backups` — отдельный volume `medinsight-backups`. БД копируется через
+`sqlite3 .backup` (консистентно, без блокировки). `.env` в full-бэкапе
+**санитизируется** (значения с `KEY/PASSWORD/SECRET/TOKEN` → `__REDACTED__`).
+Опциональное шифрование age-passphrase (`BACKUP_ENCRYPTION_ENABLED`).
+
+### API (super_admin)
+
+| Метод | Путь | Назначение |
+|-------|------|------------|
+| POST | `/api/admin/backup/create` | `{"type":"full\|db\|storage"}` → job_id |
+| GET | `/api/admin/backup/status/{job_id}` | статус Celery-задачи |
+| GET | `/api/admin/backup/list` | список бэкапов |
+| GET | `/api/admin/backup/download/{backup_id}` | скачать `.tar.gz`/`.db.gz` |
+| POST | `/api/admin/backup/restore` | `{"backup_id","type","confirm":true}` |
+| DELETE | `/api/admin/backup/{backup_id}` | удалить бэкап |
+
+```bash
+TOKEN=...  # super_admin JWT
+# создать полный бэкап
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"type":"full"}' https://medinsight.fileguardian.info/api/admin/backup/create
+# список
+curl -H "Authorization: Bearer $TOKEN" https://medinsight.fileguardian.info/api/admin/backup/list
+# восстановление (требует confirm=true!)
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"backup_id":"backup_2026-01-15_02-00-00","type":"full","confirm":true}' \
+  https://medinsight.fileguardian.info/api/admin/backup/restore
+```
+
+### Периодические задачи (Celery Beat)
+
+При `BACKUP_ENABLED=true` регистрируются (cron из `.env`):
+
+- `backup-full-daily` — `BACKUP_SCHEDULE_FULL` (по умолчанию 02:00)
+- `backup-db-hourly` — `BACKUP_SCHEDULE_DB` (каждый час)
+- `backup-cleanup-daily` — `BACKUP_SCHEDULE_CLEANUP` (03:00) — ротация GFS:
+  `BACKUP_RETENTION_DAYS` ежедневных + `_WEEKS` еженедельных + `_MONTHS` месячных.
+
+### Ручной бэкап / восстановление (без приложения)
+
+```bash
+./scripts/backup.sh full           # или db | storage  → в $BACKUP_DIR
+./scripts/restore.sh /backups/full/backup_<ts>.tar.gz   # остановит и перезапустит контейнеры
+```
+
+### Мониторинг
+
+Метрики Prometheus на `/metrics`: `backup_size_bytes{type}`,
+`backup_duration_seconds{type}`, `backup_status_total{type,result}`,
+`backup_age_days`. Алерты (лог + опционально Telegram через `TELEGRAM_BOT_TOKEN`/
+`TELEGRAM_CHAT_ID`): последний бэкап старше `BACKUP_ALERT_MAX_AGE_HOURS` (48ч),
+размер > `BACKUP_MAX_SIZE_MB`, восстановление > 5 мин.
+
+### Безопасность
+- Доступ к бэкапам — только `super_admin`; все действия пишутся в аудит.
+- Секреты не попадают в архив (`.env` санитизируется).
+- Перед восстановлением создаётся защитная копия (`*.pre-restore`); full-restore
+  проверяет sha256 БД из `metadata.json`. Распаковка защищена от path traversal.
+
+Переменные окружения (Фаза 8): см. `.env.example` (`BACKUP_*`, `TELEGRAM_*`).
+Тест: `python scripts/test_backup.py`.
+
 ## Отключение биллинга (тестовый режим)
 
 Главный выключатель `BILLING_ENABLED` (по образцу ReportAgent) позволяет
