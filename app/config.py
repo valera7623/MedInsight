@@ -106,6 +106,12 @@ class Settings(BaseSettings):
     # Phase 11: Dark mode default for new users (light | dark | system)
     DEFAULT_THEME: str = "light"
 
+    # Phase 12: DICOM medical imaging
+    DICOM_ENABLED: bool = True
+    DICOM_MAX_FILE_SIZE_MB: int = 500
+    DICOM_STORAGE_PATH: str = "./storage/dicom"
+    DICOM_THUMBNAIL_SIZE: str = "256x256"
+
     # Phase 9: OpenTelemetry (distributed tracing)
     OTEL_ENABLED: bool = False
     OTEL_SERVICE_NAME: str = "medinsight"

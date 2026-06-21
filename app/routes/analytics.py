@@ -26,6 +26,9 @@ class RecentPatient(BaseModel):
 class DashboardResponse(BaseModel):
     total_patients: int
     total_documents: int
+    total_dicom_studies: int = 0
+    dicom_modalities: dict[str, int] = {}
+    dicom_body_parts: dict[str, int] = {}
     diagnoses: dict[str, int]
     medications: dict[str, int]
     recent_patients: list[RecentPatient]

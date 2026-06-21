@@ -1,0 +1,150 @@
+"""Celery task: parse DICOM upload and persist study/series/frames."""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime
+from pathlib import Path
+
+from app.database import SessionLocal
+from app.models import DicomFrame, DicomSeries, DicomStudy, Patient
+from app.services.dicom_parser import DicomParser, DicomParseError
+from app.services.dicom_storage import DicomStorage
+from app.tasks.celery_app import celery_app
+
+logger = logging.getLogger(__name__)
+
+
+def _notify_dicom_ready(study: DicomStudy, user_id: int) -> None:
+    try:
+        from app.websocket.events import EVENT_DICOM_READY, publish_event
+
+        publish_event(
+            EVENT_DICOM_READY,
+            {
+                "study_uid": study.study_uid,
+                "patient_id": study.patient_id,
+                "modality": study.modality,
+                "status": study.status,
+            },
+            user_id=user_id,
+            tenant_id=study.tenant_id,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("WS dicom.ready failed: %s", exc)
+
+    try:
+        from app.config import settings
+
+        if not settings.TELEGRAM_BOT_ENABLED:
+            return
+        from app.bot.services.notification_service import get_notification_service
+
+        db = SessionLocal()
+        try:
+            patient = db.query(Patient).filter(Patient.id == study.patient_id).first()
+            name = f"{patient.last_name} {patient.first_name}".strip() if patient else "пациент"
+        finally:
+            db.close()
+        msg = (
+            f"🩻 <b>DICOM исследование готово</b>\n"
+            f"Пациент: {name}\n"
+            f"Модальность: {study.modality or '—'}\n"
+            f"Кадров: {study.num_instances}"
+        )
+        get_notification_service().send_bulk_notification([user_id], msg)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Telegram dicom notification failed: %s", exc)
+
+
+@celery_app.task(bind=True, name="app.tasks.dicom_task.process_dicom_study")
+def process_dicom_study(self, study_id: int, temp_path: str) -> dict:
+    db = SessionLocal()
+    parser = DicomParser()
+    storage = DicomStorage()
+    try:
+        study = db.query(DicomStudy).filter(DicomStudy.id == study_id).first()
+        if not study:
+            return {"status": "failed", "error": "Study not found"}
+
+        study.status = "processing"
+        db.commit()
+
+        if not parser.validate_dicom(temp_path):
+            raise DicomParseError("Invalid DICOM file")
+
+        parsed = parser.parse_dicom_file(temp_path)
+
+        enc_path = storage.store_encrypted(
+            temp_path,
+            tenant_id=study.tenant_id,
+            patient_id=study.patient_id,
+            study_uid=parsed["study_uid"],
+            filename=study.original_filename or "upload.dcm",
+        )
+
+        frame_tuples = [(f["instance_uid"], f["frame_number"], f["png_bytes"]) for f in parsed["frames"]]
+        image_paths = storage.store_frames(
+            patient_id=study.patient_id,
+            study_uid=parsed["study_uid"],
+            frames=frame_tuples,
+        )
+
+        series = DicomSeries(
+            study_id=study.id,
+            series_uid=parsed["series_uid"],
+            series_number=parsed.get("series_number"),
+            series_description=parsed.get("series_description"),
+            modality=parsed.get("modality"),
+            num_instances=len(parsed["frames"]),
+        )
+        db.add(series)
+        db.flush()
+
+        for fmeta, img_path in zip(parsed["frames"], image_paths, strict=True):
+            db.add(
+                DicomFrame(
+                    series_id=series.id,
+                    instance_uid=fmeta["instance_uid"],
+                    frame_number=fmeta["frame_number"],
+                    image_path=img_path,
+                    width=fmeta.get("width"),
+                    height=fmeta.get("height"),
+                    bit_depth=fmeta.get("bit_depth"),
+                    pixel_spacing=fmeta.get("pixel_spacing"),
+                )
+            )
+
+        study.study_uid = parsed["study_uid"]
+        study.study_date = parsed.get("study_date") or study.study_date
+        study.study_description = parsed.get("study_description")
+        study.modality = parsed.get("modality")
+        study.body_part = parsed.get("body_part")
+        study.patient_name_dicom = parsed.get("patient_name")
+        study.patient_id_dicom = parsed.get("patient_id")
+        study.num_series = 1
+        study.num_instances = len(parsed["frames"])
+        study.file_path_encrypted = enc_path
+        study.status = "ready"
+        study.processed_at = datetime.utcnow()
+        study.error_message = None
+        db.commit()
+
+        _notify_dicom_ready(study, study.user_id)
+        logger.info("DICOM study %s processed (%d frames)", study.study_uid, study.num_instances)
+        return {"status": "ready", "study_uid": study.study_uid, "num_instances": study.num_instances}
+
+    except Exception as exc:
+        logger.exception("DICOM processing failed for study %s: %s", study_id, exc)
+        if study := db.query(DicomStudy).filter(DicomStudy.id == study_id).first():
+            study.status = "failed"
+            study.error_message = str(exc)
+            study.processed_at = datetime.utcnow()
+            db.commit()
+        return {"status": "failed", "error": str(exc)}
+    finally:
+        db.close()
+        try:
+            Path(temp_path).unlink(missing_ok=True)
+        except Exception:  # noqa: BLE001
+            pass

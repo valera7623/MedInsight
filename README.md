@@ -862,6 +862,63 @@ DEFAULT_THEME=light   # light | dark | system — для новых пользо
 
 Тест: `python scripts/test_theme.py`.
 
+## Фаза 12: DICOM Support (медицинские изображения)
+
+Загрузка, хранение, просмотр и анализ DICOM-файлов. Оригиналы шифруются через age
+(как документы в Фазе 3); кадры конвертируются в PNG на сервере (`pydicom` + Pillow)
+для веб-просмотра.
+
+### Возможности
+
+- Загрузка `.dcm` через API или UI (`/dicom`, drag & drop)
+- Асинхронная обработка Celery (`process_dicom_study`)
+- Веб-вьюер OHIF-style: `/dicom/viewer/{study_uid}` — серии, кадры, zoom/pan/rotate, W/L
+- RBAC + изоляция по `tenant_id`; аудит upload/view/delete
+- WebSocket (`dicom.ready`) + Telegram при завершении обработки
+- Метаданные (модальность, body part) в аналитике дашборда
+
+### API
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| `POST` | `/api/dicom/upload` | multipart: `file`, `patient_id` → `{study_uid, job_id, status}` |
+| `GET` | `/api/dicom/studies` | Список с пагинацией (фильтры: patient_id, modality, status, date_from/to) |
+| `GET` | `/api/dicom/studies/{study_uid}` | Детали исследования (серии, кадры) |
+| `GET` | `/api/dicom/studies/{study_uid}/series/{series_uid}/frames` | Кадры серии |
+| `GET` | `/api/dicom/frames/{instance_uid}` | PNG-кадр (JWT, range-friendly) |
+| `GET` | `/api/dicom/studies/{study_uid}/thumbnail` | Превью (первый кадр) |
+| `DELETE` | `/api/dicom/studies/{study_uid}` | Удаление (admin) |
+
+```bash
+TOKEN=...  # JWT врача
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -F "patient_id=1" -F "file=@scan.dcm" \
+  https://medinsight.fileguardian.info/api/dicom/upload
+```
+
+### Хранение
+
+```
+storage/dicom/{patient_id}/{study_uid}/frames/{instance_uid}_f{N}.png
+storage/encrypted/tenant_{id}/patient_{id}/dicom_{study_uid}_*.age  # оригинал
+```
+
+### Переменные окружения
+
+```env
+DICOM_ENABLED=true
+DICOM_MAX_FILE_SIZE_MB=500
+DICOM_STORAGE_PATH=./storage/dicom
+DICOM_THUMBNAIL_SIZE=256x256
+```
+
+### UI
+
+- `/dicom` — список исследований, фильтры, загрузка
+- `/dicom/viewer/{study_uid}` — просмотр (canvas, навигация по кадрам)
+
+Тест: `python scripts/test_dicom.py` (синтетический DICOM + парсинг + БД).
+
 ## Фаза 8: Резервное копирование (Backup & Restore)
 
 Автоматический и ручной бэкап БД (SQLite) и `storage/`, восстановление и ротация.

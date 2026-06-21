@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Query, Session
 
-from app.models import AuditLog, Department, Document, Patient, Prediction, User
+from app.models import AuditLog, Department, DicomStudy, Document, Patient, Prediction, User
 from app.services.access import is_super_admin, patients_query
 
 PATIENT_SEARCH_FIELDS = ("first_name", "last_name", "middle_name", "phone", "email")
@@ -29,6 +29,9 @@ DEPARTMENT_SORT = ("id", "name")
 
 AUDIT_SORT = ("id", "created_at", "action")
 
+DICOM_SEARCH_FIELDS = ("study_description", "modality", "body_part", "patient_name_dicom")
+DICOM_SORT = ("id", "created_at", "study_date", "modality", "status")
+
 
 def _accessible_patient_ids(db: Session, user: User, tenant_id: int | None):
     return patients_query(db, user, tenant_id).with_entities(Patient.id)
@@ -46,6 +49,14 @@ def documents_scope(db: Session, user: User, tenant_id: int | None) -> Query:
 def predictions_scope(db: Session, user: User, tenant_id: int | None) -> Query:
     ids = _accessible_patient_ids(db, user, tenant_id)
     return db.query(Prediction).filter(Prediction.patient_id.in_(ids))
+
+
+def dicom_studies_scope(db: Session, user: User, tenant_id: int | None) -> Query:
+    ids = _accessible_patient_ids(db, user, tenant_id)
+    query = db.query(DicomStudy).filter(DicomStudy.patient_id.in_(ids))
+    if tenant_id is not None:
+        query = query.filter(DicomStudy.tenant_id == tenant_id)
+    return query
 
 
 def users_scope(db: Session, user: User, tenant_id: int | None) -> Query:

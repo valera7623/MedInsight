@@ -302,6 +302,72 @@ class TelegramUser(Base):
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
 
 
+class DicomStudy(Base):
+    """DICOM study metadata (Phase 12)."""
+
+    __tablename__ = "dicom_studies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    patient_id: Mapped[int] = mapped_column(Integer, ForeignKey("patients.id"), nullable=False, index=True)
+    tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    study_uid: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+    study_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    study_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    modality: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    body_part: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    patient_name_dicom: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    patient_id_dicom: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    num_series: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    num_instances: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    file_path_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="uploaded")
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    patient: Mapped["Patient"] = relationship("Patient", foreign_keys=[patient_id])
+    series: Mapped[list["DicomSeries"]] = relationship(
+        "DicomSeries", back_populates="study", cascade="all, delete-orphan"
+    )
+
+
+class DicomSeries(Base):
+    __tablename__ = "dicom_series"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    study_id: Mapped[int] = mapped_column(Integer, ForeignKey("dicom_studies.id"), nullable=False, index=True)
+    series_uid: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+    series_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    series_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    modality: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    num_instances: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    study: Mapped["DicomStudy"] = relationship("DicomStudy", back_populates="series")
+    frames: Mapped[list["DicomFrame"]] = relationship(
+        "DicomFrame", back_populates="series", cascade="all, delete-orphan"
+    )
+
+
+class DicomFrame(Base):
+    __tablename__ = "dicom_frames"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    series_id: Mapped[int] = mapped_column(Integer, ForeignKey("dicom_series.id"), nullable=False, index=True)
+    instance_uid: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+    frame_number: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    image_path: Mapped[str] = mapped_column(Text, nullable=False)
+    width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bit_depth: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pixel_spacing: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    series: Mapped["DicomSeries"] = relationship("DicomSeries", back_populates="frames")
+
+
 class BackupLog(Base):
     """Record of each backup attempt (Phase 8)."""
 

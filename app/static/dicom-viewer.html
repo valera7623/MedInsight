@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — DICOM Viewer</title>
+  <link rel="stylesheet" href="/static/styles/themes.css">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/components/theme-toggle.js"></script>
+</head>
+<body class="dicom-viewer-body">
+  <nav class="navbar">
+    <div class="nav-brand">MedInsight</div>
+    <div class="nav-links">
+      <a href="/dicom">← К списку</a>
+    </div>
+    <div class="nav-actions">
+      <div data-theme-toggle></div>
+      <button class="btn btn-secondary btn-sm" id="logout-btn">Выйти</button>
+    </div>
+  </nav>
+
+  <div class="dicom-viewer-layout">
+    <aside class="dicom-sidebar" id="dicom-sidebar">
+      <h3>Серии</h3>
+      <ul id="series-list" class="dicom-series-list"></ul>
+      <div class="dicom-meta" id="dicom-meta"></div>
+    </aside>
+
+    <section class="dicom-viewport">
+      <div class="dicom-toolbar">
+        <button class="btn btn-secondary btn-sm" id="tool-zoom-in" title="Увеличить">🔍+</button>
+        <button class="btn btn-secondary btn-sm" id="tool-zoom-out" title="Уменьшить">🔍−</button>
+        <button class="btn btn-secondary btn-sm" id="tool-reset" title="Сброс">⟲</button>
+        <button class="btn btn-secondary btn-sm" id="tool-rotate" title="Поворот">↻</button>
+        <label class="dicom-wl-label">
+          W/L
+          <input type="range" id="wl-slider" min="0" max="200" value="100">
+        </label>
+        <span id="frame-label" class="dicom-frame-label">Кадр 1 / 1</span>
+      </div>
+      <div class="dicom-canvas-wrap" id="canvas-wrap">
+        <canvas id="dicom-canvas"></canvas>
+      </div>
+      <input type="range" id="frame-slider" class="dicom-frame-slider" min="0" max="0" value="0">
+    </section>
+  </div>
+
+  <script src="/static/dashboard.js"></script>
+  <script src="/static/dicom-viewer.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const parts = window.location.pathname.split('/');
+      const studyUid = parts[parts.length - 1] || parts[parts.length - 2];
+      initDicomViewer(studyUid);
+    });
+  </script>
+</body>
+</html>

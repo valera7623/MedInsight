@@ -2,7 +2,7 @@ from collections import Counter
 
 from sqlalchemy.orm import Session
 
-from app.models import Document, Patient, User
+from app.models import Document, Patient, User, DicomStudy
 from app.services.access import patients_query
 
 
@@ -18,8 +18,22 @@ def get_dashboard_data(
 
     if patient_ids:
         documents = db.query(Document).filter(Document.patient_id.in_(patient_ids)).all()
+        dicom_studies = (
+            db.query(DicomStudy)
+            .filter(DicomStudy.patient_id.in_(patient_ids), DicomStudy.status == "ready")
+            .all()
+        )
     else:
         documents = []
+        dicom_studies = []
+
+    modality_counter: Counter = Counter()
+    body_part_counter: Counter = Counter()
+    for ds in dicom_studies:
+        if ds.modality:
+            modality_counter[ds.modality] += 1
+        if ds.body_part:
+            body_part_counter[ds.body_part] += 1
 
     diagnoses_counter: Counter = Counter()
     medications_counter: Counter = Counter()
@@ -37,6 +51,9 @@ def get_dashboard_data(
     return {
         "total_patients": len(patients),
         "total_documents": len(documents),
+        "total_dicom_studies": len(dicom_studies),
+        "dicom_modalities": dict(modality_counter.most_common(10)),
+        "dicom_body_parts": dict(body_part_counter.most_common(10)),
         "diagnoses": dict(diagnoses_counter.most_common(20)),
         "medications": dict(medications_counter.most_common(20)),
         "recent_patients": [

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — DICOM</title>
+  <link rel="stylesheet" href="/static/styles/themes.css">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/components/theme-toggle.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">MedInsight</div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Меню" aria-expanded="false">☰</button>
+    <div class="nav-links">
+      <a href="/">Дашборд</a>
+      <a href="/patients">Пациенты</a>
+      <a href="/dicom" class="active">DICOM</a>
+      <a href="/admin" class="nav-admin-link hidden">Админ</a>
+      <a href="/docs" target="_blank">API Docs</a>
+    </div>
+    <div class="nav-actions">
+      <div data-theme-toggle></div>
+      <button class="btn btn-secondary btn-sm" id="logout-btn">Выйти</button>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>DICOM-исследования</h1>
+      <button class="btn btn-primary" id="upload-dicom-btn">+ Загрузить DICOM</button>
+    </header>
+
+    <div class="list-toolbar">
+      <input type="search" id="dicom-search" class="toolbar-input" placeholder="Поиск по описанию, модальности…">
+      <select id="dicom-modality" class="btn btn-secondary btn-sm" style="padding:0.4rem">
+        <option value="">Все модальности</option>
+        <option value="CT">CT</option>
+        <option value="MR">MR</option>
+        <option value="US">US</option>
+        <option value="XA">XA</option>
+        <option value="CR">CR</option>
+        <option value="DX">DX</option>
+      </select>
+      <select id="dicom-status" class="btn btn-secondary btn-sm" style="padding:0.4rem">
+        <option value="">Все статусы</option>
+        <option value="ready">Готово</option>
+        <option value="processing">Обработка</option>
+        <option value="failed">Ошибка</option>
+      </select>
+      <select id="dicom-limit" class="btn btn-secondary btn-sm" style="padding:0.4rem">
+        <option value="10">10</option>
+        <option value="20" selected>20</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+
+    <div class="dicom-grid" id="dicom-grid"></div>
+
+    <div class="pagination" id="pagination">
+      <button class="btn btn-secondary btn-sm" id="prev-page" disabled>← Назад</button>
+      <span id="page-info">Страница 1</span>
+      <button class="btn btn-secondary btn-sm" id="next-page">Вперёд →</button>
+    </div>
+  </main>
+
+  <!-- Upload modal -->
+  <div class="modal hidden" id="dicom-upload-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <h2>Загрузка DICOM</h2>
+      <form id="dicom-upload-form">
+        <div class="form-group">
+          <label>Пациент</label>
+          <select id="dicom-patient" required></select>
+        </div>
+        <div class="dicom-dropzone" id="dicom-dropzone">
+          <p>Перетащите .dcm файл сюда или нажмите для выбора</p>
+          <input type="file" id="dicom-file" accept=".dcm,.dicom,application/dicom" hidden>
+          <span id="dicom-file-name" class="text-muted"></span>
+        </div>
+        <div id="dicom-upload-error" class="error-message hidden"></div>
+        <div id="dicom-upload-progress" class="hidden">Загрузка и обработка…</div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-close">Отмена</button>
+          <button type="submit" class="btn btn-primary">Загрузить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/websocket.js"></script>
+  <script src="/static/dashboard.js"></script>
+  <script src="/static/dicom.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => initDicomPage());
+  </script>
+</body>
+</html>

@@ -9,7 +9,7 @@
 (function () {
   const KNOWN_EVENTS = [
     'prediction.ready', 'analysis.completed', 'limit.exceeded',
-    'document.parsed', 'patient.updated',
+    'document.parsed', 'patient.updated', 'dicom.ready',
   ];
 
   class MedInsightSocket {

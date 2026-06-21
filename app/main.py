@@ -19,7 +19,7 @@ from app.database import Base, bootstrap_system, close_db_connection, engine, ru
 from app.middleware.audit import AuditMiddleware
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
-from app.routes import admin, admin_backup, analytics, documents, export, export_excel, health, patients, payments, predictions, preferences, telegram, users, webhooks
+from app.routes import admin, admin_backup, analytics, dicom, documents, export, export_excel, health, patients, payments, predictions, preferences, telegram, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
@@ -162,6 +162,8 @@ async def lifespan(app: FastAPI):
     # --- startup ---
     Path(settings.STORAGE_PATH).mkdir(parents=True, exist_ok=True)
     Path(settings.STORAGE_PATH, "encrypted").mkdir(parents=True, exist_ok=True)
+    if settings.DICOM_ENABLED:
+        Path(settings.DICOM_STORAGE_PATH).mkdir(parents=True, exist_ok=True)
     Path(settings.EXPORT_TEMP_DIR).mkdir(parents=True, exist_ok=True)
     if settings.BACKUP_ENABLED:
         Path(settings.BACKUP_DIR).mkdir(parents=True, exist_ok=True)
@@ -246,6 +248,7 @@ app.include_router(health.router)
 app.include_router(auth_router, prefix="/api")
 app.include_router(patients.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
+app.include_router(dicom.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(predictions.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
@@ -303,3 +306,13 @@ def patient_detail_page(patient_id: int):
 @app.get("/admin")
 def admin_page():
     return FileResponse(static_dir / "admin.html")
+
+
+@app.get("/dicom")
+def dicom_page():
+    return FileResponse(static_dir / "dicom.html")
+
+
+@app.get("/dicom/viewer/{study_uid}")
+def dicom_viewer_page(study_uid: str):
+    return FileResponse(static_dir / "dicom-viewer.html")

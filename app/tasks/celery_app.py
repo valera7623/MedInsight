@@ -17,6 +17,7 @@ celery_app = Celery(
         "app.tasks.webhook_task",
         "app.tasks.export_task",
         "app.tasks.backup_task",
+        "app.tasks.dicom_task",
     ],
 )
 
