@@ -101,11 +101,12 @@ mkdocs serve
 
 ### Где документация на проде?
 
-```
-https://fileguardian.com.ru/help/
-```
+| Язык | URL |
+|------|-----|
+| Русский | `https://fileguardian.com.ru/help/` |
+| English | `https://fileguardian.com.ru/help/en/` |
 
-Ссылка «Документация» есть в меню приложения и на странице входа. API Swagger — `/docs`.
+Язык переключается в шапке документации или автоматически при первом визите (по языку браузера). API Swagger — `/docs`.
 
 ## Контакты
 

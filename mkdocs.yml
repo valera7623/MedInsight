@@ -1,5 +1,5 @@
 site_name: MedInsight Documentation
-site_description: Клиническая аналитика — руководства для пользователей, администраторов и разработчиков
+site_description: Clinical analytics — guides for users, administrators, and developers
 site_url: https://fileguardian.com.ru/help/
 repo_url: https://github.com/valera7623/MedInsight
 repo_name: valera7623/MedInsight
@@ -30,6 +30,35 @@ theme:
     - toc.follow
 
 plugins:
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: ru
+          default: true
+          name: Русский
+          build: true
+          site_name: MedInsight — документация
+          site_description: Клиническая аналитика — руководства для пользователей, администраторов и разработчиков
+          theme:
+            language: ru
+        - locale: en
+          name: English
+          build: true
+          site_name: MedInsight Documentation
+          site_description: Clinical analytics — guides for users, administrators, and developers
+          theme:
+            language: en
+          nav_translations:
+            Главная: Home
+            Руководство пользователя: User Guide
+            Руководство администратора: Admin Guide
+            Руководство разработчика: Developer Guide
+            API: API
+            Деплой: Deployment
+            Дополнительно: More
   - search
   - mermaid2
 
@@ -86,3 +115,6 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/valera7623/MedInsight
+
+extra_javascript:
+  - javascripts/lang-redirect.js

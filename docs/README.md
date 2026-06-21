@@ -29,6 +29,15 @@ mkdocs build
 | [deployment/](deployment/) | DevOps | Docker, VPS, CI/CD |
 | [misc/](misc/) | Все | Changelog, FAQ, глоссарий |
 
+## Языки / Languages
+
+| Язык | URL |
+|------|-----|
+| Русский (по умолчанию) | `/help/` |
+| English | `/help/en/` |
+
+Переключатель языка — в шапке сайта (Material). При первом визите язык определяется автоматически по настройкам браузера (`Accept-Language` / `navigator.languages`).
+
 ## Интерактивная API-документация
 
 | URL | Описание |
