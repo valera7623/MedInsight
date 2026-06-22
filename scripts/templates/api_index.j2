@@ -1,0 +1,59 @@
+{{ banner }}# API Reference
+
+{{ description }}
+
+## Base URL
+
+```
+{{ base_url }}/api
+```
+
+## Interactive documentation
+
+| URL | Format |
+|-----|--------|
+| `/docs` | Swagger UI |
+| `/redoc` | ReDoc |
+| `/openapi.json` | OpenAPI 3 JSON schema |
+
+## Authentication
+
+Most endpoints require a JWT Bearer token:
+
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" {{ base_url }}/api/auth/me
+```
+
+Obtain a token via `POST /api/auth/login`.
+
+## Sections
+
+| Section | Description |
+|---------|-------------|
+{% for section in sections %}
+| [{{ section.title }}]({{ section.filename }}) | {{ section.endpoint_count }} endpoint(s) |
+{% endfor %}
+
+## Error format
+
+```json
+{
+  "detail": "Human-readable error message"
+}
+```
+
+## Common status codes
+
+| Code | Meaning |
+|------|---------|
+| 400 | Bad request / validation error |
+| 401 | Not authenticated |
+| 403 | Insufficient permissions |
+| 404 | Resource not found |
+| 402 | Plan limit exceeded (predictions) |
+| 422 | Validation error (Pydantic) |
+| 500 | Internal server error |
+
+---
+
+*Generated from OpenAPI {{ openapi_version }} — {{ generated_at }}*

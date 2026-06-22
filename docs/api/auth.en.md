@@ -1,101 +1,275 @@
-# API — Authentication
+<!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
-Prefix: `/api/auth`
+# Authentication
 
-## POST /api/auth/register
+Auto-generated reference for **Authentication** endpoints (9 operations).
 
-Register a user.
+**OpenAPI tags:** auth, preferences
 
-**Body (JSON):**
+**Endpoints:** 9
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| email | string | yes | Email |
-| password | string | yes | Password |
-| full_name | string | yes | Full name |
-| role | string | yes | admin, doctor, nurse, … |
-| subdomain | string | yes | Clinic |
-| department_id | int | for nurse/head | Department ID |
+---
+
+## GET /api/auth/departments
+
+List Public Departments
+
+**Authentication:** none
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| subdomain | query | string | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `[{"id": 0, "name": "string"}]` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
 
 **Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "doctor@clinic.ru",
-    "password": "SecurePass123",
-    "full_name": "Ivan Ivanov",
-    "role": "doctor",
-    "subdomain": "demo",
-    "department_id": 1
-  }'
-```
-
-**Response 201:**
-
-```json
-{
-  "id": 5,
-  "email": "doctor@clinic.ru",
-  "full_name": "Ivan Ivanov",
-  "role": "doctor"
-}
+curl -X GET https://fileguardian.com.ru/api/auth/departments \
+  -H "Authorization: Bearer $JWT"
 ```
 
 ## POST /api/auth/login
 
-**Body:** `email`, `password`, `subdomain`
+Login
 
-```bash
-curl -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"doctor@clinic.ru","password":"SecurePass123","subdomain":"demo"}'
-```
+**Authentication:** none
 
-**Response 200:**
+**Request Body:**
 
 ```json
 {
-  "access_token": "eyJ...",
-  "token_type": "bearer"
+  "email": "user@example.com",
+  "password": "string",
+  "subdomain": "string"
 }
+```
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"access_token": "string", "token_type": "bearer", "tenant_id": 0, "role": "string"}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/auth/login \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"string","subdomain":"string"}'
 ```
 
 ## GET /api/auth/me
 
-Current user. Requires Bearer token.
+Me
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"id": 0, "email": "string", "full_name": "string", "role": "string", "tenant_id": 0, "department_id": 0, "department...` |
+
+**Example:**
 
 ```bash
-curl -H "Authorization: Bearer TOKEN" \
-  http://localhost:8000/api/auth/me
+curl -X GET https://fileguardian.com.ru/api/auth/me \
+  -H "Authorization: Bearer $JWT"
 ```
 
-**Response:**
+## POST /api/auth/register
+
+Register
+
+**Authentication:** none
+
+**Request Body:**
 
 ```json
 {
-  "id": 5,
-  "email": "doctor@clinic.ru",
-  "full_name": "Ivan Ivanov",
+  "email": "user@example.com",
+  "password": "string",
+  "full_name": "string",
   "role": "doctor",
-  "department_id": 1,
-  "department_name": "Therapy"
+  "subdomain": "string",
+  "department_id": 0
 }
 ```
 
-## GET /api/auth/departments
 
-Public list of clinic departments.
 
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 201 | Successful Response | `{"id": 0, "email": "string", "full_name": "string", "role": "string", "tenant_id": 0, "department_id": 0, "department...` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/auth/register \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"string","full_name":"string","role":"doctor","subdomain":"string","department_id":0}'
 ```
-GET /api/auth/departments?subdomain=demo
+
+## POST /api/auth/request-reset
+
+Request Reset
+
+**Authentication:** none
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com",
+  "subdomain": "string"
+}
 ```
 
-## Errors
 
-| Code | Cause |
-|------|-------|
-| 400 | Email already taken, invalid role |
-| 401 | Wrong password |
-| 404 | Subdomain not found |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 202 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/auth/request-reset \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","subdomain":"string"}'
+```
+
+## GET /api/auth/tenants
+
+List Public Tenants
+
+**Authentication:** none
+
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `[{"id": 0, "name": "string", "subdomain": "string"}]` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/auth/tenants \
+  -H "Authorization: Bearer $JWT"
+```
+
+## GET /api/preferences
+
+Read Preferences
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/preferences \
+  -H "Authorization: Bearer $JWT"
+```
+
+## PUT /api/preferences
+
+Write Preferences
+
+**Authentication:** `Bearer JWT` (required)
+
+**Request Body:**
+
+```json
+{
+  "theme": "string",
+  "settings": {}
+}
+```
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X PUT https://fileguardian.com.ru/api/preferences \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"theme":"string","settings":{}}'
+```
+
+## PUT /api/preferences/theme
+
+Write Theme
+
+**Authentication:** `Bearer JWT` (required)
+
+**Request Body:**
+
+```json
+{
+  "theme": "string"
+}
+```
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X PUT https://fileguardian.com.ru/api/preferences/theme \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"theme":"string"}'
+```
+

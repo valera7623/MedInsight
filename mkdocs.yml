@@ -100,6 +100,11 @@ nav:
       - api/dicom.md
       - api/analytics.md
       - api/predictions.md
+      - api/exports.md
+      - api/webhooks.md
+      - api/payments.md
+      - api/admin.md
+      - api/websocket.md
   - Деплой:
       - deployment/docker.md
       - deployment/vps.md

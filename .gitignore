@@ -18,3 +18,4 @@ secrets/*
 dist/
 build/
 site/
+openapi.json

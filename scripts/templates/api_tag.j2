@@ -1,0 +1,16 @@
+{{ banner }}# {{ title }}
+
+{{ description }}
+
+{% if openapi_tags %}
+**OpenAPI tags:** {{ openapi_tags | join(", ") }}
+{% endif %}
+
+**Endpoints:** {{ endpoints | length }}
+
+---
+
+{% for endpoint in endpoints %}
+{% include "api_endpoint.j2" %}
+
+{% endfor %}

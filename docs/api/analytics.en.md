@@ -1,84 +1,40 @@
-# API — Analytics
+<!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
-Prefixes: `/api/analytics`, `/api/dashboard`  
-Requires: Bearer token
+# Analytics
 
-## GET /api/dashboard/stats
+Auto-generated reference for **Analytics** endpoints (1 operations).
 
-Summary statistics for the dashboard.
+**OpenAPI tags:** analytics
 
-**Query:** `department_id` (optional)
+**Endpoints:** 1
+
+---
+
+## GET /api/analytics/dashboard
+
+Dashboard
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| department_id | query | integer | null | ❌ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"total_patients": 0, "total_documents": 0, "total_dicom_studies": 0, "dicom_modalities": {}, "dicom_body_parts": {},...` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
 
 ```bash
-curl -H "Authorization: Bearer TOKEN" \
-  "http://localhost:8000/api/dashboard/stats?department_id=1"
+curl -X GET https://fileguardian.com.ru/api/analytics/dashboard \
+  -H "Authorization: Bearer $JWT"
 ```
 
-**Response 200:**
-
-```json
-{
-  "patients_count": 150,
-  "documents_count": 320,
-  "diagnoses_count": 45,
-  "top_diagnoses": [
-    {"code": "I10", "count": 42},
-    {"code": "E11", "count": 38}
-  ],
-  "top_medications": [
-    {"name": "metformin", "count": 55}
-  ],
-  "dicom_studies_count": 12,
-  "dicom_by_modality": {"CT": 8, "MR": 4}
-}
-```
-
-## GET /api/analytics/diagnoses
-
-Top diagnoses with pagination.
-
-## GET /api/analytics/medications
-
-Top medications.
-
-## GET /api/analytics/departments
-
-Statistics by department.
-
-## GET /api/analytics/risk-summary
-
-Risk summary (high/medium/low counts).
-
-## GET /api/analytics/recent-patients
-
-Recently added patients.
-
-## GET /api/analytics/export/excel
-
-Export analytics to Excel.
-
-## Webhooks (admin)
-
-### GET /api/webhooks
-
-List clinic webhooks.
-
-### POST /api/webhooks
-
-Create webhook (URL + events).
-
-### DELETE /api/webhooks/{id}
-
-Delete.
-
-## RBAC
-
-- `viewer`, `researcher` — read-only statistics;
-- `researcher` — aggregates without PII in detailed lists;
-- export — per role policy.
-
-## Errors
-
-| Code | Cause |
-|------|-------|
-| 403 | No access to department |

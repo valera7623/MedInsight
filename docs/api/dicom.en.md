@@ -1,104 +1,223 @@
-# API — DICOM
+<!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
-Prefix: `/api/dicom`  
-Requires: Bearer token
+# DICOM
 
-## POST /api/dicom/upload
+Auto-generated reference for **DICOM** endpoints (7 operations).
 
-Upload a DICOM file (multipart).
+**OpenAPI tags:** dicom
 
-| Field | Type | Description |
-|-------|------|-------------|
-| file | file | `.dcm` |
-| patient_id | int | Patient ID |
+**Endpoints:** 7
+
+---
+
+## GET /api/dicom/frames/{instance_uid}
+
+Get Dicom Frame
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| instance_uid | path | string | ✅ | — |
+| study_uid | query | string | null | ❌ | — |
+| frame | query | integer | ❌ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/dicom/upload \
-  -H "Authorization: Bearer TOKEN" \
-  -F "file=@scan.dcm" \
-  -F "patient_id=1"
-```
-
-**Response 201:**
-
-```json
-{
-  "id": 3,
-  "study_uid": "1.2.840.113619.2.55.3...",
-  "status": "processing",
-  "patient_id": 1
-}
+curl -X GET https://fileguardian.com.ru/api/dicom/frames/{instance_uid} \
+  -H "Authorization: Bearer $JWT"
 ```
 
 ## GET /api/dicom/studies
 
-List studies.
+List Dicom Studies
 
-**Query:** `patient_id`, `modality`, `status`, `search`, `skip`, `limit`
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| page | query | integer | ❌ | — |
+| limit | query | integer | ❌ | — |
+| search | query | string | null | ❌ | — |
+| patient_id | query | integer | null | ❌ | — |
+| modality | query | string | null | ❌ | — |
+| status | query | string | null | ❌ | — |
+| date_from | query | string (date-time) | null | ❌ | — |
+| date_to | query | string (date-time) | null | ❌ | — |
+| sort_by | query | string | ❌ | — |
+| sort_order | query | string | ❌ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
 
 ```bash
-curl -H "Authorization: Bearer TOKEN" \
-  "http://localhost:8000/api/dicom/studies?modality=CT&limit=20"
+curl -X GET https://fileguardian.com.ru/api/dicom/studies \
+  -H "Authorization: Bearer $JWT"
 ```
 
-**Response:**
+## DELETE /api/dicom/studies/{study_uid}
 
-```json
-{
-  "items": [
-    {
-      "id": 3,
-      "study_uid": "1.2.840...",
-      "modality": "CT",
-      "study_description": "Chest CT",
-      "body_part": "CHEST",
-      "status": "ready",
-      "frame_count": 120,
-      "thumbnail_url": "/api/dicom/studies/3/thumbnail"
-    }
-  ],
-  "total": 5
-}
+Delete Dicom Study
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| study_uid | path | string | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 204 | Successful Response | `{}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X DELETE https://fileguardian.com.ru/api/dicom/studies/{study_uid} \
+  -H "Authorization: Bearer $JWT"
 ```
 
-## GET /api/dicom/studies/{study_id}
+## GET /api/dicom/studies/{study_uid}
 
-Study details + series.
+Get Dicom Study
 
-## GET /api/dicom/studies/{study_id}/viewer
+**Authentication:** `Bearer JWT` (required)
 
-Viewer data (series, frames, window/level).
 
-## GET /api/dicom/studies/{study_id}/thumbnail
 
-PNG preview (first frame).
+**Parameters:**
 
-## GET /api/dicom/frames/{frame_id}/image
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| study_uid | path | string | ✅ | — |
 
-PNG for a specific frame.
+**Responses:**
 
-## DELETE /api/dicom/studies/{study_id}
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
 
-Delete (admin).
+**Example:**
 
-## Statuses
+```bash
+curl -X GET https://fileguardian.com.ru/api/dicom/studies/{study_uid} \
+  -H "Authorization: Bearer $JWT"
+```
 
-| status | Description |
-|--------|-------------|
-| processing | Celery processing |
-| ready | Ready to view |
-| failed | Parse error |
+## GET /api/dicom/studies/{study_uid}/series/{series_uid}/frames
 
-## Errors
+List Series Frames
 
-| Code | Cause |
-|------|-------|
-| 413 | DICOM_MAX_FILE_SIZE_MB exceeded |
-| 422 | Invalid DICOM |
+**Authentication:** `Bearer JWT` (required)
 
-## Frontend routes
 
-| URL | Description |
-|-----|-------------|
-| `/dicom` | List |
-| `/dicom/viewer/{study_uid}` | Viewer |
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| study_uid | path | string | ✅ | — |
+| series_uid | path | string | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/dicom/studies/{study_uid}/series/{series_uid}/frames \
+  -H "Authorization: Bearer $JWT"
+```
+
+## GET /api/dicom/studies/{study_uid}/thumbnail
+
+Get Study Thumbnail
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| study_uid | path | string | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/dicom/studies/{study_uid}/thumbnail \
+  -H "Authorization: Bearer $JWT"
+```
+
+## POST /api/dicom/upload
+
+Upload Dicom
+
+**Authentication:** `Bearer JWT` (required)
+
+
+**Form Data:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| patient_id | integer | ✅ | Patient Id |
+| file | string | ✅ | File |
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 202 | Successful Response | `{"study_uid": "string", "study_id": 0, "job_id": "string", "status": "string"}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/dicom/upload \
+  -H "Authorization: Bearer $JWT" \
+  -F "patient_id=value" \
+  -F "file=file.pdf"
+```
+

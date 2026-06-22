@@ -1,101 +1,214 @@
-# API — Predictions
+<!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
-Prefix: `/api/predictions`  
-Requires: Bearer token, WRITE_ROLES for creation
+# Predictions
 
-## POST /api/predictions/run
+Auto-generated reference for **Predictions** endpoints (7 operations).
 
-Run a prediction for a patient.
+**OpenAPI tags:** predictions
 
-**Body:**
+**Endpoints:** 7
 
-```json
-{
-  "patient_id": 1
-}
-```
+---
+
+## GET /api/analytics/dashboard/predictions
+
+Predictions Dashboard
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| department_id | query | integer | null | ❌ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"high_risk_patients": [{"id": 0, "name": "string", "readmission_risk": 0.0, "complication_risk": 0.0, "last_predicti...` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
 
 ```bash
-curl -X POST http://localhost:8000/api/predictions/run \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"patient_id": 1}'
+curl -X GET https://fileguardian.com.ru/api/analytics/dashboard/predictions \
+  -H "Authorization: Bearer $JWT"
 ```
 
-**Response 202:**
+## POST /api/analytics/insights/{patient_id}
 
-```json
-{
-  "task_id": "abc-123",
-  "status": "processing",
-  "message": "Prediction queued"
-}
+Patient Insights
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| patient_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"insights": "string", "recommendations": ["string"]}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/analytics/insights/{patient_id} \
+  -H "Authorization: Bearer $JWT"
 ```
 
-## GET /api/predictions/patient/{patient_id}
+## GET /api/analytics/predict/status/{job_id}
 
-Patient prediction history.
+Prediction Status
 
-**Response:**
+**Authentication:** `Bearer JWT` (required)
 
-```json
-{
-  "items": [
-    {
-      "id": 7,
-      "patient_id": 1,
-      "readmission_risk": 0.35,
-      "complication_risk": 0.22,
-      "risk_level": "medium",
-      "gpt_explanation": "Patient with comorbidities...",
-      "created_at": "2026-06-20T14:30:00Z",
-      "validated": null
-    }
-  ]
-}
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| job_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"status": "string", "result": {}, "error": "string"}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/analytics/predict/status/{job_id} \
+  -H "Authorization: Bearer $JWT"
 ```
 
-## GET /api/predictions/high-risk
+## POST /api/analytics/predict/{patient_id}
 
-High-risk patients (dashboard).
+Start Prediction
 
-**Query:** `department_id`, `limit`
+**Authentication:** `Bearer JWT` (required)
 
-## POST /api/predictions/{id}/validate
 
-Clinician validation of a prediction.
 
-**Body:**
+**Parameters:**
 
-```json
-{
-  "is_accurate": true,
-  "comment": "Agree with the assessment"
-}
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| patient_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"job_id": "string", "status": "string"}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/analytics/predict/{patient_id} \
+  -H "Authorization: Bearer $JWT"
 ```
 
-## GET /api/predictions/export/excel
+## GET /api/analytics/predictions
 
-Export predictions to Excel.
+List Predictions All
 
-## Plan limits
+**Authentication:** `Bearer JWT` (required)
 
-When monthly limit is exceeded:
 
-**Response 402:**
 
-```json
-{
-  "detail": "Monthly analysis limit exceeded",
-  "limit": 5,
-  "used": 5
-}
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| page | query | integer | ❌ | — |
+| limit | query | integer | ❌ | — |
+| patient_id | query | integer | null | ❌ | — |
+| type | query | string | null | ❌ | — |
+| validated | query | boolean | null | ❌ | — |
+| sort_by | query | string | ❌ | — |
+| sort_order | query | string | ❌ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/analytics/predictions \
+  -H "Authorization: Bearer $JWT"
 ```
 
-## Asynchronous processing
+## GET /api/analytics/predictions/{patient_id}
 
-Result is available after Celery task completes. Subscribe to WebSocket or poll `GET /api/predictions/patient/{id}`.
+List Predictions
 
-## Fallback
+**Authentication:** `Bearer JWT` (required)
 
-If GPT is unavailable, `gpt_explanation` may be `null`; risks are calculated rule-based.
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| patient_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"predictions": [{"id": 0, "patient_id": 0, "type": "string", "prediction": {}, "probabilities": {}, "confidence_scor...` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/analytics/predictions/{patient_id} \
+  -H "Authorization: Bearer $JWT"
+```
+
+## POST /api/analytics/validate-prediction/{prediction_id}
+
+Validate Prediction
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| prediction_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"status": "string"}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/analytics/validate-prediction/{prediction_id} \
+  -H "Authorization: Bearer $JWT"
+```
+

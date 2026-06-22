@@ -1,85 +1,164 @@
-# API — Documents
+<!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
-Prefix: `/api/documents`  
-Requires: Bearer token
+# Documents
 
-## POST /api/documents/upload
+Auto-generated reference for **Documents** endpoints (5 operations).
 
-Upload a document (multipart/form-data).
+**OpenAPI tags:** documents
 
-| Field | Type | Description |
-|-------|------|-------------|
-| file | file | PDF or DOCX |
-| patient_id | int | Patient ID |
-| document_type | string | discharge, lab, history |
+**Endpoints:** 5
 
-```bash
-curl -X POST http://localhost:8000/api/documents/upload \
-  -H "Authorization: Bearer TOKEN" \
-  -F "file=@discharge.pdf" \
-  -F "patient_id=1" \
-  -F "document_type=discharge"
-```
-
-**Response 201:**
-
-```json
-{
-  "id": 10,
-  "patient_id": 1,
-  "filename": "discharge.pdf",
-  "status": "uploaded",
-  "document_type": "discharge"
-}
-```
-
-After upload, Celery queues parsing → status `processing` → `parsed`.
+---
 
 ## GET /api/documents
 
-List documents.
+List Documents
 
-**Query:** `patient_id`, `status`, `skip`, `limit`
+**Authentication:** `Bearer JWT` (required)
 
-## GET /api/documents/{id}
 
-Document metadata + parsed data (if ready).
 
-**Response (parsed):**
+**Parameters:**
 
-```json
-{
-  "id": 10,
-  "status": "parsed",
-  "parsed_data": {
-    "diagnoses": ["I10", "E11"],
-    "medications": ["metformin", "enalapril"],
-    "raw_text_preview": "..."
-  }
-}
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| page | query | integer | ❌ | — |
+| limit | query | integer | ❌ | — |
+| search | query | string | null | ❌ | — |
+| patient_id | query | integer | null | ❌ | — |
+| document_type | query | string | null | ❌ | — |
+| status | query | string | null | ❌ | — |
+| sort_by | query | string | ❌ | — |
+| sort_order | query | string | ❌ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/documents \
+  -H "Authorization: Bearer $JWT"
 ```
 
-## GET /api/documents/{id}/download
+## GET /api/documents/patient/{patient_id}
 
-Download decrypted file (stream).
+List Patient Documents
 
-## DELETE /api/documents/{id}
+**Authentication:** `Bearer JWT` (required)
 
-Delete (admin / head_of_department).
 
-## Statuses
 
-| status | Description |
-|--------|-------------|
-| uploaded | Accepted |
-| processing | Parsing |
-| parsed | Ready |
-| failed | Error |
+**Parameters:**
 
-## Errors
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| patient_id | path | integer | ✅ | — |
 
-| Code | Cause |
-|------|-------|
-| 403 | No permission for patient |
-| 413 | File too large |
-| 415 | Unsupported format |
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `[{"id": 0, "tenant_id": 0, "patient_id": 0, "user_id": 0, "filename": "string", "file_size": 0, "mime_type": "string"...` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/documents/patient/{patient_id} \
+  -H "Authorization: Bearer $JWT"
+```
+
+## POST /api/documents/upload
+
+Upload Document
+
+**Authentication:** `Bearer JWT` (required)
+
+
+**Form Data:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| patient_id | integer | ✅ | Patient Id |
+| document_type | string | ❌ | Document Type |
+| file | string | ✅ | File |
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 201 | Successful Response | `{"id": 0, "tenant_id": 0, "patient_id": 0, "user_id": 0, "filename": "string", "file_size": 0, "mime_type": "string",...` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/documents/upload \
+  -H "Authorization: Bearer $JWT" \
+  -F "patient_id=value" \
+  -F "document_type=value" \
+  -F "file=file.pdf"
+```
+
+## GET /api/documents/{document_id}
+
+Get Document
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| document_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"id": 0, "tenant_id": 0, "patient_id": 0, "user_id": 0, "filename": "string", "file_size": 0, "mime_type": "string",...` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/documents/{document_id} \
+  -H "Authorization: Bearer $JWT"
+```
+
+## GET /api/documents/{document_id}/download
+
+Download Document
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| document_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/documents/{document_id}/download \
+  -H "Authorization: Bearer $JWT"
+```
+

@@ -1,86 +1,188 @@
-# API — Patients
+<!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
-Prefix: `/api/patients`  
-Requires: `Authorization: Bearer TOKEN`
+# Patients
+
+Auto-generated reference for **Patients** endpoints (5 operations).
+
+**OpenAPI tags:** patients
+
+**Endpoints:** 5
+
+---
 
 ## GET /api/patients
 
-List patients (RBAC-aware).
+List Patients
 
-**Query:**
+**Authentication:** `Bearer JWT` (required)
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| skip | int | Offset (default 0) |
-| limit | int | Limit (default 20) |
-| search | string | Search by name/phone |
-| department_id | int | Department filter |
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| page | query | integer | ❌ | — |
+| limit | query | integer | ❌ | — |
+| page_size | query | integer | null | ❌ | Алиас limit (совместимость) |
+| search | query | string | null | ❌ | — |
+| department_id | query | integer | null | ❌ | — |
+| attending_doctor_id | query | integer | null | ❌ | — |
+| sort_by | query | string | ❌ | — |
+| sort_order | query | string | ❌ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
 
 ```bash
-curl -H "Authorization: Bearer TOKEN" \
-  "http://localhost:8000/api/patients?limit=10&search=Ivanov"
-```
-
-**Response 200:**
-
-```json
-{
-  "items": [
-    {
-      "id": 1,
-      "full_name": "Ivan Ivanov",
-      "date_of_birth": "1980-05-15",
-      "gender": "male",
-      "phone": "+79001234567",
-      "department_id": 1
-    }
-  ],
-  "total": 42
-}
+curl -X GET https://fileguardian.com.ru/api/patients \
+  -H "Authorization: Bearer $JWT"
 ```
 
 ## POST /api/patients
 
-Create a patient.
+Create Patient
 
-**Body:**
+**Authentication:** `Bearer JWT` (required)
 
-| Field | Type | Required |
-|-------|------|----------|
-| full_name | string | yes |
-| date_of_birth | date | yes |
-| gender | string | yes |
-| phone | string | yes |
-| email | string | no |
-| department_id | int | yes |
+**Request Body:**
 
-## GET /api/patients/{id}
+```json
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "middle_name": null,
+  "birth_date": "1980-05-15",
+  "gender": "M",
+  "phone": "+1234567890",
+  "email": "user@example.com",
+  "department_id": 0,
+  "attending_doctor_id": 0
+}
+```
 
-Patient record with documents and predictions.
 
-## PUT /api/patients/{id}
 
-Update (WRITE_ROLES).
+**Responses:**
 
-## DELETE /api/patients/{id}
+| Status | Description | Example |
+|--------|-------------|---------|
+| 201 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
 
-Delete (admin only).
+**Example:**
 
-## GET /api/patients/export/excel
+```bash
+curl -X POST https://fileguardian.com.ru/api/patients \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"first_name":"John","last_name":"Doe","middle_name":null,"birth_date":"1980-05-15","gender":"M","phone":"+1234567890","email":"user@example.com","department_id":0,"attending_doctor_id":0}'
+```
 
-Export list to Excel.
+## DELETE /api/patients/{patient_id}
 
-## GET /api/patients/{id}/export/pdf
+Delete Patient
 
-PDF report for a patient.
+**Authentication:** `Bearer JWT` (required)
 
-## Errors
 
-| Code | Cause |
-|------|-------|
-| 403 | No access to patient/department |
-| 404 | Patient not found |
 
-## Anonymization
+**Parameters:**
 
-For role `researcher`, fields `full_name`, `phone`, `email` are masked in responses.
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| patient_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 204 | Successful Response | `{}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X DELETE https://fileguardian.com.ru/api/patients/{patient_id} \
+  -H "Authorization: Bearer $JWT"
+```
+
+## GET /api/patients/{patient_id}
+
+Get Patient
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| patient_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/patients/{patient_id} \
+  -H "Authorization: Bearer $JWT"
+```
+
+## PUT /api/patients/{patient_id}
+
+Update Patient
+
+**Authentication:** `Bearer JWT` (required)
+
+**Request Body:**
+
+```json
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "middle_name": null,
+  "birth_date": "1980-05-15",
+  "gender": "M",
+  "phone": "string",
+  "email": "user@example.com",
+  "department_id": 0,
+  "attending_doctor_id": 0
+}
+```
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| patient_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X PUT https://fileguardian.com.ru/api/patients/{patient_id} \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"first_name":"John","last_name":"Doe","middle_name":null,"birth_date":"1980-05-15","gender":"M","phone":"string","email":"user@example.com","department_id":0,"attending_doctor_id":0}'
+```
+

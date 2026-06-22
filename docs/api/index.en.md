@@ -1,93 +1,68 @@
-# API — Overview
+<!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
-MedInsight provides a REST API on FastAPI.
+# API Reference
+
+Machine-readable API reference generated from the FastAPI OpenAPI schema. For interactive exploration use Swagger UI at `/docs`.
 
 ## Base URL
 
 ```
-https://medinsight.fileguardian.info/api
+https://fileguardian.com.ru/api
 ```
-
-Locally: `http://localhost:8000/api`
 
 ## Interactive documentation
 
 | URL | Format |
 |-----|--------|
-| `/docs` | Swagger UI (OpenAPI 3) |
+| `/docs` | Swagger UI |
 | `/redoc` | ReDoc |
-| `/openapi.json` | OpenAPI JSON |
-
-OpenAPI is **generated automatically** from FastAPI code.
+| `/openapi.json` | OpenAPI 3 JSON schema |
 
 ## Authentication
 
-JWT Bearer token:
+Most endpoints require a JWT Bearer token:
 
 ```bash
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  https://example.com/api/patients
+curl -H "Authorization: Bearer YOUR_TOKEN" https://fileguardian.com.ru/api/auth/me
 ```
 
-Obtain a token: [auth.md](auth.md)
+Obtain a token via `POST /api/auth/login`.
 
-## Response format
+## Sections
 
-Success — JSON with data.
+| Section | Description |
+|---------|-------------|
+| [Authentication](auth.md) | 9 endpoint(s) |
+| [Patients](patients.md) | 5 endpoint(s) |
+| [Documents](documents.md) | 5 endpoint(s) |
+| [DICOM](dicom.md) | 7 endpoint(s) |
+| [Analytics](analytics.md) | 1 endpoint(s) |
+| [Predictions](predictions.md) | 7 endpoint(s) |
+| [Export](exports.md) | 7 endpoint(s) |
+| [Webhooks](webhooks.md) | 7 endpoint(s) |
+| [Payments](payments.md) | 6 endpoint(s) |
+| [Admin](admin.md) | 34 endpoint(s) |
 
-Errors:
+## Error format
 
 ```json
 {
-  "detail": "Error message"
+  "detail": "Human-readable error message"
 }
 ```
 
+## Common status codes
+
 | Code | Meaning |
 |------|---------|
-| 400 | Bad request |
-| 401 | Unauthorized |
-| 403 | Forbidden |
-| 404 | Not found |
-| 402 | Plan limit |
-| 422 | Validation error |
-| 500 | Server error |
+| 400 | Bad request / validation error |
+| 401 | Not authenticated |
+| 403 | Insufficient permissions |
+| 404 | Resource not found |
+| 402 | Plan limit exceeded (predictions) |
+| 422 | Validation error (Pydantic) |
+| 500 | Internal server error |
 
-## Pagination
+---
 
-Lists support `skip` and `limit`:
-
-```
-GET /api/patients?skip=0&limit=20
-```
-
-## Multi-tenancy
-
-Registration/login uses the clinic `subdomain`. JWT contains `tenant_id` — all data is isolated.
-
-## API sections
-
-| Document | Prefix |
-|----------|--------|
-| [Authentication](auth.md) | `/api/auth` |
-| [Patients](patients.md) | `/api/patients` |
-| [Documents](documents.md) | `/api/documents` |
-| [DICOM](dicom.md) | `/api/dicom` |
-| [Analytics](analytics.md) | `/api/analytics`, `/api/dashboard` |
-| [Predictions](predictions.md) | `/api/predictions` |
-
-## WebSocket
-
-```
-ws://host/ws/notifications?token=JWT
-```
-
-Events: `document_parsed`, `prediction_ready`, `dicom_processed`.
-
-## Rate limiting
-
-nginx rate limit recommended on production. In the app — plan limits on predictions.
-
-## Versioning
-
-Current API version is not in the URL. Breaking changes are documented in [Changelog](../misc/changelog.md).
+*Generated from OpenAPI 3.1.0 — 2026-06-22 00:07 UTC*

@@ -1,0 +1,55 @@
+## {{ endpoint.method }} {{ endpoint.path }}
+
+{{ endpoint.description }}
+
+{% if endpoint.auth_label %}
+**Authentication:** `{{ endpoint.auth_label }}` (required)
+{% else %}
+**Authentication:** none
+{% endif %}
+
+{% if endpoint.request_body_json %}
+**Request Body:**
+
+```json
+{{ endpoint.request_body_json }}
+```
+{% endif %}
+
+{% if endpoint.request_form_fields %}
+**Form Data:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+{% for field in endpoint.request_form_fields %}
+| {{ field.name }} | {{ field.type }} | {{ field.required }} | {{ field.description }} |
+{% endfor %}
+{% endif %}
+
+{% if endpoint.parameters %}
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+{% for param in endpoint.parameters %}
+| {{ param.name }} | {{ param.location }} | {{ param.type }} | {{ param.required }} | {{ param.description }} |
+{% endfor %}
+{% endif %}
+
+{% if endpoint.responses %}
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+{% for resp in endpoint.responses %}
+| {{ resp.status }} | {{ resp.description }} | `{{ resp.example }}` |
+{% endfor %}
+{% endif %}
+
+{% if endpoint.curl_example %}
+**Example:**
+
+```bash
+{{ endpoint.curl_example }}
+```
+{% endif %}

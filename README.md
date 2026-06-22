@@ -60,6 +60,36 @@ chmod +x deploy.sh
 ./deploy.sh production  # prod на :8000
 ```
 
+## API documentation generation
+
+English API reference is **auto-generated** from the FastAPI OpenAPI schema.
+
+```bash
+# From running app
+python scripts/generate_api_docs.py --url http://localhost:8000 --update-nav
+
+# From FastAPI import (CI / no server)
+python scripts/generate_api_docs.py --import-app --cache --update-nav
+
+# From cached file
+python scripts/generate_api_docs.py --file openapi.json --update-nav
+
+# Specific tags only
+python scripts/generate_api_docs.py --import-app --tags patients,documents,dicom
+```
+
+**Output:** `docs/api/*.en.md` (English, MkDocs i18n suffix layout)
+
+**Config:** `scripts/api_docs_config.py` · **CI:** `.github/workflows/docs-generate.yml`
+
+Custom endpoint description in FastAPI:
+
+```python
+@router.post("/patients", openapi_extra={"x-docs": {"description": "Custom text."}})
+```
+
+Hide endpoint: `openapi_extra={"x-hide-docs": True}`
+
 ## Настройка ProxyAPI
 
 MedInsight использует [ProxyAPI](https://proxyapi.ru) как прокси к OpenAI API. Это позволяет работать с GPT из России без VPN.
