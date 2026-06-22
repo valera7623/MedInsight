@@ -27,23 +27,31 @@
         <span>Volume Rendering</span>
         <span class="dicom-3d-status" id="volume-status">Загрузка…</span>
       </div>
-      <canvas id="vr-fallback-canvas" class="dicom-3d-fallback"></canvas>
+      <div class="dicom-3d-viewport" id="vr-viewport-wrap">
+        <canvas id="vr-fallback-canvas" class="dicom-3d-fallback"></canvas>
+      </div>
     </section>
 
     <aside class="dicom-3d-mpr">
       <div class="dicom-3d-mpr-panel" data-plane="axial">
         <div class="dicom-3d-panel-header">Axial</div>
-        <canvas class="dicom-3d-mpr-canvas" id="mpr-axial"></canvas>
+        <div class="dicom-3d-mpr-viewport">
+          <canvas class="dicom-3d-mpr-canvas" id="mpr-axial"></canvas>
+        </div>
         <input type="range" class="dicom-3d-slice-slider" id="slice-axial" min="0" max="0" value="0">
       </div>
       <div class="dicom-3d-mpr-panel" data-plane="coronal">
         <div class="dicom-3d-panel-header">Coronal</div>
-        <canvas class="dicom-3d-mpr-canvas" id="mpr-coronal"></canvas>
+        <div class="dicom-3d-mpr-viewport">
+          <canvas class="dicom-3d-mpr-canvas" id="mpr-coronal"></canvas>
+        </div>
         <input type="range" class="dicom-3d-slice-slider" id="slice-coronal" min="0" max="0" value="0">
       </div>
       <div class="dicom-3d-mpr-panel" data-plane="sagittal">
         <div class="dicom-3d-panel-header">Sagittal</div>
-        <canvas class="dicom-3d-mpr-canvas" id="mpr-sagittal"></canvas>
+        <div class="dicom-3d-mpr-viewport">
+          <canvas class="dicom-3d-mpr-canvas" id="mpr-sagittal"></canvas>
+        </div>
         <input type="range" class="dicom-3d-slice-slider" id="slice-sagittal" min="0" max="0" value="0">
       </div>
     </aside>

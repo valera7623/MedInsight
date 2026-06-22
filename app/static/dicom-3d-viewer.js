@@ -13,6 +13,8 @@ const viewer3dState = {
   windowCenter: null,
   windowWidth: null,
   refreshTimer: null,
+  lastPreview: null,
+  zoom: 1,
 };
 
 function authHeaders() {
@@ -97,20 +99,39 @@ async function loadPreview() {
   return res.json();
 }
 
+function fitImageToCanvas(canvas, img) {
+  const container = canvas.closest('.dicom-3d-viewport, .dicom-3d-mpr-viewport');
+  if (!container) return;
+  const maxW = Math.max(container.clientWidth, 1);
+  const maxH = Math.max(container.clientHeight, 1);
+  let scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+  if (canvas.id === 'vr-fallback-canvas') {
+    scale *= viewer3dState.zoom;
+  }
+  const w = Math.max(1, Math.round(img.naturalWidth * scale));
+  const h = Math.max(1, Math.round(img.naturalHeight * scale));
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+}
+
 function drawBase64OnCanvas(canvas, b64) {
   if (!canvas || !b64) return;
   const img = new Image();
-  img.onload = () => {
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
-  };
+  img.onload = () => fitImageToCanvas(canvas, img);
   img.src = `data:image/png;base64,${b64}`;
 }
 
+function redrawPreview() {
+  if (viewer3dState.lastPreview) {
+    applyPreview(viewer3dState.lastPreview);
+  }
+}
+
 function applyPreview(preview) {
+  viewer3dState.lastPreview = preview;
   drawBase64OnCanvas(document.getElementById('vr-fallback-canvas'), preview.render);
 
   for (const plane of ['axial', 'coronal', 'sagittal']) {
@@ -189,12 +210,15 @@ function onToolbarAction(action, value) {
       scheduleFullRefresh();
       break;
     case 'zoom':
+      viewer3dState.zoom = Math.max(0.5, Math.min(3, viewer3dState.zoom * (value > 0 ? 1.15 : 0.87)));
+      redrawPreview();
       break;
     case 'reset':
       viewer3dState.azimuth = 0;
       viewer3dState.elevation = 0;
       viewer3dState.preset = 'default';
       viewer3dState.mode = 'mip';
+      viewer3dState.zoom = 1;
       scheduleFullRefresh();
       if (typeof Dicom3dToolbar !== 'undefined') Dicom3dToolbar.resetUi();
       break;
@@ -246,4 +270,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (back) back.href = `/dicom/viewer/${encodeURIComponent(studyUid)}`;
     initDicom3dViewer(studyUid);
   }
+});
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(redrawPreview, 150);
 });
