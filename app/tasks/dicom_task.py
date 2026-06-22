@@ -8,6 +8,7 @@ from pathlib import Path
 
 from sqlalchemy.exc import IntegrityError
 
+from app.config import settings
 from app.database import SessionLocal
 from app.models import DicomStudy, Patient
 from app.services.dicom_parser import DicomParser, DicomParseError
