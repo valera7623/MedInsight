@@ -109,9 +109,3 @@ def friendly_integrity_error(exc: Exception) -> str | None:
     if "dicom_frames.instance_uid" in err:
         return "Кадр DICOM уже существует. Удалите старое исследование и загрузите файл снова."
     return None
-
-
-def remove_placeholder_study(db: Session, study: DicomStudy) -> None:
-    """Drop pending upload row after unrecoverable duplicate/conflict."""
-    db.delete(study)
-    db.commit()

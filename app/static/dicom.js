@@ -1,5 +1,6 @@
 let dicomPage = 1;
 let dicomPollTimer = null;
+const DICOM_POLL_KEY = 'dicomProcessingStudyId';
 
 function stopDicomStatusPoll() {
   if (dicomPollTimer) {
@@ -9,6 +10,9 @@ function stopDicomStatusPoll() {
 }
 
 function startDicomStatusPoll(studyId) {
+  if (!studyId) return;
+  sessionStorage.setItem(DICOM_POLL_KEY, String(studyId));
+  stopDicomStatusPoll();
   const panel = document.getElementById('dicom-processing-panel');
   const label = document.getElementById('dicom-processing-label');
   if (panel) panel.classList.remove('hidden');
@@ -17,6 +21,12 @@ function startDicomStatusPoll(studyId) {
   const poll = async () => {
     try {
       const res = await apiFetch(`/api/dicom/upload/status/${studyId}`);
+      if (res.status === 404) {
+        stopDicomStatusPoll();
+        sessionStorage.removeItem(DICOM_POLL_KEY);
+        loadDicomStudies(dicomPage);
+        return;
+      }
       if (!res.ok) return;
       const data = await res.json();
       if (label && data.num_instances) {
@@ -24,6 +34,7 @@ function startDicomStatusPoll(studyId) {
       }
       if (data.status === 'ready' || data.status === 'failed') {
         stopDicomStatusPoll();
+        sessionStorage.removeItem(DICOM_POLL_KEY);
         if (panel) panel.classList.add('hidden');
         if (data.status === 'failed') {
           alert(data.error_message || 'Ошибка обработки DICOM');
@@ -37,6 +48,25 @@ function startDicomStatusPoll(studyId) {
 
   poll();
   dicomPollTimer = setInterval(poll, 2000);
+}
+
+async function resumeDicomProcessingPolls() {
+  const storedId = sessionStorage.getItem(DICOM_POLL_KEY);
+  if (storedId) {
+    startDicomStatusPoll(Number(storedId));
+    return;
+  }
+  try {
+    const res = await apiFetch('/api/dicom/studies?status=processing&limit=5');
+    if (!res.ok) return;
+    const data = await res.json();
+    const processing = (data.items || []).find(s => s.status === 'processing');
+    if (processing?.id) {
+      startDicomStatusPoll(processing.id);
+    }
+  } catch (err) {
+    console.error('Failed to resume DICOM polls', err);
+  }
 }
 
 async function deleteDicomStudy(studyUid, label) {
@@ -305,7 +335,10 @@ function initDicomPage() {
       showAdminNav();
       return loadDicomStudies();
     })
+    .then(() => resumeDicomProcessingPolls())
     .catch(err => console.error(err));
+
+  window.addEventListener('pagehide', stopDicomStatusPoll);
 
   if (typeof MedInsightSocket !== 'undefined') {
     const socket = new MedInsightSocket({

@@ -16,7 +16,6 @@ from app.services.dicom_persistence import (
     ensure_unique_dicom_ids,
     friendly_integrity_error,
     get_or_create_series,
-    remove_placeholder_study,
 )
 from app.services.dicom_storage import DicomStorage
 from app.tasks.celery_app import celery_app
@@ -66,12 +65,9 @@ def _notify_dicom_ready(study: DicomStudy, user_id: int) -> None:
         logger.debug("Telegram dicom notification failed: %s", exc)
 
 
-def _mark_study_failed(db, study_id: int, message: str, *, remove_row: bool = False) -> None:
+def _mark_study_failed(db, study_id: int, message: str) -> None:
     study = db.query(DicomStudy).filter(DicomStudy.id == study_id).first()
     if not study:
-        return
-    if remove_row and study.study_uid.startswith("pending-"):
-        remove_placeholder_study(db, study)
         return
     study.status = "failed"
     study.error_message = message
@@ -147,13 +143,13 @@ def process_dicom_study(self, study_id: int, temp_path: str) -> dict:
     except DicomParseError as exc:
         logger.warning("DICOM parse failed for study %s: %s", study_id, exc)
         db.rollback()
-        _mark_study_failed(db, study_id, str(exc), remove_row=True)
+        _mark_study_failed(db, study_id, str(exc))
         return {"status": "failed", "error": str(exc)}
     except IntegrityError as exc:
         logger.warning("DICOM integrity error for study %s: %s", study_id, exc)
         db.rollback()
         message = friendly_integrity_error(exc) or "Конфликт данных DICOM (дубликат)."
-        _mark_study_failed(db, study_id, message, remove_row=True)
+        _mark_study_failed(db, study_id, message)
         return {"status": "failed", "error": message}
     except Exception as exc:
         logger.exception("DICOM processing failed for study %s: %s", study_id, exc)
