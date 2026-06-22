@@ -21,7 +21,7 @@ from app.models import DicomStudy, Patient, User
 from app.services.access import can_delete_dicom_study, can_view_patient, effective_tenant_id, is_super_admin
 from app.services.audit import log_audit
 from app.services.dicom_storage import DicomStorage
-from app.services.dicom_persistence import delete_study_data, read_study_uid_from_file
+from app.services.dicom_persistence import delete_study_data, handle_cross_patient_conflict, read_study_uid_from_file
 from app.services.dicom_viewer import DicomViewer
 from app.services.list_queries import DICOM_SEARCH_FIELDS, DICOM_SORT, dicom_studies_scope
 from app.tasks.celery_app import redis_available
@@ -196,13 +196,7 @@ async def upload_dicom(
             .first()
         )
         if cross_patient:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    f"Исследование уже загружено для пациента #{cross_patient.patient_id}. "
-                    "Удалите существующую запись или выберите того же пациента."
-                ),
-            )
+            handle_cross_patient_conflict(db, cross_patient, current_user, storage)
 
         in_progress = (
             db.query(DicomStudy)

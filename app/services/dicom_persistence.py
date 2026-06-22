@@ -7,11 +7,104 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from app.models import DicomFrame, DicomSeries, DicomStudy
+from app.models import DicomFrame, DicomSeries, DicomStudy, Patient, User
 from app.services.dicom_parser import DicomParseError
 from app.services.dicom_storage import DicomStorage
 
 logger = logging.getLogger(__name__)
+
+
+def handle_cross_patient_conflict(
+    db: Session,
+    cross_patient: DicomStudy,
+    current_user: User,
+    storage: DicomStorage,
+) -> None:
+    """Resolve or reject upload when Study UID exists for another patient."""
+    from fastapi import HTTPException, status
+
+    from app.services.access import can_delete_dicom_study, can_view_patient, is_admin, is_super_admin
+
+    conflict_patient = cross_patient.patient
+    if conflict_patient is None:
+        conflict_patient = db.query(Patient).filter(Patient.id == cross_patient.patient_id).first()
+
+    can_view = conflict_patient is not None and can_view_patient(current_user, conflict_patient)
+
+    if is_super_admin(current_user) or is_admin(current_user):
+        delete_study_data(db, cross_patient, storage)
+        db.commit()
+        logger.info(
+            "Admin replaced cross-patient DICOM conflict: study %s patient %s -> upload by user %s",
+            cross_patient.study_uid,
+            cross_patient.patient_id,
+            current_user.id,
+        )
+        return
+
+    if can_delete_dicom_study(current_user, cross_patient):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": (
+                    f"Исследование уже загружено для пациента #{cross_patient.patient_id}. "
+                    "Удалите существующую запись или выберите того же пациента."
+                ),
+                "conflict_patient_id": cross_patient.patient_id,
+                "conflict_study_uid": cross_patient.study_uid,
+                "conflict_visible": can_view,
+                "can_delete": True,
+            },
+        )
+
+    if can_view:
+        message = (
+            f"Исследование уже загружено для пациента #{cross_patient.patient_id}. "
+            "У вас нет прав на удаление — обратитесь к администратору."
+        )
+    else:
+        message = (
+            f"Исследование с этим файлом уже есть у пациента #{cross_patient.patient_id}, "
+            "но у вас нет доступа к этой записи. Обратитесь к администратору."
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "message": message,
+            "conflict_patient_id": cross_patient.patient_id,
+            "conflict_study_uid": cross_patient.study_uid,
+            "conflict_visible": can_view,
+            "can_delete": False,
+        },
+    )
+
+
+def cross_patient_conflict_message(
+    db: Session,
+    other: DicomStudy,
+    study: DicomStudy,
+    storage: DicomStorage,
+) -> str | None:
+    """Task-side cross-patient handling. Returns error text or None if admin replaced conflict."""
+    from app.services.access import can_view_patient, is_admin, is_super_admin
+
+    user = db.query(User).filter(User.id == study.user_id).first()
+    if user and (is_super_admin(user) or is_admin(user)):
+        delete_study_data(db, other, storage)
+        db.flush()
+        return None
+
+    conflict_patient = db.query(Patient).filter(Patient.id == other.patient_id).first()
+    if user and conflict_patient and can_view_patient(user, conflict_patient):
+        return (
+            f"Исследование уже загружено для пациента #{other.patient_id}. "
+            "Удалите существующую запись или выберите того же пациента."
+        )
+    return (
+        f"Исследование с этим файлом уже есть у пациента #{other.patient_id}, "
+        "но у вас нет доступа к этой записи. Обратитесь к администратору."
+    )
 
 
 def read_study_uid_from_file(file_path: str) -> str | None:
@@ -83,10 +176,10 @@ def prepare_study_for_upload(
         .all()
     ):
         if other.patient_id != study.patient_id:
-            raise DicomParseError(
-                f"Исследование уже загружено для пациента #{other.patient_id}. "
-                "Удалите существующую запись или выберите того же пациента."
-            )
+            msg = cross_patient_conflict_message(db, other, study, storage)
+            if msg:
+                raise DicomParseError(msg)
+            continue
         if other.status == "processing":
             raise DicomParseError("Исследование уже обрабатывается. Подождите завершения.")
         delete_study_data(db, other, storage)

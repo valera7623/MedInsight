@@ -136,12 +136,14 @@ function statusBadge(status) {
 async function loadDicomStudies(page = 1) {
   dicomPage = page;
   const search = document.getElementById('dicom-search')?.value.trim() || '';
+  const patientFilter = document.getElementById('dicom-patient-filter')?.value.trim() || '';
   const modality = document.getElementById('dicom-modality')?.value || '';
   const studyStatus = document.getElementById('dicom-status')?.value || '';
   const limit = document.getElementById('dicom-limit')?.value || '20';
 
   const params = new URLSearchParams({ page: String(page), limit });
   if (search) params.set('search', search);
+  if (patientFilter) params.set('patient_id', patientFilter);
   if (modality) params.set('modality', modality);
   if (studyStatus) params.set('status', studyStatus);
 
@@ -243,6 +245,52 @@ function setupDicomDropzone() {
   });
 }
 
+function showUploadConflict(detail, retryUpload) {
+  const errEl = document.getElementById('dicom-upload-error');
+  if (!errEl) return;
+  const msg = formatApiError(detail);
+  errEl.textContent = msg;
+  errEl.classList.remove('hidden');
+
+  const oldBtn = document.getElementById('dicom-conflict-delete');
+  if (oldBtn) oldBtn.remove();
+
+  if (detail?.can_delete && detail?.conflict_study_uid) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'dicom-conflict-delete';
+    btn.className = 'btn btn-danger btn-sm';
+    btn.style.marginTop = '0.75rem';
+    btn.textContent = 'Удалить существующее и загрузить снова';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        const del = await apiFetch(
+          `/api/dicom/studies/${encodeURIComponent(detail.conflict_study_uid)}`,
+          { method: 'DELETE' },
+        );
+        if (!del.ok) {
+          const data = await del.json().catch(() => ({}));
+          throw new Error(formatApiError(data.detail) || 'Не удалось удалить');
+        }
+        await retryUpload();
+      } catch (err) {
+        alert(err.message || 'Ошибка удаления');
+        btn.disabled = false;
+      }
+    });
+    errEl.insertAdjacentElement('afterend', btn);
+  } else if (detail?.conflict_visible && detail?.conflict_patient_id) {
+    const link = document.createElement('a');
+    link.href = `/dicom?patient_id=${detail.conflict_patient_id}`;
+    link.className = 'btn btn-secondary btn-sm';
+    link.style.marginTop = '0.75rem';
+    link.style.display = 'inline-block';
+    link.textContent = `Показать исследования пациента #${detail.conflict_patient_id}`;
+    errEl.insertAdjacentElement('afterend', link);
+  }
+}
+
 function setupDicomUploadForm(onSuccess) {
   const form = document.getElementById('dicom-upload-form');
   if (!form) return;
@@ -275,16 +323,23 @@ function setupDicomUploadForm(onSuccess) {
     progressEl.classList.remove('hidden');
     const submitBtn = form.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.disabled = true;
+    document.getElementById('dicom-conflict-delete')?.remove();
 
-    try {
+    async function doUpload() {
       const res = await apiFetch('/api/dicom/upload', {
         method: 'POST',
         body: formData,
         headers: {},
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(formatApiError(data.detail) || `Ошибка загрузки (${res.status})`);
-
+      if (!res.ok) {
+        if (res.status === 409 && data.detail && typeof data.detail === 'object') {
+          showUploadConflict(data.detail, doUpload);
+          throw new Error('conflict');
+        }
+        throw new Error(formatApiError(data.detail) || `Ошибка загрузки (${res.status})`);
+      }
+      document.getElementById('dicom-conflict-delete')?.remove();
       document.getElementById('dicom-upload-modal').classList.add('hidden');
       form.reset();
       document.getElementById('dicom-file-name').textContent = '';
@@ -294,10 +349,16 @@ function setupDicomUploadForm(onSuccess) {
         startDicomStatusPoll(data.study_id);
       }
       if (onSuccess) onSuccess(data);
+    }
+
+    try {
+      await doUpload();
     } catch (err) {
       progressEl.classList.add('hidden');
-      errEl.textContent = err.message || 'Ошибка загрузки';
-      errEl.classList.remove('hidden');
+      if (err.message !== 'conflict') {
+        errEl.textContent = err.message || 'Ошибка загрузки';
+        errEl.classList.remove('hidden');
+      }
     } finally {
       if (submitBtn) submitBtn.disabled = false;
     }
@@ -313,10 +374,20 @@ function setupDicomControls() {
   ['dicom-modality', 'dicom-status', 'dicom-limit'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', () => loadDicomStudies(1));
   });
+  let patientFilterTimer;
+  document.getElementById('dicom-patient-filter')?.addEventListener('input', () => {
+    clearTimeout(patientFilterTimer);
+    patientFilterTimer = setTimeout(() => loadDicomStudies(1), 350);
+  });
 }
 
 function initDicomPage() {
   if (!requireAuth()) return;
+  const urlPatient = new URLSearchParams(window.location.search).get('patient_id');
+  if (urlPatient) {
+    const el = document.getElementById('dicom-patient-filter');
+    if (el) el.value = urlPatient;
+  }
   setupLogout();
   setupModals();
   setupDicomUploadForm(() => loadDicomStudies(dicomPage));
