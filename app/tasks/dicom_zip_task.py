@@ -62,22 +62,20 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
         if not dicom_files:
             raise DicomZipError("No DICOM files after extraction")
 
-        study_groups = processor.group_by_study(dicom_files)
-        primary_study_uid = max(study_groups.keys(), key=lambda k: len(study_groups[k]))
-        primary_files = study_groups[primary_study_uid]
-
-        structure = processor.process_study(primary_files, study.patient_id)
-        real_study_uid = structure["study_uid"]
-
-        # Store encrypted copy of first DICOM from primary study as file_path_encrypted fallback
-        first_dcm = primary_files[0]
-        enc_dcm_path = storage.store_encrypted(
-            first_dcm,
-            tenant_id=study.tenant_id,
-            patient_id=study.patient_id,
-            study_uid=real_study_uid,
-            filename=Path(first_dcm).name,
+        file_groups = processor.group_files(dicom_files)
+        primary_study_uid = max(
+            file_groups.keys(),
+            key=lambda k: sum(len(files) for files in file_groups[k].values()),
         )
+        primary_series_groups = file_groups[primary_study_uid]
+        primary_files = [f for files in primary_series_groups.values() for f in files]
+
+        structure = processor.process_study(
+            primary_files,
+            study.patient_id,
+            series_groups=primary_series_groups,
+        )
+        real_study_uid = structure["study_uid"]
 
         study.study_uid = real_study_uid
         study.study_date = structure.get("study_date") or study.study_date
@@ -86,7 +84,6 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
         study.body_part = structure.get("body_part")
         study.patient_name_dicom = structure.get("patient_name")
         study.patient_id_dicom = structure.get("patient_id_dicom")
-        study.file_path_encrypted = enc_dcm_path
         study.num_series = 0
         study.num_instances = 0
         db.commit()
@@ -97,17 +94,23 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
 
         for series_data in structure["series"]:
             series_uid = series_data["series_uid"]
-            series = DicomSeries(
-                study_id=study.id,
-                series_uid=series_uid,
-                series_number=series_data.get("series_number"),
-                series_description=series_data.get("series_description"),
-                modality=series_data.get("modality"),
-                original_filename=Path(series_data.get("original_filename") or "").name or None,
-                num_instances=0,
+            series = (
+                db.query(DicomSeries)
+                .filter(DicomSeries.study_id == study.id, DicomSeries.series_uid == series_uid)
+                .first()
             )
-            db.add(series)
-            db.flush()
+            if not series:
+                series = DicomSeries(
+                    study_id=study.id,
+                    series_uid=series_uid,
+                    series_number=series_data.get("series_number"),
+                    series_description=series_data.get("series_description"),
+                    modality=series_data.get("modality"),
+                    original_filename=Path(series_data.get("original_filename") or "").name or None,
+                    num_instances=0,
+                )
+                db.add(series)
+                db.flush()
             series_count += 1
 
             for inst in series_data["instances"]:
@@ -137,17 +140,36 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
                 series.num_instances += len(inst["frames"])
                 processed_count += 1
                 study.processed_files = processed_count
-                db.commit()
 
-                if processed_count % PROGRESS_EVERY == 0:
-                    _update_progress(self, processed_count, total_files, real_study_uid)
+            db.commit()
+            if processed_count % PROGRESS_EVERY == 0:
+                _update_progress(self, processed_count, total_files, real_study_uid)
+
+        try:
+            first_dcm = primary_files[0]
+            enc_dcm_path = storage.store_encrypted(
+                first_dcm,
+                tenant_id=study.tenant_id,
+                patient_id=study.patient_id,
+                study_uid=real_study_uid,
+                filename=Path(first_dcm).name,
+            )
+            study.file_path_encrypted = enc_dcm_path
+            db.commit()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("DICOM ZIP encryption failed for study %s: %s", study_id, exc)
 
         # Additional Study UIDs in same ZIP → separate DicomStudy rows
-        for alt_uid, alt_files in study_groups.items():
+        for alt_uid, alt_series_groups in file_groups.items():
             if alt_uid == primary_study_uid:
                 continue
+            alt_files = [f for files in alt_series_groups.values() for f in files]
             try:
-                alt_structure = processor.process_study(alt_files, study.patient_id)
+                alt_structure = processor.process_study(
+                    alt_files,
+                    study.patient_id,
+                    series_groups=alt_series_groups,
+                )
                 alt_study = DicomStudy(
                     patient_id=study.patient_id,
                     tenant_id=study.tenant_id,
@@ -237,6 +259,7 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
 
     except Exception as exc:
         logger.exception("DICOM ZIP processing failed for study %s: %s", study_id, exc)
+        db.rollback()
         if study := db.query(DicomStudy).filter(DicomStudy.id == study_id).first():
             study.status = "failed"
             study.error_message = str(exc)

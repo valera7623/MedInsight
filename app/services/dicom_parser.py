@@ -45,6 +45,13 @@ def _parse_dicom_date(value: Any) -> datetime | None:
     return None
 
 
+def _viewer_max_edge() -> int | None:
+    size = settings.DICOM_VIEWER_MAX_SIZE
+    if not size:
+        return None
+    return int(size)
+
+
 class DicomParser:
     def validate_dicom(self, file_path: str) -> bool:
         try:
@@ -77,6 +84,9 @@ class DicomParser:
             except Exception:  # noqa: BLE001
                 pixel_spacing = None
 
+        width = int(getattr(dicom, "Columns", 0) or 0) or None
+        height = int(getattr(dicom, "Rows", 0) or 0) or None
+
         return {
             "patient_name": _safe_str(getattr(dicom, "PatientName", None)),
             "patient_id": _safe_str(getattr(dicom, "PatientID", None), 128),
@@ -92,6 +102,8 @@ class DicomParser:
             "bit_depth": int(getattr(dicom, "BitsStored", 8) or 8),
             "pixel_spacing": pixel_spacing,
             "num_frames": int(getattr(dicom, "NumberOfFrames", 1) or 1),
+            "width": width,
+            "height": height,
         }
 
     def extract_pixel_data(self, dicom: Any, *, window_center: float | None = None, window_width: float | None = None) -> bytes:
@@ -140,10 +152,13 @@ class DicomParser:
             except Exception:  # noqa: BLE001
                 ww = None
 
+        max_edge = _viewer_max_edge() if not thumbnail else None
+        compress_level = max(0, min(9, settings.DICOM_PNG_COMPRESS_LEVEL))
+
         pngs: list[bytes] = []
         for frame in arrays:
             data = apply_voi_lut(frame, dicom) if hasattr(dicom, "PixelData") else frame
-            data = np.asarray(data, dtype=np.float64)
+            data = np.asarray(data, dtype=np.float32)
             if wc is not None and ww is not None and ww > 0:
                 low = wc - ww / 2
                 high = wc + ww / 2
@@ -162,10 +177,22 @@ class DicomParser:
             img = Image.fromarray(img_arr, mode=mode)
             if thumbnail:
                 img = self._maybe_thumbnail(img)
+            elif max_edge:
+                img = self._resize_max_edge(img, max_edge)
             buf = io.BytesIO()
-            img.save(buf, format="PNG", optimize=True)
+            img.save(buf, format="PNG", compress_level=compress_level)
             pngs.append(buf.getvalue())
         return pngs
+
+    def _resize_max_edge(self, img: Any, max_edge: int) -> Any:
+        from PIL import Image
+
+        if img.width <= max_edge and img.height <= max_edge:
+            return img
+        copy = img.copy()
+        ratio = min(max_edge / img.width, max_edge / img.height)
+        new_size = (max(1, int(img.width * ratio)), max(1, int(img.height * ratio)))
+        return copy.resize(new_size, Image.Resampling.BILINEAR)
 
     def _maybe_thumbnail(self, img: Any) -> Any:
         from PIL import Image
@@ -197,14 +224,8 @@ class DicomParser:
         if not png_frames:
             raise DicomParseError("Could not extract frames from DICOM")
 
-        width, height = None, None
-        try:
-            if hasattr(ds, "pixel_array"):
-                arr = ds.pixel_array
-                if arr.ndim >= 2:
-                    height, width = int(arr.shape[-2]), int(arr.shape[-1])
-        except Exception:  # noqa: BLE001
-            pass
+        width = meta.get("width")
+        height = meta.get("height")
 
         frames = []
         for idx, png in enumerate(png_frames):

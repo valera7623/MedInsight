@@ -111,6 +111,10 @@ class Settings(BaseSettings):
     DICOM_MAX_FILE_SIZE_MB: int = 500
     DICOM_STORAGE_PATH: str = "./storage/dicom"
     DICOM_THUMBNAIL_SIZE: str = "256x256"
+    # Max edge length for stored viewer frames (0 = full resolution). Smaller = faster processing.
+    DICOM_VIEWER_MAX_SIZE: int = 1024
+    # PNG compress_level 1–9; lower is faster (default 1).
+    DICOM_PNG_COMPRESS_LEVEL: int = 1
     DICOM_ZIP_MAX_SIZE_MB: int = 2048
     DICOM_ZIP_TEMP_DIR: str = "./temp/dicom_zip"
     DICOM_ZIP_MAX_FILES: int = 5000

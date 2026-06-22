@@ -134,48 +134,62 @@ class DicomZipProcessor:
         entries = self._scan_zip_entries(zip_path)
         return [(e.filename, Path(e.filename).name) for e in entries]
 
+    def group_files(self, files: list[str]) -> dict[str, dict[str, list[str]]]:
+        """Group file paths by study_uid → series_uid in a single metadata read per file."""
+        groups: dict[str, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
+        for file_path in files:
+            uids = self._read_file_uids(file_path)
+            groups[uids["study_uid"]][uids["series_uid"]].append(file_path)
+        return {study_uid: dict(series_map) for study_uid, series_map in groups.items()}
+
     def group_by_study(self, files: list[str]) -> dict[str, list[str]]:
         """Group file paths by StudyInstanceUID."""
         groups: dict[str, list[str]] = defaultdict(list)
-        for file_path in files:
-            study_uid = self._read_study_uid(file_path)
-            groups[study_uid].append(file_path)
+        for study_uid, series_map in self.group_files(files).items():
+            for series_files in series_map.values():
+                groups[study_uid].extend(series_files)
         return dict(groups)
 
     def group_by_series(self, files: list[str]) -> dict[str, list[str]]:
         """Group file paths by SeriesInstanceUID."""
         groups: dict[str, list[str]] = defaultdict(list)
         for file_path in files:
-            series_uid = self._read_series_uid(file_path)
-            groups[series_uid].append(file_path)
+            uids = self._read_file_uids(file_path)
+            groups[uids["series_uid"]].append(file_path)
         return dict(groups)
 
-    def _read_study_uid(self, file_path: str) -> str:
+    def _read_file_uids(self, file_path: str) -> dict[str, str]:
         try:
             import pydicom
 
             ds = pydicom.dcmread(file_path, force=True, stop_before_pixels=True)
-            uid = getattr(ds, "StudyInstanceUID", None)
-            if uid:
-                return str(uid)
+            study_uid = getattr(ds, "StudyInstanceUID", None)
+            series_uid = getattr(ds, "SeriesInstanceUID", None)
+            if study_uid and series_uid:
+                return {"study_uid": str(study_uid), "series_uid": str(series_uid)}
+            if study_uid:
+                return {
+                    "study_uid": str(study_uid),
+                    "series_uid": f"{study_uid}.series.{uuid.uuid4().hex[:8]}",
+                }
         except Exception as exc:  # noqa: BLE001
-            logger.debug("Study UID read failed %s: %s", file_path, exc)
-        return f"unknown-study-{uuid.uuid4().hex}"
+            logger.debug("UID read failed %s: %s", file_path, exc)
+        study = f"unknown-study-{uuid.uuid4().hex}"
+        return {"study_uid": study, "series_uid": f"{study}.series.{uuid.uuid4().hex[:8]}"}
+
+    def _read_study_uid(self, file_path: str) -> str:
+        return self._read_file_uids(file_path)["study_uid"]
 
     def _read_series_uid(self, file_path: str) -> str:
-        try:
-            import pydicom
+        return self._read_file_uids(file_path)["series_uid"]
 
-            ds = pydicom.dcmread(file_path, force=True, stop_before_pixels=True)
-            uid = getattr(ds, "SeriesInstanceUID", None)
-            if uid:
-                return str(uid)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Series UID read failed %s: %s", file_path, exc)
-        study = self._read_study_uid(file_path)
-        return f"{study}.series.{uuid.uuid4().hex[:8]}"
-
-    def process_study(self, files: list[str], patient_id: int) -> dict[str, Any]:
+    def process_study(
+        self,
+        files: list[str],
+        patient_id: int,
+        *,
+        series_groups: dict[str, list[str]] | None = None,
+    ) -> dict[str, Any]:
         """
         Parse grouped files into study structure (no DB writes).
 
@@ -184,7 +198,9 @@ class DicomZipProcessor:
         if not files:
             raise DicomZipError("No DICOM files to process")
 
-        series_groups = self.group_by_series(files)
+        if series_groups is None:
+            series_groups = self.group_by_series(files)
+
         parsed_series: list[dict[str, Any]] = []
         study_meta: dict[str, Any] | None = None
         total_instances = 0
@@ -194,9 +210,6 @@ class DicomZipProcessor:
             series_meta: dict[str, Any] | None = None
 
             for file_path in series_files:
-                if not self.parser.validate_dicom(file_path):
-                    logger.warning("Skipping invalid DICOM: %s", file_path)
-                    continue
                 try:
                     parsed = self.parser.parse_dicom_file(file_path)
                 except DicomParseError as exc:

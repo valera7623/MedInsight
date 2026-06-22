@@ -68,6 +68,14 @@ class DicomUploadResponse(BaseModel):
     status: str
 
 
+class DicomUploadStatusResponse(BaseModel):
+    study_id: int
+    study_uid: str
+    status: str
+    num_instances: int
+    error_message: str | None = None
+
+
 def _ensure_dicom_enabled() -> None:
     if not settings.DICOM_ENABLED:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="DICOM support is disabled")
@@ -206,6 +214,32 @@ async def upload_dicom(
         study_id=study.id,
         job_id=job_id,
         status=study.status,
+    )
+
+
+@router.get("/upload/status/{study_id}", response_model=DicomUploadStatusResponse)
+def get_dicom_upload_status(
+    study_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    _ensure_dicom_enabled()
+    tid = effective_tenant_id(current_user, get_request_tenant_id(request))
+    query = db.query(DicomStudy).filter(DicomStudy.id == study_id)
+    if tid is not None:
+        query = query.filter(DicomStudy.tenant_id == tid)
+    study = query.first()
+    if not study:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DICOM study not found")
+    if study.patient is not None and not can_view_patient(current_user, study.patient):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DICOM study not found")
+    return DicomUploadStatusResponse(
+        study_id=study.id,
+        study_uid=study.study_uid,
+        status=study.status,
+        num_instances=study.num_instances,
+        error_message=study.error_message,
     )
 
 

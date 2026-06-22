@@ -62,6 +62,7 @@ def process_dicom_study(self, study_id: int, temp_path: str) -> dict:
     db = SessionLocal()
     parser = DicomParser()
     storage = DicomStorage()
+    study = None
     try:
         study = db.query(DicomStudy).filter(DicomStudy.id == study_id).first()
         if not study:
@@ -70,18 +71,7 @@ def process_dicom_study(self, study_id: int, temp_path: str) -> dict:
         study.status = "processing"
         db.commit()
 
-        if not parser.validate_dicom(temp_path):
-            raise DicomParseError("Invalid DICOM file")
-
         parsed = parser.parse_dicom_file(temp_path)
-
-        enc_path = storage.store_encrypted(
-            temp_path,
-            tenant_id=study.tenant_id,
-            patient_id=study.patient_id,
-            study_uid=parsed["study_uid"],
-            filename=study.original_filename or "upload.dcm",
-        )
 
         frame_tuples = [(f["instance_uid"], f["frame_number"], f["png_bytes"]) for f in parsed["frames"]]
         image_paths = storage.store_frames(
@@ -124,18 +114,40 @@ def process_dicom_study(self, study_id: int, temp_path: str) -> dict:
         study.patient_id_dicom = parsed.get("patient_id")
         study.num_series = 1
         study.num_instances = len(parsed["frames"])
-        study.file_path_encrypted = enc_path
         study.status = "ready"
         study.processed_at = datetime.utcnow()
         study.error_message = None
         db.commit()
 
+        try:
+            enc_path = storage.store_encrypted(
+                temp_path,
+                tenant_id=study.tenant_id,
+                patient_id=study.patient_id,
+                study_uid=parsed["study_uid"],
+                filename=study.original_filename or "upload.dcm",
+            )
+            study.file_path_encrypted = enc_path
+            db.commit()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("DICOM encryption failed for study %s (viewer frames are ready): %s", study_id, exc)
+
         _notify_dicom_ready(study, study.user_id)
         logger.info("DICOM study %s processed (%d frames)", study.study_uid, study.num_instances)
         return {"status": "ready", "study_uid": study.study_uid, "num_instances": study.num_instances}
 
+    except DicomParseError as exc:
+        logger.warning("DICOM parse failed for study %s: %s", study_id, exc)
+        db.rollback()
+        if study := db.query(DicomStudy).filter(DicomStudy.id == study_id).first():
+            study.status = "failed"
+            study.error_message = str(exc)
+            study.processed_at = datetime.utcnow()
+            db.commit()
+        return {"status": "failed", "error": str(exc)}
     except Exception as exc:
         logger.exception("DICOM processing failed for study %s: %s", study_id, exc)
+        db.rollback()
         if study := db.query(DicomStudy).filter(DicomStudy.id == study_id).first():
             study.status = "failed"
             study.error_message = str(exc)

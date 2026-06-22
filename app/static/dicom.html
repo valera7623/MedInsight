@@ -43,6 +43,10 @@
       </div>
     </div>
 
+    <div id="dicom-processing-panel" class="dicom-zip-progress hidden" role="status" aria-live="polite">
+      <p id="dicom-processing-label" class="dicom-zip-progress-label">Обработка DICOM…</p>
+    </div>
+
     <div class="list-toolbar">
       <input type="search" id="dicom-search" class="toolbar-input" placeholder="Поиск по описанию, модальности…">
       <select id="dicom-modality" class="btn btn-secondary btn-sm" style="padding:0.4rem">
@@ -92,7 +96,7 @@
           <span id="dicom-file-name" class="text-muted"></span>
         </div>
         <div id="dicom-upload-error" class="error-message hidden"></div>
-        <div id="dicom-upload-progress" class="hidden">Загрузка и обработка…</div>
+        <div id="dicom-upload-progress" class="hidden">Загрузка файла…</div>
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary modal-close">Отмена</button>
           <button type="submit" class="btn btn-primary">Загрузить</button>
