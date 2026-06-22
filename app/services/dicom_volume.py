@@ -47,6 +47,30 @@ _MODE_PRESET_TUNING: dict[tuple[str, str], dict[str, float]] = {
     ("bone", "mip"): {"window_center": 220.0, "window_width": 80.0},
 }
 
+# Prefer diagnostic cross-sectional series over segmentation / secondary objects.
+_MODALITY_PRIORITY: dict[str, int] = {
+    "CT": 100,
+    "MR": 90,
+    "PT": 80,
+    "NM": 70,
+    "US": 50,
+    "XA": 40,
+    "CR": 35,
+    "DX": 35,
+    "SEG": 5,
+    "RTSTRUCT": 5,
+    "RT": 5,
+    "REG": 10,
+    "SR": 0,
+    "DOC": 0,
+    "KO": 0,
+    "PR": 0,
+}
+
+_NON_VOLUMETRIC_MODALITIES = frozenset(
+    {"SEG", "RTSTRUCT", "RT", "REG", "SR", "DOC", "KO", "PR"}
+)
+
 
 class DicomVolumeError(Exception):
     pass
@@ -95,11 +119,22 @@ class DicomVolumeService:
             return None
 
         def score(series: DicomSeries) -> tuple[int, int]:
-            modality = (series.modality or "").upper()
-            modality_bonus = 2 if modality in {"CT", "MR", "PT"} else 0
-            return (modality_bonus, len(series.frames))
+            modality = (series.modality or study.modality or "").upper()
+            priority = _MODALITY_PRIORITY.get(modality, 30)
+            return (priority, len(series.frames))
 
         return max(candidates, key=score)
+
+    def _volume_warning(self, series: DicomSeries | None) -> str | None:
+        if not series:
+            return None
+        modality = (series.modality or "").upper()
+        if modality in _NON_VOLUMETRIC_MODALITIES:
+            return (
+                f"Серия {modality} — это не CT/MR. Пресеты Lung/Bone неприменимы; "
+                "используйте Default + MIP или откройте CT-серию в 2D-вьюере."
+            )
+        return None
 
     def _sorted_frames(self, series: DicomSeries) -> list[DicomFrame]:
         return sorted(series.frames, key=lambda f: (f.frame_number, f.instance_uid))
@@ -187,6 +222,11 @@ class DicomVolumeService:
             info_raw = client.get(_volume_cache_key(study_uid, "info"))
             if data and info_raw:
                 info = json.loads(info_raw.decode("utf-8"))
+                study = self._get_study(study_uid)
+                if study:
+                    best = self._select_series(study)
+                    if best and info.get("series_uid") and info.get("series_uid") != best.series_uid:
+                        return None, None
                 volume = self._unpack_volume(data, info)
                 self._mem_cache_put(study_uid, volume, info)
                 return volume, info
@@ -201,6 +241,11 @@ class DicomVolumeService:
         info_path = vdir / "info.json"
         if data_path.exists() and info_path.exists():
             info = json.loads(info_path.read_text(encoding="utf-8"))
+            study = self._get_study(study_uid)
+            if study:
+                best = self._select_series(study)
+                if best and info.get("series_uid") and info.get("series_uid") != best.series_uid:
+                    return None, None
             volume = self._unpack_volume(data_path.read_bytes(), info)
             self._mem_cache_put(study_uid, volume, info)
             return volume, info
@@ -219,7 +264,14 @@ class DicomVolumeService:
         """Return volume metadata (dimensions, spacing, orientation, cache status)."""
         _, info = self._cache_get(study_uid)
         if info:
-            return {**info, "cached": True, "status": "ready"}
+            study = self._get_study(study_uid)
+            series = self._select_series(study) if study else None
+            return {
+                **info,
+                "cached": True,
+                "status": "ready",
+                "warning": self._volume_warning(series),
+            }
 
         study = self._get_study(study_uid)
         if not study:
@@ -236,6 +288,17 @@ class DicomVolumeService:
         width = frames[0].width or 0
         height = frames[0].height or 0
 
+        available = [
+            {
+                "series_uid": s.series_uid,
+                "modality": s.modality,
+                "series_description": s.series_description,
+                "num_frames": len(s.frames),
+            }
+            for s in study.series
+            if s.frames
+        ]
+
         return {
             "study_uid": study_uid,
             "series_uid": series.series_uid,
@@ -247,6 +310,8 @@ class DicomVolumeService:
             "cached": False,
             "status": "not_built",
             "presets": list(WINDOW_PRESETS.keys()),
+            "available_series": available,
+            "warning": self._volume_warning(series),
         }
 
     def get_volume_data(self, study_uid: str) -> dict[str, Any]:
@@ -299,6 +364,7 @@ class DicomVolumeService:
             "orientation": [1, 0, 0, 0, 1, 0],
             "dtype": "float32",
             "presets": list(WINDOW_PRESETS.keys()),
+            "warning": self._volume_warning(series),
         }
 
         self._mem_cache_put(study_uid, volume, info)
@@ -331,6 +397,38 @@ class DicomVolumeService:
         clipped = np.clip(data, low, high)
         normalized = (clipped - low) / max(high - low, 1e-6)
         return (normalized * 255.0).astype(np.uint8)
+
+    def _normalize_for_display(
+        self,
+        data: np.ndarray,
+        params: dict[str, Any],
+        volume: np.ndarray,
+        *,
+        is_projection: bool = False,
+    ) -> np.ndarray:
+        """Apply W/L preset or auto-stretch when contrast is too flat (common for SEG / MinIP)."""
+        custom = params.get("window_center") is not None and params.get("window_width") is not None
+        if custom:
+            wc, ww = self._resolve_window(params, volume)
+            return self._apply_window(data, wc, ww)
+
+        std = float(np.std(data))
+        dynamic = float(np.percentile(data, 98) - np.percentile(data, 2))
+        mode = (params.get("mode") or "mip").lower()
+        needs_auto = std < 18 or dynamic < 20 or (is_projection and mode == "minip")
+
+        if needs_auto:
+            lo = float(np.percentile(data, 1))
+            hi = float(np.percentile(data, 99))
+            if hi - lo < 1:
+                lo, hi = float(np.min(data)), float(np.max(data))
+            if hi - lo < 1:
+                return np.full(data.shape, 128, dtype=np.uint8)
+            normalized = (np.clip(data, lo, hi) - lo) / (hi - lo)
+            return (normalized * 255.0).astype(np.uint8)
+
+        wc, ww = self._resolve_window(params, volume)
+        return self._apply_window(data, wc, ww)
 
     def _slice_volume(
         self, volume: np.ndarray, plane: str, slice_index: int
@@ -378,8 +476,7 @@ class DicomVolumeService:
         params = params or {}
         volume, info = self._get_volume_or_build(study_uid)
         slice_data = self._slice_volume(volume, plane, slice_index)
-        wc, ww = self._resolve_window(params, volume)
-        rendered = self._apply_window(slice_data, wc, ww)
+        rendered = self._normalize_for_display(slice_data, params, volume)
         return self._array_to_png(rendered)
 
     def render_volume(self, study_uid: str, params: dict[str, Any] | None = None) -> bytes:
@@ -405,8 +502,7 @@ class DicomVolumeService:
         else:
             projection = np.max(rotated, axis=0)
 
-        wc, ww = self._resolve_window(params, volume)
-        rendered = self._apply_window(projection, wc, ww)
+        rendered = self._normalize_for_display(projection, params, volume, is_projection=True)
         return self._array_to_png(rendered)
 
     def render_preview(
@@ -421,7 +517,6 @@ class DicomVolumeService:
         slices = slices or {}
         volume, info = self._get_volume_or_build(study_uid)
         z, y, x = volume.shape
-        wc, ww = self._resolve_window(params, volume)
 
         slice_idx = {
             "axial": int(slices.get("axial", z // 2)),
@@ -432,7 +527,7 @@ class DicomVolumeService:
         mpr_b64: dict[str, str] = {}
         for plane in ("axial", "coronal", "sagittal"):
             slice_data = self._slice_volume(volume, plane, slice_idx[plane])
-            rendered = self._apply_window(slice_data, wc, ww)
+            rendered = self._normalize_for_display(slice_data, params, volume)
             mpr_b64[plane] = base64.b64encode(self._array_to_png(rendered)).decode("ascii")
 
         mode = (params.get("mode") or "mip").lower()
@@ -448,12 +543,16 @@ class DicomVolumeService:
             projection = np.mean(rotated, axis=0)
         else:
             projection = np.max(rotated, axis=0)
-        vr_rendered = self._apply_window(projection, wc, ww)
+        vr_rendered = self._normalize_for_display(projection, params, volume, is_projection=True)
         vr_b64 = base64.b64encode(self._array_to_png(vr_rendered)).decode("ascii")
+
+        study = self._get_study(study_uid)
+        series = self._select_series(study) if study else None
+        warning = self._volume_warning(series)
 
         return {
             "study_uid": study_uid,
-            "info": {**info, "cached": True, "status": "ready"},
+            "info": {**info, "cached": True, "status": "ready", "warning": warning},
             "slices": slice_idx,
             "render": vr_b64,
             "mpr": mpr_b64,

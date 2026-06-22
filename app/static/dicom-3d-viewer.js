@@ -43,7 +43,22 @@ function setStatus(text, isError = false) {
   if (el) {
     el.textContent = text;
     el.classList.toggle('error', isError);
+    el.title = isError || text.length > 40 ? text : '';
   }
+}
+
+function showVolumeWarning(info) {
+  const warn = info?.warning;
+  if (!warn) return;
+  let banner = document.getElementById('dicom-3d-warning');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'dicom-3d-warning';
+    banner.className = 'dicom-3d-warning';
+    document.querySelector('.dicom-3d-layout')?.prepend(banner);
+  }
+  banner.textContent = warn;
+  banner.classList.remove('hidden');
 }
 
 function renderQueryParams() {
@@ -145,6 +160,7 @@ function applyPreview(preview) {
 
   if (preview.info) {
     viewer3dState.volumeInfo = preview.info;
+    showVolumeWarning(preview.info);
   }
 }
 
@@ -253,7 +269,9 @@ async function initDicom3dViewer(studyUid) {
 
     const preview = await loadPreview();
     applyPreview(preview);
-    setStatus(`Готово · ${info.num_slices || 0} срезов · ${info.modality || ''}`);
+    const mod = info.modality || preview.info?.modality || '';
+    setStatus(`Готово · ${info.num_slices || 0} срезов · ${mod}`);
+    showVolumeWarning(preview.info || info);
   } catch (err) {
     console.error(err);
     setStatus(err.message || 'Ошибка загрузки', true);

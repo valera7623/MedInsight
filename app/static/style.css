@@ -781,6 +781,15 @@ select.btn {
   max-width: 55%;
 }
 .dicom-3d-status.error { color: var(--danger, #e74c3c); }
+.dicom-3d-warning {
+  grid-column: 1 / -1;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8rem;
+  background: #3d3000;
+  color: #ffd866;
+  border-bottom: 1px solid #665500;
+}
+.dicom-3d-warning.hidden { display: none; }
 .dicom-3d-viewport,
 .dicom-3d-mpr-viewport {
   flex: 1;

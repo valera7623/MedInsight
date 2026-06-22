@@ -43,6 +43,8 @@ class VolumeInfoResponse(BaseModel):
     cached: bool = False
     status: str = "not_built"
     presets: list[str] = Field(default_factory=list)
+    warning: str | None = None
+    available_series: list[dict[str, Any]] = Field(default_factory=list)
 
 
 def _ensure_3d_enabled() -> None:
@@ -79,6 +81,7 @@ class VolumePreviewResponse(BaseModel):
     slices: dict[str, int] = Field(default_factory=dict)
     render: str
     mpr: dict[str, str] = Field(default_factory=dict)
+    warning: str | None = None
 
 
 @router.get("/{study_uid}/preview", response_model=VolumePreviewResponse)
@@ -120,7 +123,14 @@ def render_volume_preview(
         payload = service.render_preview(study_uid, slices=slice_map or None, params=params)
     except DicomVolumeError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    return VolumePreviewResponse(**payload)
+    return VolumePreviewResponse(
+        study_uid=payload["study_uid"],
+        info=payload.get("info", {}),
+        slices=payload.get("slices", {}),
+        render=payload["render"],
+        mpr=payload.get("mpr", {}),
+        warning=payload.get("info", {}).get("warning"),
+    )
 
 
 @router.get("/{study_uid}/info", response_model=VolumeInfoResponse)
