@@ -29,13 +29,22 @@ PLANES = frozenset({"axial", "coronal", "sagittal"})
 _mem_volume_cache: dict[str, tuple[np.ndarray, dict[str, Any]]] = {}
 _mem_volume_cache_max = 4
 
+# Window/level presets for PNG-derived volumes (0–255 grayscale).
+# HU-based values (e.g. lung WC=-600) do not apply — frames are pre-converted to PNG.
 WINDOW_PRESETS: dict[str, dict[str, float]] = {
-    "bone": {"window_center": 400.0, "window_width": 1800.0},
-    "lung": {"window_center": -600.0, "window_width": 1500.0},
-    "brain": {"window_center": 40.0, "window_width": 80.0},
-    "abdomen": {"window_center": 50.0, "window_width": 400.0},
-    "liver": {"window_center": 60.0, "window_width": 160.0},
     "default": {"window_center": 128.0, "window_width": 256.0},
+    "lung": {"window_center": 90.0, "window_width": 360.0},
+    "bone": {"window_center": 210.0, "window_width": 100.0},
+    "brain": {"window_center": 128.0, "window_width": 72.0},
+    "abdomen": {"window_center": 130.0, "window_width": 180.0},
+    "liver": {"window_center": 140.0, "window_width": 110.0},
+}
+
+# Optional W/L tweak per projection mode (still on 0–255 scale).
+_MODE_PRESET_TUNING: dict[tuple[str, str], dict[str, float]] = {
+    ("lung", "minip"): {"window_center": 70.0, "window_width": 320.0},
+    ("lung", "mip"): {"window_center": 110.0, "window_width": 280.0},
+    ("bone", "mip"): {"window_center": 220.0, "window_width": 80.0},
 }
 
 
@@ -300,7 +309,11 @@ class DicomVolumeService:
         self, params: dict[str, Any], volume: np.ndarray
     ) -> tuple[float, float]:
         preset = (params.get("preset") or "").lower()
+        mode = (params.get("mode") or "mip").lower()
         if preset and preset in WINDOW_PRESETS:
+            tuning = _MODE_PRESET_TUNING.get((preset, mode))
+            if tuning:
+                return tuning["window_center"], tuning["window_width"]
             p = WINDOW_PRESETS[preset]
             return p["window_center"], p["window_width"]
 

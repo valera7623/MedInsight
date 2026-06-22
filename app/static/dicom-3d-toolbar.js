@@ -12,6 +12,15 @@ const Dicom3dToolbar = (() => {
     { id: 'liver', label: 'Liver' },
   ];
 
+  const PRESET_WL = {
+    default: { center: 128, width: 256 },
+    lung: { center: 90, width: 360 },
+    bone: { center: 210, width: 100 },
+    brain: { center: 128, width: 72 },
+    abdomen: { center: 130, width: 180 },
+    liver: { center: 140, width: 110 },
+  };
+
   const MODES = [
     { id: 'mip', label: 'MIP' },
     { id: 'minip', label: 'MinIP' },
@@ -42,8 +51,8 @@ const Dicom3dToolbar = (() => {
         </div>
         <div class="dicom-3d-toolbar-group">
           <span class="dicom-3d-toolbar-label">W/L</span>
-          <label>Центр <input type="range" id="wl-center" min="0" max="4095" value="128"></label>
-          <label>Ширина <input type="range" id="wl-width" min="1" max="4095" value="256"></label>
+          <label>Центр <input type="range" id="wl-center" min="0" max="255" value="128"></label>
+          <label>Ширина <input type="range" id="wl-width" min="8" max="512" value="256"></label>
         </div>
         <div class="dicom-3d-toolbar-group">
           <span class="dicom-3d-toolbar-label">Инструменты</span>
@@ -57,10 +66,18 @@ const Dicom3dToolbar = (() => {
   }
 
   function bindEvents() {
+    const wlCenter = root.querySelector('#wl-center');
+    const wlWidth = root.querySelector('#wl-width');
+
     root.querySelectorAll('.dicom-3d-preset').forEach((btn) => {
       btn.addEventListener('click', () => {
         root.querySelectorAll('.dicom-3d-preset').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
+        const wl = PRESET_WL[btn.dataset.preset];
+        if (wl && wlCenter && wlWidth) {
+          wlCenter.value = wl.center;
+          wlWidth.value = wl.width;
+        }
         onAction?.('preset', btn.dataset.preset);
       });
     });
@@ -73,8 +90,6 @@ const Dicom3dToolbar = (() => {
       });
     });
 
-    const wlCenter = root.querySelector('#wl-center');
-    const wlWidth = root.querySelector('#wl-width');
     const emitWindow = () => {
       onAction?.('window', {
         center: parseInt(wlCenter.value, 10),
