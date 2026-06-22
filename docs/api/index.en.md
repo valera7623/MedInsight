@@ -65,4 +65,4 @@ Obtain a token via `POST /api/auth/login`.
 
 ---
 
-*Generated from OpenAPI 3.1.0 — 2026-06-22 14:19 UTC*
+*Generated from OpenAPI 3.1.0 — 2026-06-22 14:25 UTC*
