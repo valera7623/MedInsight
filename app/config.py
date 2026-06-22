@@ -120,6 +120,11 @@ class Settings(BaseSettings):
     DICOM_ZIP_MAX_FILES: int = 5000
     DICOM_ZIP_TASK_TIMEOUT_SEC: int = 1800
 
+    # Phase 12c: DICOM image annotations
+    DICOM_ANNOTATIONS_ENABLED: bool = True
+    DICOM_ANNOTATIONS_AUTO_SAVE_DELAY_MS: int = 500
+    DICOM_ANNOTATIONS_MAX_PER_FRAME: int = 100
+
     # Phase 9: OpenTelemetry (distributed tracing)
     OTEL_ENABLED: bool = False
     OTEL_SERVICE_NAME: str = "medinsight"

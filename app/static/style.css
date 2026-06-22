@@ -597,6 +597,80 @@ select.btn {
 #dicom-canvas { image-rendering: auto; }
 .dicom-frame-slider { width: 100%; padding: 0.5rem 1rem; background: var(--bg-card); }
 
+.dicom-canvas-stack { position: relative; display: inline-block; }
+.dicom-canvas-stack canvas { display: block; }
+.annotation-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+.dicom-annotate-body { overflow: hidden; }
+.dicom-annotate-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  height: calc(100vh - 56px);
+}
+.dicom-annotate-viewport {
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  min-width: 0;
+}
+.dicom-annotate-sidebar {
+  background: var(--bg-card);
+  border-left: 1px solid var(--border-primary);
+  padding: 1rem;
+  overflow-y: auto;
+}
+.annotation-toolbar {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-primary);
+  padding: 0.5rem 1rem;
+}
+.ann-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+.ann-tool.active, .ann-color-swatch.active {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+.ann-color-swatch {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+}
+.ann-label-field { font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem; }
+.ann-save-status { font-size: 0.85rem; margin-left: auto; }
+.annotation-list { list-style: none; margin: 0.75rem 0; padding: 0; }
+.ann-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  margin-bottom: 0.25rem;
+}
+.ann-list-item:hover { background: var(--bg-hover); }
+.ann-type { font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); }
+.ann-label-text { flex: 1; font-size: 0.85rem; }
+.ann-empty { color: var(--text-secondary); font-size: 0.85rem; }
+.ann-frame-info { font-size: 0.8rem; color: var(--text-secondary); }
+
+@media (max-width: 768px) {
+  .dicom-annotate-layout { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  .dicom-annotate-sidebar { max-height: 200px; border-left: none; border-top: 1px solid var(--border-primary); }
+}
+
 .plans-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

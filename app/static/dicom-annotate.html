@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — DICOM Annotations</title>
+  <link rel="stylesheet" href="/static/styles/themes.css">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/components/theme-toggle.js"></script>
+</head>
+<body class="dicom-annotate-body">
+  <nav class="navbar">
+    <div class="nav-brand">MedInsight</div>
+    <div class="nav-links">
+      <a href="#" id="back-to-viewer">← К просмотру</a>
+    </div>
+    <div class="nav-actions">
+      <div data-theme-toggle></div>
+      <button class="btn btn-secondary btn-sm" id="logout-btn">Выйти</button>
+    </div>
+  </nav>
+
+  <div class="dicom-annotate-layout">
+    <section class="dicom-annotate-viewport">
+      <div class="dicom-canvas-stack" id="canvas-stack">
+        <canvas id="dicom-canvas"></canvas>
+        <canvas id="annotation-canvas"></canvas>
+      </div>
+      <div id="annotation-toolbar" class="annotation-toolbar"></div>
+    </section>
+
+    <aside class="dicom-annotate-sidebar">
+      <h3>Аннотации</h3>
+      <p class="ann-frame-info" id="ann-frame-info">—</p>
+      <ul id="annotation-list" class="annotation-list"></ul>
+    </aside>
+  </div>
+
+  <script src="/static/dashboard.js"></script>
+  <script src="/static/dicom-annotations.js"></script>
+  <script src="/static/dicom-annotation-toolbar.js"></script>
+  <script>
+    const annotateState = {
+      studyUid: '',
+      seriesUid: '',
+      frameInstanceUid: '',
+      frame: null,
+      study: null,
+      img: null,
+      scale: 1,
+      tool: null,
+      toolbar: null,
+      autoSaveDelay: 500,
+    };
+
+    function parsePath() {
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      const idx = parts.indexOf('annotate');
+      return {
+        studyUid: parts[idx + 1] || '',
+        seriesUid: parts[idx + 2] || '',
+        frameInstanceUid: parts[idx + 3] || '',
+      };
+    }
+
+    function findFrame(study, seriesUid, instanceUid) {
+      const series = (study.series || []).find(s => s.series_uid === seriesUid);
+      return (series?.frames || []).find(f => f.instance_uid === instanceUid) || null;
+    }
+
+    function renderAnnotationList(annotations) {
+      const list = document.getElementById('annotation-list');
+      if (!list) return;
+      if (!annotations.length) {
+        list.innerHTML = '<li class="ann-empty">Нет аннотаций</li>';
+        return;
+      }
+      list.innerHTML = annotations.map(a => `
+        <li data-id="${a.id}" class="ann-list-item">
+          <span class="ann-type">${a.type}</span>
+          <span class="ann-label-text">${a.label || '—'}</span>
+          <button type="button" class="btn btn-danger btn-sm ann-del-btn" data-id="${a.id}">✕</button>
+        </li>
+      `).join('');
+
+      list.querySelectorAll('.ann-list-item').forEach(li => {
+        li.addEventListener('click', e => {
+          if (e.target.classList.contains('ann-del-btn')) return;
+          annotateState.tool?.selectAnnotation(li.dataset.id);
+        });
+      });
+      list.querySelectorAll('.ann-del-btn').forEach(btn => {
+        btn.addEventListener('click', async e => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const ann = annotations.find(a => String(a.id) === String(id));
+          if (!ann) return;
+          if (!ann.local) {
+            await apiFetch(`/api/dicom/annotations/${id}`, { method: 'DELETE' });
+          }
+          annotateState.tool.annotations = annotateState.tool.annotations.filter(a => String(a.id) !== String(id));
+          annotateState.tool.redraw();
+          renderAnnotationList(annotateState.tool.annotations);
+        });
+      });
+    }
+
+    async function loadConfig() {
+      const res = await apiFetch('/api/dicom/annotations/config');
+      if (res.ok) {
+        const cfg = await res.json();
+        annotateState.autoSaveDelay = cfg.auto_save_delay_ms || 500;
+      }
+    }
+
+    async function drawImage() {
+      const canvas = document.getElementById('dicom-canvas');
+      if (!canvas || !annotateState.img) return;
+      const ctx = canvas.getContext('2d');
+      canvas.width = annotateState.img.naturalWidth;
+      canvas.height = annotateState.img.naturalHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(annotateState.img, 0, 0);
+      annotateState.tool?.redraw();
+    }
+
+    async function loadFrameImage(frame) {
+      const token = getToken();
+      const tenantId = getTenantId();
+      const res = await fetch(frame.image_url, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
+        },
+      });
+      if (!res.ok) throw new Error('Frame load failed');
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = URL.createObjectURL(blob);
+      });
+    }
+
+    async function startSession() {
+      await apiFetch('/api/dicom/annotations/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          study_uid: annotateState.studyUid,
+          series_uid: annotateState.seriesUid,
+          frame_instance_uid: annotateState.frameInstanceUid,
+        }),
+      });
+    }
+
+    async function initAnnotatePage() {
+      if (!requireAuth()) return;
+      setupLogout();
+
+      const path = parsePath();
+      annotateState.studyUid = path.studyUid;
+      annotateState.seriesUid = path.seriesUid;
+      annotateState.frameInstanceUid = path.frameInstanceUid;
+
+      document.getElementById('back-to-viewer').href =
+        `/dicom/viewer/${encodeURIComponent(annotateState.studyUid)}`;
+
+      await loadConfig();
+
+      const studyRes = await apiFetch(`/api/dicom/studies/${encodeURIComponent(annotateState.studyUid)}`);
+      if (!studyRes.ok) {
+        alert('Исследование не найдено');
+        window.location.href = '/dicom';
+        return;
+      }
+      annotateState.study = await studyRes.json();
+      annotateState.frame = findFrame(
+        annotateState.study,
+        annotateState.seriesUid,
+        annotateState.frameInstanceUid
+      );
+      if (!annotateState.frame) {
+        alert('Кадр не найден');
+        window.location.href = `/dicom/viewer/${encodeURIComponent(annotateState.studyUid)}`;
+        return;
+      }
+
+      document.getElementById('ann-frame-info').textContent =
+        `Кадр ${annotateState.frame.frame_number + 1} · ${annotateState.frame.instance_uid.slice(0, 20)}…`;
+
+      annotateState.img = await loadFrameImage(annotateState.frame);
+      await drawImage();
+      await startSession();
+
+      const imageCanvas = document.getElementById('dicom-canvas');
+      const overlayCanvas = document.getElementById('annotation-canvas');
+
+      annotateState.tool = new DicomAnnotationTool({
+        imageCanvas,
+        overlayCanvas,
+        frameId: annotateState.frame.id,
+        pixelSpacing: annotateState.frame.pixel_spacing,
+        autoSaveDelay: annotateState.autoSaveDelay,
+        onSaveStatus: status => annotateState.toolbar?.setSaveStatus(status),
+        onAnnotationsChange: renderAnnotationList,
+      });
+
+      annotateState.toolbar = new DicomAnnotationToolbar(annotateState.tool, {
+        container: document.getElementById('annotation-toolbar'),
+        onUndo: () => annotateState.tool.undo(),
+        onRedo: () => annotateState.tool.redo(),
+        onDelete: () => annotateState.tool.deleteSelected(),
+        onSaveAll: () => annotateState.tool.saveAll(),
+        onClearAll: () => annotateState.tool.clearAll(),
+      });
+
+      await annotateState.tool.loadAnnotations(annotateState.frame.id);
+      renderAnnotationList(annotateState.tool.annotations);
+    }
+
+    document.addEventListener('DOMContentLoaded', initAnnotatePage);
+  </script>
+</body>
+</html>

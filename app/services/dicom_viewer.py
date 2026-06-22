@@ -49,11 +49,16 @@ class DicomViewer:
                     "num_instances": s.num_instances,
                     "frames": [
                         {
+                            "id": f.id,
                             "instance_uid": f.instance_uid,
                             "frame_number": f.frame_number,
                             "image_url": self.get_frame_url(study.study_uid, f.instance_uid, f.frame_number),
                             "width": f.width,
                             "height": f.height,
+                            "pixel_spacing": f.pixel_spacing,
+                            "annotate_url": (
+                                f"/dicom/annotate/{study.study_uid}/{s.series_uid}/{f.instance_uid}"
+                            ),
                         }
                         for f in sorted(s.frames, key=lambda x: x.frame_number)
                     ],
@@ -80,9 +85,16 @@ class DicomViewer:
             "modality": series.modality,
             "frames": [
                 {
+                    "id": f.id,
                     "instance_uid": f.instance_uid,
                     "frame_number": f.frame_number,
                     "image_url": self.get_frame_url(study.study_uid, f.instance_uid, f.frame_number),
+                    "width": f.width,
+                    "height": f.height,
+                    "pixel_spacing": f.pixel_spacing,
+                    "annotate_url": (
+                        f"/dicom/annotate/{study.study_uid}/{series.series_uid}/{f.instance_uid}"
+                    ),
                 }
                 for f in sorted(series.frames, key=lambda x: x.frame_number)
             ],

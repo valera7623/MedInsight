@@ -371,6 +371,44 @@ class DicomFrame(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     series: Mapped["DicomSeries"] = relationship("DicomSeries", back_populates="frames")
+    annotations: Mapped[list["DicomAnnotation"]] = relationship(
+        "DicomAnnotation", back_populates="frame", cascade="all, delete-orphan"
+    )
+
+
+class DicomAnnotation(Base):
+    """User-drawn markup on a DICOM frame (Phase 12c)."""
+
+    __tablename__ = "dicom_annotations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    frame_id: Mapped[int] = mapped_column(Integer, ForeignKey("dicom_frames.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(32), nullable=False)
+    coordinates: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    color: Mapped[str] = mapped_column(String(16), nullable=False, default="#FF0000")
+    label: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    measurement_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    measurement_unit: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    frame: Mapped["DicomFrame"] = relationship("DicomFrame", back_populates="annotations")
+
+
+class DicomAnnotationSession(Base):
+    """Tracks which frame a user last annotated (Phase 12c)."""
+
+    __tablename__ = "dicom_annotation_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    study_uid: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    series_uid: Mapped[str] = mapped_column(String(128), nullable=False)
+    frame_instance_uid: Mapped[str] = mapped_column(String(128), nullable=False)
+    opened_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class BackupLog(Base):

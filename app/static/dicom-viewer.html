@@ -38,16 +38,21 @@
           <input type="range" id="wl-slider" min="0" max="200" value="100">
         </label>
         <span id="frame-label" class="dicom-frame-label">Кадр 1 / 1</span>
+        <a class="btn btn-primary btn-sm hidden" id="annotate-link" href="#">✏️ Аннотации</a>
         <button class="btn btn-danger btn-sm hidden" id="delete-study-btn" type="button">Удалить</button>
       </div>
       <div class="dicom-canvas-wrap" id="canvas-wrap">
-        <canvas id="dicom-canvas"></canvas>
+        <div class="dicom-canvas-stack">
+          <canvas id="dicom-canvas"></canvas>
+          <canvas id="annotation-overlay" class="annotation-overlay"></canvas>
+        </div>
       </div>
       <input type="range" id="frame-slider" class="dicom-frame-slider" min="0" max="0" value="0">
     </section>
   </div>
 
   <script src="/static/dashboard.js"></script>
+  <script src="/static/dicom-annotations.js"></script>
   <script src="/static/dicom-viewer.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {

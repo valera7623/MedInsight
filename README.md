@@ -971,6 +971,51 @@ DICOM_ZIP_TASK_TIMEOUT_SEC=1800
 
 Тест: `python scripts/test_dicom_zip.py`
 
+### DICOM Annotations (разметка изображений)
+
+Рисование аннотаций поверх DICOM-кадров: прямоугольники, круги, стрелки, текст, линии,
+измерения расстояния и углов. Аннотации сохраняются в БД (JSON) и подгружаются при
+повторном открытии кадра.
+
+#### Возможности
+
+- Инструменты: rectangle, circle, arrow, text, line, measurement, angle
+- Auto-save через 500 ms после изменения (настраивается)
+- Canvas overlay в вьюере и на отдельной странице аннотаций
+- Экспорт JSON / GeoJSON; импорт JSON
+- RBAC: доступ только к пациентам, видимым пользователю; аудит create/update/delete
+- Сессии аннотаций (последний открытый кадр)
+
+#### API
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| `POST` | `/api/dicom/annotations` | Создать аннотацию |
+| `GET` | `/api/dicom/annotations/frame/{frame_id}` | Список по frame_id |
+| `GET` | `/api/dicom/annotations/frame-instance/{uid}` | Список по instance UID |
+| `PUT` | `/api/dicom/annotations/{id}` | Обновить |
+| `DELETE` | `/api/dicom/annotations/{id}` | Удалить (soft) |
+| `DELETE` | `/api/dicom/annotations/frame/{frame_id}` | Удалить все на кадре |
+| `POST` | `/api/dicom/annotations/export/{frame_id}` | Экспорт JSON |
+| `GET` | `/api/dicom/annotations/export/{frame_id}/geojson` | Экспорт GeoJSON |
+| `POST` | `/api/dicom/annotations/import/{frame_id}` | Импорт JSON |
+| `GET` | `/api/dicom/annotations/session` | Текущая сессия |
+| `POST` | `/api/dicom/annotations/session` | Начать сессию |
+| `GET` | `/api/dicom/annotations/config` | Настройки (enabled, delay, max) |
+
+#### UI
+
+- `/dicom/viewer/{study_uid}` — кнопка «Аннотации», overlay существующих разметок
+- `/dicom/annotate/{study_uid}/{series_uid}/{frame_instance_uid}` — полноэкранный редактор
+
+```env
+DICOM_ANNOTATIONS_ENABLED=true
+DICOM_ANNOTATIONS_AUTO_SAVE_DELAY_MS=500
+DICOM_ANNOTATIONS_MAX_PER_FRAME=100
+```
+
+Тест: `python scripts/test_annotations.py`
+
 ## Фаза 8: Резервное копирование (Backup & Restore)
 
 Автоматический и ручной бэкап БД (SQLite) и `storage/`, восстановление и ротация.
