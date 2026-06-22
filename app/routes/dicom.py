@@ -21,6 +21,7 @@ from app.models import DicomStudy, Patient, User
 from app.services.access import can_delete_dicom_study, can_view_patient, effective_tenant_id, is_super_admin
 from app.services.audit import log_audit
 from app.services.dicom_storage import DicomStorage
+from app.services.dicom_persistence import delete_study_data, read_study_uid_from_file
 from app.services.dicom_viewer import DicomViewer
 from app.services.list_queries import DICOM_SEARCH_FIELDS, DICOM_SORT, dicom_studies_scope
 from app.tasks.celery_app import redis_available
@@ -181,20 +182,90 @@ async def upload_dicom(
     temp_path = storage.temp_upload_path(suffix=suffix or ".dcm")
     temp_path.write_bytes(content)
 
-    placeholder_uid = f"pending-{uuid.uuid4().hex}"
-    study = DicomStudy(
-        patient_id=patient_id,
-        tenant_id=patient.tenant_id,
-        user_id=current_user.id,
-        study_uid=placeholder_uid,
-        original_filename=Path(file.filename).name,
-        status="processing",
-        num_series=0,
-        num_instances=0,
-    )
-    db.add(study)
-    db.commit()
-    db.refresh(study)
+    safe_name = Path(file.filename).name
+    dicom_study_uid = read_study_uid_from_file(str(temp_path))
+
+    study: DicomStudy | None = None
+    if dicom_study_uid:
+        cross_patient = (
+            db.query(DicomStudy)
+            .filter(
+                DicomStudy.study_uid == dicom_study_uid,
+                DicomStudy.patient_id != patient_id,
+            )
+            .first()
+        )
+        if cross_patient:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Исследование уже загружено для пациента #{cross_patient.patient_id}. "
+                    "Удалите существующую запись или выберите того же пациента."
+                ),
+            )
+
+        in_progress = (
+            db.query(DicomStudy)
+            .filter(
+                DicomStudy.study_uid == dicom_study_uid,
+                DicomStudy.patient_id == patient_id,
+                DicomStudy.status == "processing",
+            )
+            .first()
+        )
+        if in_progress:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Исследование уже обрабатывается. Подождите завершения.",
+            )
+
+        study = (
+            db.query(DicomStudy)
+            .filter(
+                DicomStudy.study_uid == dicom_study_uid,
+                DicomStudy.patient_id == patient_id,
+            )
+            .first()
+        )
+        if study:
+            study.status = "processing"
+            study.error_message = None
+            study.original_filename = safe_name
+            study.user_id = current_user.id
+            study.processed_at = None
+            db.commit()
+            db.refresh(study)
+
+    if study is None:
+        # Remove failed placeholder uploads for the same patient + filename.
+        stale = (
+            db.query(DicomStudy)
+            .filter(
+                DicomStudy.patient_id == patient_id,
+                DicomStudy.status == "failed",
+                DicomStudy.study_uid.like("pending-%"),
+                DicomStudy.original_filename == safe_name,
+            )
+            .all()
+        )
+        for row in stale:
+            delete_study_data(db, row, storage)
+        db.commit()
+
+        placeholder_uid = f"pending-{uuid.uuid4().hex}"
+        study = DicomStudy(
+            patient_id=patient_id,
+            tenant_id=patient.tenant_id,
+            user_id=current_user.id,
+            study_uid=placeholder_uid,
+            original_filename=safe_name,
+            status="processing",
+            num_series=0,
+            num_instances=0,
+        )
+        db.add(study)
+        db.commit()
+        db.refresh(study)
 
     log_audit(
         db,
@@ -414,31 +485,10 @@ def delete_dicom_study(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete this DICOM study")
 
     storage = DicomStorage()
-    zip_path = study.zip_original_path
-
-    if study.file_path_encrypted:
-        try:
-            Path(study.file_path_encrypted).unlink(missing_ok=True)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Failed to delete encrypted DICOM %s: %s", study.file_path_encrypted, exc)
-
-    storage.delete_study(study.patient_id, study.study_uid)
     study_id = study.id
     tenant_id = study.tenant_id
-    db.delete(study)
+    delete_study_data(db, study, storage)
     db.commit()
-
-    if zip_path:
-        others = (
-            db.query(DicomStudy)
-            .filter(DicomStudy.zip_original_path == zip_path)
-            .count()
-        )
-        if others == 0:
-            try:
-                Path(zip_path).unlink(missing_ok=True)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Failed to delete ZIP archive %s: %s", zip_path, exc)
 
     log_audit(
         db,

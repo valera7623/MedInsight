@@ -236,52 +236,142 @@ def test_dicom_api_delete() -> None:
     print("PASS dicom API delete")
 
 
-def test_dicom_duplicate_study_uid() -> None:
+def test_dicom_duplicate_different_patient() -> None:
+    from datetime import date
+
+    from app.auth import hash_password
+    from app.database import Base, SessionLocal, bootstrap_system, engine
+    from app.models import Department, DicomStudy, Patient, Tenant, User
+    from app.services.dicom_parser import DicomParser, DicomParseError
+    from app.services.dicom_persistence import prepare_study_for_upload
+    from app.services.dicom_storage import DicomStorage
+
+    Base.metadata.create_all(bind=engine)
+    bootstrap_system()
+    db = SessionLocal()
+    storage = DicomStorage()
+    try:
+        tenant = db.query(Tenant).first()
+        dept = Department(tenant_id=tenant.id, name="Dup2 Rad")
+        db.add(dept)
+        db.commit()
+
+        user = User(
+            tenant_id=tenant.id,
+            email="dup2@example.com",
+            password_hash=hash_password("secret"),
+            full_name="Dup2 Doc",
+            role="doctor",
+            department_id=dept.id,
+        )
+        db.add(user)
+        db.flush()
+        patient_a = Patient(
+            tenant_id=tenant.id,
+            user_id=user.id,
+            department_id=dept.id,
+            first_name="A",
+            last_name="One",
+            birth_date=date(1985, 1, 1),
+            gender="M",
+            phone="+7222",
+        )
+        patient_b = Patient(
+            tenant_id=tenant.id,
+            user_id=user.id,
+            department_id=dept.id,
+            first_name="B",
+            last_name="Two",
+            birth_date=date(1986, 1, 1),
+            gender="F",
+            phone="+7333",
+        )
+        db.add_all([patient_a, patient_b])
+        db.commit()
+        db.refresh(patient_a)
+        db.refresh(patient_b)
+
+        sample = Path(tempfile.mkdtemp()) / "dup2.dcm"
+        _make_sample_dicom(sample)
+        parsed = DicomParser().parse_dicom_file(str(sample))
+
+        existing = DicomStudy(
+            patient_id=patient_a.id,
+            tenant_id=tenant.id,
+            user_id=user.id,
+            study_uid=parsed["study_uid"],
+            status="ready",
+            num_series=1,
+            num_instances=1,
+        )
+        pending = DicomStudy(
+            patient_id=patient_b.id,
+            tenant_id=tenant.id,
+            user_id=user.id,
+            study_uid="pending-dup2",
+            status="processing",
+            num_series=0,
+            num_instances=0,
+        )
+        db.add_all([existing, pending])
+        db.commit()
+        db.refresh(pending)
+
+        try:
+            prepare_study_for_upload(db, pending, parsed, storage)
+            raise AssertionError("expected DicomParseError for cross-patient duplicate")
+        except DicomParseError as exc:
+            assert "пациента #" in str(exc)
+        print("PASS duplicate different patient blocked")
+    finally:
+        db.close()
+
+
+def test_dicom_reupload_same_patient() -> None:
     from datetime import date
 
     from app.auth import hash_password
     from app.database import Base, SessionLocal, bootstrap_system, engine
     from app.models import Department, DicomStudy, Patient, Tenant, User
     from app.services.dicom_parser import DicomParser
-    from app.services.dicom_persistence import ensure_unique_dicom_ids
-    from app.services.dicom_parser import DicomParseError
+    from app.services.dicom_persistence import prepare_study_for_upload
+    from app.services.dicom_storage import DicomStorage
 
     Base.metadata.create_all(bind=engine)
     bootstrap_system()
     db = SessionLocal()
+    storage = DicomStorage()
     try:
         tenant = db.query(Tenant).first()
-        user = db.query(User).filter(User.email == "dicom@example.com").first()
-        patient = db.query(Patient).first()
-        if not user or not patient:
-            dept = Department(tenant_id=tenant.id, name="Dup Rad")
-            db.add(dept)
-            db.commit()
-            user = User(
-                tenant_id=tenant.id,
-                email="dup@example.com",
-                password_hash=hash_password("secret"),
-                full_name="Dup Doc",
-                role="doctor",
-                department_id=dept.id,
-            )
-            db.add(user)
-            patient = Patient(
-                tenant_id=tenant.id,
-                user_id=user.id,
-                department_id=dept.id,
-                first_name="P",
-                last_name="Dup",
-                birth_date=date(1985, 1, 1),
-                gender="M",
-                phone="+7111",
-            )
-            db.add(patient)
-            db.commit()
-            db.refresh(user)
-            db.refresh(patient)
+        dept = Department(tenant_id=tenant.id, name="Re Rad")
+        db.add(dept)
+        db.commit()
 
-        sample = Path(tempfile.mkdtemp()) / "dup.dcm"
+        user = User(
+            tenant_id=tenant.id,
+            email="re@example.com",
+            password_hash=hash_password("secret"),
+            full_name="Re Doc",
+            role="doctor",
+            department_id=dept.id,
+        )
+        db.add(user)
+        db.flush()
+        patient = Patient(
+            tenant_id=tenant.id,
+            user_id=user.id,
+            department_id=dept.id,
+            first_name="Re",
+            last_name="Upload",
+            birth_date=date(1985, 1, 1),
+            gender="M",
+            phone="+7444",
+        )
+        db.add(patient)
+        db.commit()
+        db.refresh(patient)
+
+        sample = Path(tempfile.mkdtemp()) / "re.dcm"
         _make_sample_dicom(sample)
         parsed = DicomParser().parse_dicom_file(str(sample))
 
@@ -294,28 +384,24 @@ def test_dicom_duplicate_study_uid() -> None:
             num_series=1,
             num_instances=1,
         )
-        db.add(existing)
-        db.commit()
-
         pending = DicomStudy(
             patient_id=patient.id,
             tenant_id=tenant.id,
             user_id=user.id,
-            study_uid="pending-dup-test",
+            study_uid="pending-re",
             status="processing",
             num_series=0,
             num_instances=0,
         )
-        db.add(pending)
+        db.add_all([existing, pending])
         db.commit()
         db.refresh(pending)
 
-        try:
-            ensure_unique_dicom_ids(db, pending, parsed)
-            raise AssertionError("expected DicomParseError for duplicate study_uid")
-        except DicomParseError:
-            pass
-        print("PASS duplicate study_uid detection")
+        prepare_study_for_upload(db, pending, parsed, storage)
+        db.commit()
+        assert db.query(DicomStudy).filter(DicomStudy.study_uid == parsed["study_uid"]).count() == 0
+        assert db.query(DicomStudy).filter(DicomStudy.id == pending.id).first() is not None
+        print("PASS re-upload same patient replaces old study")
     finally:
         db.close()
 
@@ -326,7 +412,8 @@ def main() -> None:
     test_process_dicom_study_db()
     test_dicom_api_list()
     test_dicom_api_delete()
-    test_dicom_duplicate_study_uid()
+    test_dicom_duplicate_different_patient()
+    test_dicom_reupload_same_patient()
     print("\nAll DICOM tests passed.")
 
 

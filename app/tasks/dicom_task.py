@@ -13,9 +13,9 @@ from app.models import DicomStudy, Patient
 from app.services.dicom_parser import DicomParser, DicomParseError
 from app.services.dicom_persistence import (
     add_frames_to_series,
-    ensure_unique_dicom_ids,
     friendly_integrity_error,
     get_or_create_series,
+    prepare_study_for_upload,
 )
 from app.services.dicom_storage import DicomStorage
 from app.tasks.celery_app import celery_app
@@ -87,6 +87,7 @@ def process_dicom_study(self, study_id: int, temp_path: str) -> dict:
             return {"status": "failed", "error": "Study not found"}
 
         if study.status == "ready" and not study.study_uid.startswith("pending-"):
+            # Re-upload sets status to processing before enqueue; ready here means skip duplicate task.
             return {
                 "status": "ready",
                 "study_uid": study.study_uid,
@@ -97,7 +98,7 @@ def process_dicom_study(self, study_id: int, temp_path: str) -> dict:
         db.commit()
 
         parsed = parser.parse_dicom_file(temp_path)
-        ensure_unique_dicom_ids(db, study, parsed)
+        prepare_study_for_upload(db, study, parsed, storage)
 
         frame_tuples = [(f["instance_uid"], f["frame_number"], f["png_bytes"]) for f in parsed["frames"]]
         image_paths = storage.store_frames(
