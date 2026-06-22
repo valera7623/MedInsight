@@ -11,7 +11,14 @@ from typing import Any
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
-from app.models import DicomAnnotation, DicomAnnotationSession, DicomFrame, DicomSeries, DicomStudy
+from app.models import (
+    AnnotationHistory,
+    DicomAnnotation,
+    DicomAnnotationSession,
+    DicomFrame,
+    DicomSeries,
+    DicomStudy,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -86,12 +93,115 @@ class DicomAnnotationService:
     def get_annotation(self, annotation_id: int) -> DicomAnnotation | None:
         return self._active_query().filter(DicomAnnotation.id == annotation_id).first()
 
+    def _snapshot(self, ann: DicomAnnotation) -> dict[str, Any]:
+        return {
+            "id": ann.id,
+            "type": ann.type,
+            "coordinates": dict(ann.coordinates or {}),
+            "color": ann.color,
+            "label": ann.label,
+            "measurement_value": ann.measurement_value,
+            "measurement_unit": ann.measurement_unit,
+        }
+
+    def record_history(
+        self,
+        *,
+        user_id: int,
+        annotation_id: int | None,
+        frame_id: int,
+        action: str,
+        before: dict | None,
+        after: dict | None,
+    ) -> None:
+        self.db.add(
+            AnnotationHistory(
+                user_id=user_id,
+                annotation_id=annotation_id,
+                frame_id=frame_id,
+                action=action,
+                before_state=before,
+                after_state=after,
+            )
+        )
+        # Trim old history for this user/frame
+        limit = settings.DICOM_ANNOTATIONS_HISTORY_LIMIT
+        old = (
+            self.db.query(AnnotationHistory)
+            .filter(AnnotationHistory.user_id == user_id, AnnotationHistory.frame_id == frame_id)
+            .order_by(AnnotationHistory.id.desc())
+            .offset(limit)
+            .all()
+        )
+        for row in old:
+            self.db.delete(row)
+
+    def edit_annotation(
+        self,
+        annotation_id: int,
+        data: dict,
+        *,
+        user_id: int,
+        action: str = "update",
+    ) -> DicomAnnotation:
+        ann = self.get_annotation(annotation_id)
+        if not ann:
+            raise AnnotationError("Annotation not found")
+        before = self._snapshot(ann)
+
+        if "coordinates" in data and data["coordinates"] is not None:
+            ann.coordinates = dict(data["coordinates"])
+        if "color" in data and data["color"]:
+            ann.color = str(data["color"])[:16]
+        if "label" in data:
+            ann.label = str(data["label"]).strip()[:255] if data["label"] else None
+        if "type" in data and data["type"]:
+            ann.type = self._validate_type(data["type"])
+        if "measurement_value" in data:
+            ann.measurement_value = (
+                float(data["measurement_value"]) if data["measurement_value"] is not None else None
+            )
+        if "measurement_unit" in data:
+            ann.measurement_unit = (
+                str(data["measurement_unit"])[:16] if data["measurement_unit"] else None
+            )
+        ann.updated_at = datetime.utcnow()
+        after = self._snapshot(ann)
+        self.record_history(
+            user_id=user_id,
+            annotation_id=ann.id,
+            frame_id=ann.frame_id,
+            action=action,
+            before=before,
+            after=after,
+        )
+        self.db.commit()
+        self.db.refresh(ann)
+        return ann
+
+    def move_annotation(self, annotation_id: int, coordinates: dict, *, user_id: int) -> DicomAnnotation:
+        return self.edit_annotation(
+            annotation_id, {"coordinates": coordinates}, user_id=user_id, action="move"
+        )
+
+    def resize_annotation(self, annotation_id: int, coordinates: dict, *, user_id: int) -> DicomAnnotation:
+        return self.edit_annotation(
+            annotation_id, {"coordinates": coordinates}, user_id=user_id, action="resize"
+        )
+
+    def update_color(self, annotation_id: int, color: str, *, user_id: int) -> DicomAnnotation:
+        return self.edit_annotation(annotation_id, {"color": color}, user_id=user_id, action="color")
+
+    def update_label(self, annotation_id: int, label: str | None, *, user_id: int) -> DicomAnnotation:
+        return self.edit_annotation(annotation_id, {"label": label}, user_id=user_id, action="label")
+
+    def update_type(self, annotation_id: int, ann_type: str, *, user_id: int) -> DicomAnnotation:
+        return self.edit_annotation(annotation_id, {"type": ann_type}, user_id=user_id, action="type")
+
     def update_annotation(self, annotation_id: int, data: dict, *, user_id: int) -> DicomAnnotation:
         ann = self.get_annotation(annotation_id)
         if not ann:
             raise AnnotationError("Annotation not found")
-        if ann.user_id != user_id:
-            raise AnnotationError("Cannot modify another user's annotation")
 
         if "type" in data and data["type"]:
             ann.type = self._validate_type(data["type"])

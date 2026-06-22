@@ -411,6 +411,23 @@ class DicomAnnotationSession(Base):
     closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class AnnotationHistory(Base):
+    """Undo/audit trail for annotation edits (Phase 12d)."""
+
+    __tablename__ = "annotation_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    annotation_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("dicom_annotations.id"), nullable=True, index=True
+    )
+    frame_id: Mapped[int] = mapped_column(Integer, ForeignKey("dicom_frames.id"), nullable=False, index=True)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    before_state: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    after_state: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class BackupLog(Base):
     """Record of each backup attempt (Phase 8)."""
 

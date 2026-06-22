@@ -337,4 +337,6 @@ def annotation_config(
         "enabled": settings.DICOM_ANNOTATIONS_ENABLED,
         "auto_save_delay_ms": settings.DICOM_ANNOTATIONS_AUTO_SAVE_DELAY_MS,
         "max_per_frame": settings.DICOM_ANNOTATIONS_MAX_PER_FRAME,
+        "history_limit": settings.DICOM_ANNOTATIONS_HISTORY_LIMIT,
+        "export_max_frames": settings.DICOM_ANNOTATIONS_EXPORT_MAX_FRAMES,
     }

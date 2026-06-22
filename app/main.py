@@ -19,7 +19,7 @@ from app.database import Base, bootstrap_system, close_db_connection, engine, ru
 from app.middleware.audit import AuditMiddleware
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
-from app.routes import admin, admin_backup, analytics, dicom, dicom_annotations, dicom_zip, documents, export, export_excel, health, patients, payments, predictions, preferences, telegram, users, webhooks
+from app.routes import admin, admin_backup, analytics, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_zip, documents, export, export_excel, health, patients, payments, predictions, preferences, telegram, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
@@ -250,6 +250,8 @@ app.include_router(patients.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
 app.include_router(dicom.router, prefix="/api")
 app.include_router(dicom_annotations.router, prefix="/api")
+app.include_router(dicom_annotations_edit.router, prefix="/api")
+app.include_router(dicom_annotations_export.router, prefix="/api")
 app.include_router(dicom_zip.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(predictions.router, prefix="/api")
@@ -337,6 +339,11 @@ def dicom_viewer_page(study_uid: str):
 @app.get("/dicom/annotate/{study_uid}/{series_uid}/{frame_instance_uid}")
 def dicom_annotate_page(study_uid: str, series_uid: str, frame_instance_uid: str):
     return FileResponse(static_dir / "dicom-annotate.html")
+
+
+@app.get("/dicom/annotate-edit/{study_uid}/{series_uid}/{frame_instance_uid}")
+def dicom_annotate_edit_page(study_uid: str, series_uid: str, frame_instance_uid: str):
+    return FileResponse(static_dir / "dicom-annotate-edit.html")
 
 
 @app.get("/subscription")

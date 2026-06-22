@@ -124,6 +124,8 @@ class Settings(BaseSettings):
     DICOM_ANNOTATIONS_ENABLED: bool = True
     DICOM_ANNOTATIONS_AUTO_SAVE_DELAY_MS: int = 500
     DICOM_ANNOTATIONS_MAX_PER_FRAME: int = 100
+    DICOM_ANNOTATIONS_HISTORY_LIMIT: int = 50
+    DICOM_ANNOTATIONS_EXPORT_MAX_FRAMES: int = 100
 
     # Phase 9: OpenTelemetry (distributed tracing)
     OTEL_ENABLED: bool = False

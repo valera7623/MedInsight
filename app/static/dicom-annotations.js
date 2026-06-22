@@ -25,6 +25,7 @@ class DicomAnnotationTool {
     this.saveTimer = null;
     this.pendingCreates = [];
     this.viewTransform = { scale: 1, panX: 0, panY: 0, rotation: 0 };
+    this.editor = null;
 
     this._bindOverlayEvents();
   }
@@ -439,6 +440,11 @@ class DicomAnnotationTool {
         ctx.lineTo(previewPoint.x, previewPoint.y);
         ctx.stroke();
       }
+    }
+
+    if (this.editor && this.selectedId) {
+      const sel = this.annotations.find(a => String(a.id) === String(this.selectedId));
+      if (sel) this.editor.drawHandles(ctx, sel);
     }
   }
 

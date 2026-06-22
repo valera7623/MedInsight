@@ -1003,10 +1003,38 @@ DICOM_ZIP_TASK_TIMEOUT_SEC=1800
 | `POST` | `/api/dicom/annotations/session` | Начать сессию |
 | `GET` | `/api/dicom/annotations/config` | Настройки (enabled, delay, max) |
 
-#### UI
+#### Annotation Editing (Phase 12d)
 
-- `/dicom/viewer/{study_uid}` — кнопка «Аннотации», overlay существующих разметок
-- `/dicom/annotate/{study_uid}/{series_uid}/{frame_instance_uid}` — полноэкранный редактор
+- Режимы: **Select**, **Move**, **Resize** + инструменты рисования
+- Маркеры на выделенной аннотации (углы, центр, радиус)
+- Двойной клик → попап (label, color, type)
+- Горячие клавиши: `Delete`, `Ctrl+Z`, `Ctrl+Y`
+- API: `PUT .../move`, `.../resize`, `.../color`, `.../label`, `.../type`
+- История правок в `annotation_history` (undo/audit)
+
+#### Annotation Export (JSON, GeoJSON, PDF)
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| `GET` | `/api/dicom/annotations/export/json/{frame_id}` | Стандартизированный JSON v1.0 |
+| `POST` | `/api/dicom/annotations/export/json` | JSON для нескольких кадров |
+| `GET` | `/api/dicom/annotations/export/geojson/{frame_id}` | GeoJSON FeatureCollection |
+| `GET` | `/api/dicom/annotations/export/pdf/{frame_id}` | PDF A4 с изображением и легендой |
+| `POST` | `/api/dicom/annotations/export/pdf` | PDF с опциями |
+| `POST` | `/api/dicom/annotations/export/batch` | ZIP (json/geojson/pdf) |
+| `POST` | `/api/dicom/annotations/import/geojson/{frame_id}` | Импорт GeoJSON |
+
+```env
+DICOM_ANNOTATIONS_HISTORY_LIMIT=50
+DICOM_ANNOTATIONS_EXPORT_MAX_FRAMES=100
+```
+
+Тесты: `python scripts/test_annotations.py`, `python scripts/test_annotation_export.py`
+
+#### UI (редактор)
+
+- `/dicom/annotate/{study_uid}/{series_uid}/{frame_instance_uid}` — редактор с экспортом
+- `/dicom/annotate-edit/{study_uid}/{series_uid}/{frame_instance_uid}` — полный редактор
 
 ```env
 DICOM_ANNOTATIONS_ENABLED=true
