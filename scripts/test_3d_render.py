@@ -3,10 +3,13 @@
 
 from __future__ import annotations
 
+import io
 import os
 import sys
 import tempfile
 from pathlib import Path
+
+from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
@@ -177,6 +180,9 @@ def test_volume_build_and_mpr() -> None:
         for plane in ("axial", "coronal", "sagittal"):
             png = service.render_mpr(study_uid, plane, 4, {"preset": "brain"})
             assert png[:8] == b"\x89PNG\r\n\x1a\n", f"{plane} MPR failed"
+            if plane != "axial":
+                with Image.open(io.BytesIO(png)) as img:
+                    assert img.height >= 32, f"{plane} MPR too short: {img.size}"
 
         vr_png = service.render_volume(study_uid, {"preset": "bone", "mode": "mip", "azimuth": 15})
         assert vr_png[:8] == b"\x89PNG\r\n\x1a\n"

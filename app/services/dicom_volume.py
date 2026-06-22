@@ -446,6 +446,28 @@ class DicomVolumeService:
             return volume[:, :, idx]
         raise DicomVolumeError(f"Unknown plane: {plane}")
 
+    def _enhance_mpr_slice(
+        self,
+        slab: np.ndarray,
+        plane: str,
+        vol_shape: tuple[int, int, int],
+        spacing: tuple[float, float, float] | None = None,
+    ) -> np.ndarray:
+        """Upsample through-plane axis so coronal/sagittal fill the viewport."""
+        if plane == "axial":
+            return slab
+        _z, y, _x = vol_shape
+        thick = slab.shape[0]
+        if thick < 2 or thick >= y:
+            return slab
+        sz, sy, _sx = spacing or (1.0, 1.0, 1.0)
+        # Match in-plane row extent; honour slice spacing when coarser than pixels.
+        target = max(y, int(round(thick * sz / max(sy, 1e-6))))
+        target = min(target, 1024)
+        if thick >= target:
+            return slab
+        return ndimage.zoom(slab, (target / thick, 1), order=1)
+
     def _array_to_png(self, arr: np.ndarray) -> bytes:
         img = Image.fromarray(arr, mode="L")
         buf = io.BytesIO()
@@ -475,7 +497,9 @@ class DicomVolumeService:
 
         params = params or {}
         volume, info = self._get_volume_or_build(study_uid)
+        spacing = tuple(info.get("spacing") or (1.0, 1.0, 1.0))
         slice_data = self._slice_volume(volume, plane, slice_index)
+        slice_data = self._enhance_mpr_slice(slice_data, plane.lower(), volume.shape, spacing)
         rendered = self._normalize_for_display(slice_data, params, volume)
         return self._array_to_png(rendered)
 
@@ -524,9 +548,11 @@ class DicomVolumeService:
             "sagittal": int(slices.get("sagittal", x // 2)),
         }
 
+        spacing = tuple(info.get("spacing") or (1.0, 1.0, 1.0))
         mpr_b64: dict[str, str] = {}
         for plane in ("axial", "coronal", "sagittal"):
             slice_data = self._slice_volume(volume, plane, slice_idx[plane])
+            slice_data = self._enhance_mpr_slice(slice_data, plane, volume.shape, spacing)
             rendered = self._normalize_for_display(slice_data, params, volume)
             mpr_b64[plane] = base64.b64encode(self._array_to_png(rendered)).decode("ascii")
 
