@@ -1044,6 +1044,36 @@ DICOM_ANNOTATIONS_MAX_PER_FRAME=100
 
 Тест: `python scripts/test_annotations.py`
 
+### 3D Volume Rendering (объёмная реконструкция)
+
+Просмотр DICOM-исследований в 3D: Volume Rendering (VR), Multiplanar Reconstruction (MPR),
+Maximum Intensity Projection (MIP), пресеты Window/Level (Bone, Lung, Brain, Abdomen, Liver).
+
+**Стек:** Cornerstone3D + vtk.js (frontend), numpy/scipy (backend), Redis-кэш объёмов.
+
+| Метод | Путь | Назначение |
+|-------|------|------------|
+| `GET` | `/api/dicom/volume/{study_uid}/info` | Метаданные объёма (размеры, spacing, статус кэша) |
+| `GET` | `/api/dicom/volume/{study_uid}/render` | 3D-проекция (PNG): `preset`, `mode`, `azimuth`, `elevation` |
+| `GET` | `/api/dicom/volume/{study_uid}/mpr/{plane}/{slice}` | MPR-срез (`axial` / `coronal` / `sagittal`) |
+| `POST` | `/api/dicom/volume/{study_uid}/reconstruct` | Асинхронная сборка объёма (Celery) |
+
+**UI:** `/dicom/3d/{study_uid}` — полноэкранный 3D-вьюер (VR слева, три MPR справа, toolbar снизу).
+Кнопка «3D» доступна в 2D-вьюере `/dicom/viewer/{study_uid}`.
+
+```env
+DICOM_3D_ENABLED=true
+DICOM_3D_CACHE_SIZE_GB=10
+DICOM_3D_MAX_VOLUME_MB=2048
+DICOM_3D_RENDER_TIMEOUT_SECONDS=30
+DICOM_3D_CACHE_TTL_SECONDS=3600
+```
+
+Кэш Redis: `volume:{study_uid}:data` (бинарный объём), `volume:{study_uid}:info` (JSON).
+Fallback на диск: `{DICOM_STORAGE_PATH}/{patient_id}/{study_uid}/volume/`.
+
+Тест: `python scripts/test_3d_render.py`
+
 ## Фаза 8: Резервное копирование (Backup & Restore)
 
 Автоматический и ручной бэкап БД (SQLite) и `storage/`, восстановление и ротация.

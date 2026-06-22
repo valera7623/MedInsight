@@ -19,6 +19,7 @@ celery_app = Celery(
         "app.tasks.backup_task",
         "app.tasks.dicom_task",
         "app.tasks.dicom_zip_task",
+        "app.tasks.dicom_volume_task",
     ],
 )
 

@@ -304,6 +304,11 @@ async function initDicomViewer(studyUid) {
   viewerState.study = await res.json();
   document.title = `DICOM — ${viewerState.study.modality || studyUid}`;
 
+  const view3d = document.getElementById('view-3d-link');
+  if (view3d) {
+    view3d.href = `/dicom/3d/${encodeURIComponent(studyUid)}`;
+  }
+
   const deleteBtn = document.getElementById('delete-study-btn');
   if (deleteBtn) {
     if (viewerState.study.can_delete) {

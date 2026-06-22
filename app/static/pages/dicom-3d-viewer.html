@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — DICOM 3D Viewer</title>
+  <link rel="stylesheet" href="/static/styles/themes.css">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/components/theme-toggle.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "@cornerstonejs/core": "https://esm.sh/@cornerstonejs/core@1.84.0",
+      "@cornerstonejs/tools": "https://esm.sh/@cornerstonejs/tools@1.84.0",
+      "@kitware/vtk.js": "https://esm.sh/@kitware/vtk.js@32.9.0"
+    }
+  }
+  </script>
+</head>
+<body class="dicom-3d-body">
+  <nav class="navbar">
+    <div class="nav-brand">MedInsight 3D</div>
+    <div class="nav-links">
+      <a href="#" id="back-to-2d">← 2D Viewer</a>
+      <a href="/dicom">К списку</a>
+    </div>
+    <div class="nav-actions">
+      <div data-theme-toggle></div>
+      <button class="btn btn-secondary btn-sm" id="logout-btn">Выйти</button>
+    </div>
+  </nav>
+
+  <div class="dicom-3d-layout">
+    <section class="dicom-3d-main" id="vr-viewport">
+      <div class="dicom-3d-panel-header">
+        <span>Volume Rendering</span>
+        <span class="dicom-3d-status" id="volume-status">Загрузка…</span>
+      </div>
+      <div class="dicom-3d-canvas-host" id="vtk-container"></div>
+      <canvas id="vr-fallback-canvas" class="dicom-3d-fallback hidden"></canvas>
+    </section>
+
+    <aside class="dicom-3d-mpr">
+      <div class="dicom-3d-mpr-panel" data-plane="axial">
+        <div class="dicom-3d-panel-header">Axial</div>
+        <canvas class="dicom-3d-mpr-canvas" id="mpr-axial"></canvas>
+        <input type="range" class="dicom-3d-slice-slider" id="slice-axial" min="0" max="0" value="0">
+      </div>
+      <div class="dicom-3d-mpr-panel" data-plane="coronal">
+        <div class="dicom-3d-panel-header">Coronal</div>
+        <canvas class="dicom-3d-mpr-canvas" id="mpr-coronal"></canvas>
+        <input type="range" class="dicom-3d-slice-slider" id="slice-coronal" min="0" max="0" value="0">
+      </div>
+      <div class="dicom-3d-mpr-panel" data-plane="sagittal">
+        <div class="dicom-3d-panel-header">Sagittal</div>
+        <canvas class="dicom-3d-mpr-canvas" id="mpr-sagittal"></canvas>
+        <input type="range" class="dicom-3d-slice-slider" id="slice-sagittal" min="0" max="0" value="0">
+      </div>
+    </aside>
+  </div>
+
+  <footer class="dicom-3d-toolbar-host" id="toolbar-host"></footer>
+
+  <script src="/static/dashboard.js"></script>
+  <script src="/static/dicom-3d-toolbar.js"></script>
+  <script type="module" src="/static/dicom-3d-viewer.js"></script>
+</body>
+</html>

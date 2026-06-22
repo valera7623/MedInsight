@@ -127,6 +127,13 @@ class Settings(BaseSettings):
     DICOM_ANNOTATIONS_HISTORY_LIMIT: int = 50
     DICOM_ANNOTATIONS_EXPORT_MAX_FRAMES: int = 100
 
+    # Phase 12d: DICOM 3D volume rendering (MPR + VR)
+    DICOM_3D_ENABLED: bool = True
+    DICOM_3D_CACHE_SIZE_GB: int = 10
+    DICOM_3D_MAX_VOLUME_MB: int = 2048
+    DICOM_3D_RENDER_TIMEOUT_SECONDS: int = 30
+    DICOM_3D_CACHE_TTL_SECONDS: int = 3600
+
     # Phase 9: OpenTelemetry (distributed tracing)
     OTEL_ENABLED: bool = False
     OTEL_SERVICE_NAME: str = "medinsight"

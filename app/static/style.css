@@ -720,7 +720,100 @@ select.btn {
 .plan-card { text-align: left; }
 .plan-card-actions { margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
+/* DICOM 3D volume viewer */
+.dicom-3d-body { overflow: hidden; }
+.dicom-3d-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  height: calc(100vh - 56px - 72px);
+  background: #0a0a0a;
+}
+.dicom-3d-main {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-primary);
+  min-height: 0;
+}
+.dicom-3d-mpr {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  background: var(--bg-card);
+  overflow-y: auto;
+}
+.dicom-3d-mpr-panel {
+  flex: 1;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.dicom-3d-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+.dicom-3d-status.error { color: var(--danger, #e74c3c); }
+.dicom-3d-canvas-host {
+  flex: 1;
+  min-height: 200px;
+  position: relative;
+}
+.dicom-3d-fallback {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.dicom-3d-mpr-canvas {
+  flex: 1;
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  background: #000;
+}
+.dicom-3d-slice-slider { width: 100%; margin: 0; }
+.dicom-3d-toolbar-host {
+  height: 72px;
+  border-top: 1px solid var(--border-primary);
+  background: var(--bg-card);
+  overflow-x: auto;
+}
+.dicom-3d-toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  flex-wrap: wrap;
+  min-height: 72px;
+}
+.dicom-3d-toolbar-group {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.dicom-3d-toolbar-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-right: 0.25rem;
+}
+.dicom-3d-preset.active,
+.dicom-3d-mode.active {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
 @media (max-width: 768px) {
   .dicom-viewer-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   .dicom-sidebar { max-height: 180px; }
+  .dicom-3d-layout { grid-template-columns: 1fr; grid-template-rows: 1fr auto; height: auto; min-height: calc(100vh - 128px); }
+  .dicom-3d-mpr { max-height: 420px; }
 }
