@@ -138,6 +138,10 @@ def process_dicom_study(self, study_id: int, temp_path: str) -> dict:
             logger.warning("DICOM encryption failed for study %s (viewer frames are ready): %s", study_id, exc)
 
         _notify_dicom_ready(study, study.user_id)
+        if settings.DICOM_3D_ENABLED:
+            from app.services.dicom_volume import enqueue_volume_prebuild
+
+            enqueue_volume_prebuild(study.study_uid, num_slices=study.num_instances)
         logger.info("DICOM study %s processed (%d frames)", study.study_uid, study.num_instances)
         return {"status": "ready", "study_uid": study.study_uid, "num_instances": study.num_instances}
 

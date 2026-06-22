@@ -181,7 +181,11 @@ def test_volume_build_and_mpr() -> None:
         vr_png = service.render_volume(study_uid, {"preset": "bone", "mode": "mip", "azimuth": 15})
         assert vr_png[:8] == b"\x89PNG\r\n\x1a\n"
 
-        print("OK: volume build, MPR and 3D render produce valid PNG")
+        preview = service.render_preview(study_uid, params={"preset": "default"})
+        assert preview["render"]
+        assert set(preview["mpr"].keys()) == {"axial", "coronal", "sagittal"}
+
+        print("OK: volume build, MPR, 3D render and preview batch")
     finally:
         db.close()
 

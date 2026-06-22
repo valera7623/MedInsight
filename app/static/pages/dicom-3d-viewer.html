@@ -7,15 +7,6 @@
   <link rel="stylesheet" href="/static/styles/themes.css">
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/components/theme-toggle.js"></script>
-  <script type="importmap">
-  {
-    "imports": {
-      "@cornerstonejs/core": "https://esm.sh/@cornerstonejs/core@1.84.0",
-      "@cornerstonejs/tools": "https://esm.sh/@cornerstonejs/tools@1.84.0",
-      "@kitware/vtk.js": "https://esm.sh/@kitware/vtk.js@32.9.0"
-    }
-  }
-  </script>
 </head>
 <body class="dicom-3d-body">
   <nav class="navbar">
@@ -36,8 +27,7 @@
         <span>Volume Rendering</span>
         <span class="dicom-3d-status" id="volume-status">Загрузка…</span>
       </div>
-      <div class="dicom-3d-canvas-host" id="vtk-container"></div>
-      <canvas id="vr-fallback-canvas" class="dicom-3d-fallback hidden"></canvas>
+      <canvas id="vr-fallback-canvas" class="dicom-3d-fallback"></canvas>
     </section>
 
     <aside class="dicom-3d-mpr">
@@ -63,6 +53,6 @@
 
   <script src="/static/dashboard.js"></script>
   <script src="/static/dicom-3d-toolbar.js"></script>
-  <script type="module" src="/static/dicom-3d-viewer.js"></script>
+  <script src="/static/dicom-3d-viewer.js"></script>
 </body>
 </html>

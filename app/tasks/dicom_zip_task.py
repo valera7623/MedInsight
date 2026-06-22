@@ -242,6 +242,10 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
 
         _update_progress(self, total_files, total_files, real_study_uid)
         _notify_dicom_ready(study, user_id)
+        if settings.DICOM_3D_ENABLED:
+            from app.services.dicom_volume import enqueue_volume_prebuild
+
+            enqueue_volume_prebuild(real_study_uid, num_slices=instance_count)
         logger.info(
             "DICOM ZIP study %s ready: %d series, %d instances from %d files",
             real_study_uid,

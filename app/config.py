@@ -133,6 +133,9 @@ class Settings(BaseSettings):
     DICOM_3D_MAX_VOLUME_MB: int = 2048
     DICOM_3D_RENDER_TIMEOUT_SECONDS: int = 30
     DICOM_3D_CACHE_TTL_SECONDS: int = 3600
+    # Build volume synchronously when slice count is at or below this (avoids Celery poll latency).
+    DICOM_3D_SYNC_BUILD_MAX_SLICES: int = 120
+    DICOM_3D_FRAME_LOAD_WORKERS: int = 8
 
     # Phase 9: OpenTelemetry (distributed tracing)
     OTEL_ENABLED: bool = False

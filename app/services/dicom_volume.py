@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import base64
 import io
 import json
 import logging
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -15,12 +17,17 @@ from scipy import ndimage
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
+from app.database import SessionLocal
 from app.models import DicomFrame, DicomSeries, DicomStudy
 from app.services.dicom_storage import DicomStorage
 
 logger = logging.getLogger(__name__)
 
 PLANES = frozenset({"axial", "coronal", "sagittal"})
+
+# In-process volume cache — avoids Redis decompress on every MPR/render in the same worker.
+_mem_volume_cache: dict[str, tuple[np.ndarray, dict[str, Any]]] = {}
+_mem_volume_cache_max = 4
 
 WINDOW_PRESETS: dict[str, dict[str, float]] = {
     "bone": {"window_center": 400.0, "window_width": 1800.0},
@@ -161,13 +168,19 @@ class DicomVolumeService:
             (vdir / "info.json").write_text(json.dumps(info), encoding="utf-8")
 
     def _cache_get(self, study_uid: str) -> tuple[np.ndarray | None, dict[str, Any] | None]:
+        cached = _mem_volume_cache.get(study_uid)
+        if cached is not None:
+            return cached[0], cached[1]
+
         try:
             client = _redis_binary()
             data = client.get(_volume_cache_key(study_uid, "data"))
             info_raw = client.get(_volume_cache_key(study_uid, "info"))
             if data and info_raw:
                 info = json.loads(info_raw.decode("utf-8"))
-                return self._unpack_volume(data, info), info
+                volume = self._unpack_volume(data, info)
+                self._mem_cache_put(study_uid, volume, info)
+                return volume, info
         except Exception as exc:  # noqa: BLE001
             logger.debug("Redis volume cache miss for %s: %s", study_uid, exc)
 
@@ -179,8 +192,15 @@ class DicomVolumeService:
         info_path = vdir / "info.json"
         if data_path.exists() and info_path.exists():
             info = json.loads(info_path.read_text(encoding="utf-8"))
-            return self._unpack_volume(data_path.read_bytes(), info), info
+            volume = self._unpack_volume(data_path.read_bytes(), info)
+            self._mem_cache_put(study_uid, volume, info)
+            return volume, info
         return None, None
+
+    def _mem_cache_put(self, study_uid: str, volume: np.ndarray, info: dict[str, Any]) -> None:
+        if len(_mem_volume_cache) >= _mem_volume_cache_max:
+            _mem_volume_cache.pop(next(iter(_mem_volume_cache)))
+        _mem_volume_cache[study_uid] = (volume, info)
 
     def is_volume_cached(self, study_uid: str) -> bool:
         volume, info = self._cache_get(study_uid)
@@ -249,9 +269,12 @@ class DicomVolumeService:
 
         self._check_geometric_consistency(frames)
 
-        slices: list[np.ndarray] = []
-        for frame in frames:
-            slices.append(self._load_frame_array(frame))
+        workers = max(1, min(settings.DICOM_3D_FRAME_LOAD_WORKERS, len(frames)))
+        if workers > 1:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                slices = list(pool.map(self._load_frame_array, frames))
+        else:
+            slices = [self._load_frame_array(frame) for frame in frames]
 
         volume = np.stack(slices, axis=0)
         spacing = self._spacing_from_frames(frames)
@@ -269,6 +292,7 @@ class DicomVolumeService:
             "presets": list(WINDOW_PRESETS.keys()),
         }
 
+        self._mem_cache_put(study_uid, volume, info)
         self._cache_set(study_uid, volume, info)
         return self._pack_volume(volume)
 
@@ -372,7 +396,58 @@ class DicomVolumeService:
         rendered = self._apply_window(projection, wc, ww)
         return self._array_to_png(rendered)
 
+    def render_preview(
+        self,
+        study_uid: str,
+        *,
+        slices: dict[str, int] | None = None,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Render VR + all MPR planes in one pass (single volume load)."""
+        params = params or {}
+        slices = slices or {}
+        volume, info = self._get_volume_or_build(study_uid)
+        z, y, x = volume.shape
+        wc, ww = self._resolve_window(params, volume)
+
+        slice_idx = {
+            "axial": int(slices.get("axial", z // 2)),
+            "coronal": int(slices.get("coronal", y // 2)),
+            "sagittal": int(slices.get("sagittal", x // 2)),
+        }
+
+        mpr_b64: dict[str, str] = {}
+        for plane in ("axial", "coronal", "sagittal"):
+            slice_data = self._slice_volume(volume, plane, slice_idx[plane])
+            rendered = self._apply_window(slice_data, wc, ww)
+            mpr_b64[plane] = base64.b64encode(self._array_to_png(rendered)).decode("ascii")
+
+        mode = (params.get("mode") or "mip").lower()
+        azimuth = float(params.get("azimuth", 0))
+        elevation = float(params.get("elevation", 0))
+        rotated = volume
+        if azimuth or elevation:
+            rotated = ndimage.rotate(volume, azimuth, axes=(1, 2), reshape=False, order=1)
+            rotated = ndimage.rotate(rotated, elevation, axes=(0, 2), reshape=False, order=1)
+        if mode == "minip":
+            projection = np.min(rotated, axis=0)
+        elif mode == "avg":
+            projection = np.mean(rotated, axis=0)
+        else:
+            projection = np.max(rotated, axis=0)
+        vr_rendered = self._apply_window(projection, wc, ww)
+        vr_b64 = base64.b64encode(self._array_to_png(vr_rendered)).decode("ascii")
+
+        return {
+            "study_uid": study_uid,
+            "info": {**info, "cached": True, "status": "ready"},
+            "slices": slice_idx,
+            "render": vr_b64,
+            "mpr": mpr_b64,
+        }
+
     def invalidate_cache(self, study_uid: str) -> None:
+        _mem_volume_cache.pop(study_uid, None)
         try:
             client = _redis_binary()
             client.delete(_volume_cache_key(study_uid, "data"))
@@ -386,3 +461,25 @@ class DicomVolumeService:
                 p = vdir / name
                 if p.exists():
                     p.unlink(missing_ok=True)
+
+
+def enqueue_volume_prebuild(study_uid: str, *, num_slices: int = 0) -> None:
+    """Warm volume cache after DICOM ingest (Celery or inline for small series)."""
+    if not settings.DICOM_3D_ENABLED:
+        return
+    try:
+        from app.tasks.celery_app import redis_available
+        from app.tasks.dicom_volume_task import build_volume_from_study
+
+        if num_slices and num_slices <= settings.DICOM_3D_SYNC_BUILD_MAX_SLICES:
+            db = SessionLocal()
+            try:
+                DicomVolumeService(db).build_volume_from_frames(study_uid)
+            finally:
+                db.close()
+            return
+
+        if redis_available():
+            build_volume_from_study.delay(study_uid)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Volume prebuild skipped for %s: %s", study_uid, exc)

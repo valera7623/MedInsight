@@ -73,6 +73,56 @@ def _render_params(
     return params
 
 
+class VolumePreviewResponse(BaseModel):
+    study_uid: str
+    info: dict[str, Any] = Field(default_factory=dict)
+    slices: dict[str, int] = Field(default_factory=dict)
+    render: str
+    mpr: dict[str, str] = Field(default_factory=dict)
+
+
+@router.get("/{study_uid}/preview", response_model=VolumePreviewResponse)
+def render_volume_preview(
+    study_uid: str,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    window_center: float | None = Query(None),
+    window_width: float | None = Query(None),
+    preset: str | None = Query(None),
+    mode: str = Query("mip", pattern="^(mip|minip|avg|vr)$"),
+    azimuth: float = Query(0, ge=-180, le=180),
+    elevation: float = Query(0, ge=-90, le=90),
+    axial_slice: int | None = Query(None, ge=0),
+    coronal_slice: int | None = Query(None, ge=0),
+    sagittal_slice: int | None = Query(None, ge=0),
+):
+    """Single-request bootstrap: VR + axial/coronal/sagittal MPR (base64 PNG)."""
+    _ensure_3d_enabled()
+    _get_study_or_404(db, study_uid, current_user, request)
+    service = DicomVolumeService(db)
+    params = _render_params(
+        window_center=window_center,
+        window_width=window_width,
+        preset=preset,
+        mode=mode,
+        azimuth=azimuth,
+        elevation=elevation,
+    )
+    slice_map: dict[str, int] = {}
+    if axial_slice is not None:
+        slice_map["axial"] = axial_slice
+    if coronal_slice is not None:
+        slice_map["coronal"] = coronal_slice
+    if sagittal_slice is not None:
+        slice_map["sagittal"] = sagittal_slice
+    try:
+        payload = service.render_preview(study_uid, slices=slice_map or None, params=params)
+    except DicomVolumeError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return VolumePreviewResponse(**payload)
+
+
 @router.get("/{study_uid}/info", response_model=VolumeInfoResponse)
 def get_volume_info(
     study_uid: str,
@@ -202,6 +252,23 @@ def reconstruct_volume(
             study_uid=study_uid,
             status="ready",
             message="Volume already cached",
+        )
+
+    try:
+        meta = service.get_volume_info(study_uid)
+    except DicomVolumeError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    num_slices = int(meta.get("num_slices") or 0)
+    if num_slices <= settings.DICOM_3D_SYNC_BUILD_MAX_SLICES:
+        try:
+            service.build_volume_from_frames(study_uid)
+        except DicomVolumeError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        return VolumeReconstructResponse(
+            study_uid=study_uid,
+            status="ready",
+            message="Volume reconstructed synchronously",
         )
 
     if redis_available():

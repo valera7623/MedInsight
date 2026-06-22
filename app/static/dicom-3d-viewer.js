@@ -1,5 +1,5 @@
 /**
- * DICOM 3D Viewer — Cornerstone3D metadata + vtk.js volume rendering + server MPR.
+ * DICOM 3D Viewer — fast server-side VR/MPR (single preview API), lazy vtk.js optional.
  */
 
 const viewer3dState = {
@@ -12,9 +12,7 @@ const viewer3dState = {
   elevation: 0,
   windowCenter: null,
   windowWidth: null,
-  vtkReady: false,
-  vtkContext: null,
-  polling: null,
+  refreshTimer: null,
 };
 
 function authHeaders() {
@@ -46,7 +44,7 @@ function setStatus(text, isError = false) {
   }
 }
 
-function renderParams() {
+function renderQueryParams() {
   const p = new URLSearchParams();
   if (viewer3dState.preset && viewer3dState.preset !== 'custom') {
     p.set('preset', viewer3dState.preset);
@@ -56,6 +54,9 @@ function renderParams() {
   if (viewer3dState.mode) p.set('mode', viewer3dState.mode);
   p.set('azimuth', String(viewer3dState.azimuth));
   p.set('elevation', String(viewer3dState.elevation));
+  p.set('axial_slice', String(viewer3dState.slices.axial));
+  p.set('coronal_slice', String(viewer3dState.slices.coronal));
+  p.set('sagittal_slice', String(viewer3dState.slices.sagittal));
   return p.toString();
 }
 
@@ -64,73 +65,65 @@ async function loadVolumeInfo(studyUid) {
   return res.json();
 }
 
-async function triggerReconstruct(studyUid) {
+async function ensureVolumeReady(studyUid) {
+  const info = await loadVolumeInfo(studyUid);
+  if (info.cached || info.status === 'ready') return info;
+
+  setStatus('Сборка объёма…');
   const res = await api3d(`/api/dicom/volume/${encodeURIComponent(studyUid)}/reconstruct`, {
     method: 'POST',
   });
-  return res.json();
-}
+  const job = await res.json();
 
-async function waitForVolume(studyUid, maxAttempts = 60) {
-  for (let i = 0; i < maxAttempts; i++) {
-    const info = await loadVolumeInfo(studyUid);
-    if (info.cached || info.status === 'ready') return info;
-    await new Promise((r) => setTimeout(r, 1000));
+  if (job.status === 'ready') {
+    return loadVolumeInfo(studyUid);
+  }
+
+  let delay = 250;
+  for (let i = 0; i < 80; i++) {
+    await new Promise((r) => setTimeout(r, delay));
+    const next = await loadVolumeInfo(studyUid);
+    if (next.cached || next.status === 'ready') return next;
+    delay = Math.min(delay * 1.2, 1500);
   }
   throw new Error('Volume reconstruction timed out');
 }
 
-async function loadMprImage(plane, sliceIndex) {
-  const qs = renderParams();
-  const url = `/api/dicom/volume/${encodeURIComponent(viewer3dState.studyUid)}/mpr/${plane}/${sliceIndex}?${qs}`;
-  const res = await api3d(url);
-  return res.blob();
+async function loadPreview() {
+  const qs = renderQueryParams();
+  const res = await api3d(
+    `/api/dicom/volume/${encodeURIComponent(viewer3dState.studyUid)}/preview?${qs}`
+  );
+  return res.json();
 }
 
-async function loadVolumeRenderImage() {
-  const qs = renderParams();
-  const url = `/api/dicom/volume/${encodeURIComponent(viewer3dState.studyUid)}/render?${qs}`;
-  const res = await api3d(url);
-  return res.blob();
-}
-
-function drawBlobOnCanvas(canvas, blob) {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
+function drawBase64OnCanvas(canvas, b64) {
+  if (!canvas || !b64) return;
   const img = new Image();
   img.onload = () => {
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0);
-    URL.revokeObjectURL(img.src);
   };
-  img.src = URL.createObjectURL(blob);
+  img.src = `data:image/png;base64,${b64}`;
 }
 
-async function refreshMprView(plane) {
-  const slice = viewer3dState.slices[plane];
-  const blob = await loadMprImage(plane, slice);
-  const canvas = document.getElementById(`mpr-${plane}`);
-  drawBlobOnCanvas(canvas, blob);
-}
+function applyPreview(preview) {
+  drawBase64OnCanvas(document.getElementById('vr-fallback-canvas'), preview.render);
 
-async function refreshAllMpr() {
-  await Promise.all(['axial', 'coronal', 'sagittal'].map((p) => refreshMprView(p)));
-}
-
-async function refreshVolumeRender() {
-  if (viewer3dState.vtkReady && viewer3dState.vtkContext?.updateFromServer) {
-    await viewer3dState.vtkContext.updateFromServer();
-    return;
+  for (const plane of ['axial', 'coronal', 'sagittal']) {
+    drawBase64OnCanvas(document.getElementById(`mpr-${plane}`), preview.mpr?.[plane]);
+    if (preview.slices?.[plane] != null) {
+      viewer3dState.slices[plane] = preview.slices[plane];
+      const slider = document.getElementById(`slice-${plane}`);
+      if (slider) slider.value = preview.slices[plane];
+    }
   }
-  const blob = await loadVolumeRenderImage();
-  const canvas = document.getElementById('vr-fallback-canvas');
-  const vtkHost = document.getElementById('vtk-container');
-  if (canvas) {
-    canvas.classList.remove('hidden');
-    if (vtkHost) vtkHost.classList.add('hidden');
-    drawBlobOnCanvas(canvas, blob);
+
+  if (preview.info) {
+    viewer3dState.volumeInfo = preview.info;
   }
 }
 
@@ -138,128 +131,38 @@ function setupSliceSliders(info) {
   const dims = info.dimensions || [1, 1, 1];
   const [z, y, x] = dims;
   const map = { axial: z - 1, coronal: y - 1, sagittal: x - 1 };
-  viewer3dState.slices.axial = Math.floor(z / 2);
-  viewer3dState.slices.coronal = Math.floor(y / 2);
-  viewer3dState.slices.sagittal = Math.floor(x / 2);
 
   Object.entries(map).forEach(([plane, maxIdx]) => {
     const slider = document.getElementById(`slice-${plane}`);
     if (!slider) return;
     slider.max = Math.max(0, maxIdx);
+    if (viewer3dState.slices[plane] == null) {
+      viewer3dState.slices[plane] = Math.floor((maxIdx + 1) / 2);
+    }
     slider.value = viewer3dState.slices[plane];
     slider.oninput = () => {
       viewer3dState.slices[plane] = parseInt(slider.value, 10);
-      refreshMprView(plane).catch(console.error);
+      schedulePreviewRefresh();
     };
   });
 }
 
-async function initVtkVolume(info) {
-  const host = document.getElementById('vtk-container');
-  if (!host) return false;
-
-  try {
-    const vtk = await import('@kitware/vtk.js');
-    const vtkFullScreenRenderWindow = vtk.Rendering.Misc.vtkFullScreenRenderWindow;
-    const vtkVolume = vtk.Rendering.Core.vtkVolume;
-    const vtkVolumeMapper = vtk.Rendering.Core.vtkVolumeMapper;
-    const vtkColorTransferFunction = vtk.Rendering.Core.vtkColorTransferFunction;
-    const vtkPiecewiseFunction = vtk.Common.DataModel.vtkPiecewiseFunction;
-    const vtkImageData = vtk.Common.DataModel.vtkImageData;
-    const vtkDataArray = vtk.Common.Core.vtkDataArray;
-
-    const fullScreenRenderer = vtkFullScreenRenderWindow.newInstance({
-      rootContainer: host,
-      containerStyle: { width: '100%', height: '100%', position: 'relative' },
-    });
-    const renderer = fullScreenRenderer.getRenderer();
-    const renderWindow = fullScreenRenderer.getRenderWindow();
-
-    const dims = info.dimensions || [1, 64, 64];
-    const spacing = info.spacing || [1, 1, 1];
-    const [z, y, x] = dims;
-
-    const size = z * y * x;
-    const scalars = new Float32Array(size);
-    for (let i = 0; i < size; i++) scalars[i] = (i % 256);
-
-    const imageData = vtkImageData.newInstance();
-    imageData.setDimensions(x, y, z);
-    imageData.setSpacing(spacing[2] || 1, spacing[1] || 1, spacing[0] || 1);
-    const da = vtkDataArray.newInstance({
-      numberOfComponents: 1,
-      values: scalars,
-      name: 'scalars',
-    });
-    imageData.getPointData().setScalars(da);
-
-    const mapper = vtkVolumeMapper.newInstance();
-    mapper.setInputData(imageData);
-
-    const actor = vtkVolume.newInstance();
-    actor.setMapper(mapper);
-
-    const ctfun = vtkColorTransferFunction.newInstance();
-    ctfun.addRGBPoint(0, 0, 0, 0);
-    ctfun.addRGBPoint(128, 0.5, 0.5, 0.5);
-    ctfun.addRGBPoint(255, 1, 1, 1);
-
-    const ofun = vtkPiecewiseFunction.newInstance();
-    ofun.addPoint(0, 0);
-    ofun.addPoint(64, 0.2);
-    ofun.addPoint(255, 0.8);
-
-    const prop = actor.getProperty();
-    prop.setRGBTransferFunction(0, ctfun);
-    prop.setScalarOpacity(0, ofun);
-    prop.setInterpolationTypeToLinear();
-    prop.setShade(true);
-
-    renderer.addVolume(actor);
-    renderer.resetCamera();
-    renderWindow.render();
-
-    document.getElementById('vr-fallback-canvas')?.classList.add('hidden');
-    host.classList.remove('hidden');
-
-    viewer3dState.vtkReady = true;
-    viewer3dState.vtkContext = {
-      renderer,
-      renderWindow,
-      actor,
-      fullScreenRenderer,
-      async updateFromServer() {
-        const blob = await loadVolumeRenderImage();
-        const canvas = document.getElementById('vr-fallback-canvas');
-        if (canvas) drawBlobOnCanvas(canvas, blob);
-      },
-      resetCamera() {
-        renderer.resetCamera();
-        renderWindow.render();
-      },
-      rotate(dAz, dEl) {
-        const cam = renderer.getActiveCamera();
-        cam.azimuth(dAz);
-        cam.elevation(dEl);
-        renderer.resetCameraClippingRange();
-        renderWindow.render();
-      },
-    };
-    return true;
-  } catch (err) {
-    console.warn('vtk.js init failed, using server-side render fallback:', err);
-    return false;
-  }
+function schedulePreviewRefresh() {
+  clearTimeout(viewer3dState.refreshTimer);
+  viewer3dState.refreshTimer = setTimeout(() => {
+    loadPreview()
+      .then(applyPreview)
+      .catch((err) => console.error('Preview refresh failed:', err));
+  }, 120);
 }
 
-async function initCornerstone() {
-  try {
-    const cs = await import('@cornerstonejs/core');
-    await cs.init();
-    viewer3dState.cornerstone = cs;
-  } catch (err) {
-    console.warn('Cornerstone3D init skipped:', err);
-  }
+function scheduleFullRefresh() {
+  clearTimeout(viewer3dState.refreshTimer);
+  viewer3dState.refreshTimer = setTimeout(() => {
+    loadPreview()
+      .then(applyPreview)
+      .catch((err) => console.error('Preview refresh failed:', err));
+  }, 0);
 }
 
 function onToolbarAction(action, value) {
@@ -268,43 +171,31 @@ function onToolbarAction(action, value) {
       viewer3dState.preset = value;
       viewer3dState.windowCenter = null;
       viewer3dState.windowWidth = null;
-      refreshAllMpr();
-      refreshVolumeRender();
+      scheduleFullRefresh();
       break;
     case 'mode':
       viewer3dState.mode = value;
-      refreshVolumeRender();
+      scheduleFullRefresh();
       break;
     case 'window':
       viewer3dState.preset = 'custom';
       viewer3dState.windowCenter = value.center;
       viewer3dState.windowWidth = value.width;
-      refreshAllMpr();
-      refreshVolumeRender();
+      schedulePreviewRefresh();
       break;
     case 'rotate':
       viewer3dState.azimuth = (viewer3dState.azimuth + (value?.azimuth || 0)) % 360;
       viewer3dState.elevation = Math.max(-90, Math.min(90, viewer3dState.elevation + (value?.elevation || 0)));
-      if (viewer3dState.vtkContext?.rotate) {
-        viewer3dState.vtkContext.rotate(value?.azimuth || 0, value?.elevation || 0);
-      }
-      refreshVolumeRender();
+      scheduleFullRefresh();
       break;
     case 'zoom':
-      if (viewer3dState.vtkContext?.fullScreenRenderer) {
-        const cam = viewer3dState.vtkContext.renderer.getActiveCamera();
-        cam.zoom(value > 0 ? 1.1 : 0.9);
-        viewer3dState.vtkContext.renderWindow.render();
-      }
       break;
     case 'reset':
       viewer3dState.azimuth = 0;
       viewer3dState.elevation = 0;
       viewer3dState.preset = 'default';
       viewer3dState.mode = 'mip';
-      if (viewer3dState.vtkContext?.resetCamera) viewer3dState.vtkContext.resetCamera();
-      refreshAllMpr();
-      refreshVolumeRender();
+      scheduleFullRefresh();
       if (typeof Dicom3dToolbar !== 'undefined') Dicom3dToolbar.resetUi();
       break;
     default:
@@ -319,7 +210,9 @@ async function initDicom3dViewer(studyUid) {
   }
 
   viewer3dState.studyUid = studyUid;
-  setStatus('Инициализация…');
+  setStatus('Загрузка…');
+
+  document.getElementById('vr-fallback-canvas')?.classList.remove('hidden');
 
   document.getElementById('logout-btn')?.addEventListener('click', () => {
     if (typeof logout === 'function') logout();
@@ -329,27 +222,14 @@ async function initDicom3dViewer(studyUid) {
     Dicom3dToolbar.mount(document.getElementById('toolbar-host'), onToolbarAction);
   }
 
-  await initCornerstone();
-
   try {
-    let info = await loadVolumeInfo(studyUid);
-    if (!info.cached && info.status !== 'ready') {
-      setStatus('Сборка объёма…');
-      const job = await triggerReconstruct(studyUid);
-      if (job.status === 'processing') {
-        info = await waitForVolume(studyUid);
-      } else {
-        info = await loadVolumeInfo(studyUid);
-      }
-    }
-
+    const info = await ensureVolumeReady(studyUid);
     viewer3dState.volumeInfo = info;
-    setStatus(`Готово · ${info.num_slices || 0} срезов · ${info.modality || ''}`);
     setupSliceSliders(info);
 
-    await initVtkVolume(info);
-    await refreshAllMpr();
-    await refreshVolumeRender();
+    const preview = await loadPreview();
+    applyPreview(preview);
+    setStatus(`Готово · ${info.num_slices || 0} срезов · ${info.modality || ''}`);
   } catch (err) {
     console.error(err);
     setStatus(err.message || 'Ошибка загрузки', true);
