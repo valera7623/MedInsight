@@ -6,9 +6,18 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from sqlalchemy.exc import IntegrityError
+
 from app.database import SessionLocal
-from app.models import DicomFrame, DicomSeries, DicomStudy, Patient
+from app.models import DicomStudy, Patient
 from app.services.dicom_parser import DicomParser, DicomParseError
+from app.services.dicom_persistence import (
+    add_frames_to_series,
+    ensure_unique_dicom_ids,
+    friendly_integrity_error,
+    get_or_create_series,
+    remove_placeholder_study,
+)
 from app.services.dicom_storage import DicomStorage
 from app.tasks.celery_app import celery_app
 
@@ -57,6 +66,19 @@ def _notify_dicom_ready(study: DicomStudy, user_id: int) -> None:
         logger.debug("Telegram dicom notification failed: %s", exc)
 
 
+def _mark_study_failed(db, study_id: int, message: str, *, remove_row: bool = False) -> None:
+    study = db.query(DicomStudy).filter(DicomStudy.id == study_id).first()
+    if not study:
+        return
+    if remove_row and study.study_uid.startswith("pending-"):
+        remove_placeholder_study(db, study)
+        return
+    study.status = "failed"
+    study.error_message = message
+    study.processed_at = datetime.utcnow()
+    db.commit()
+
+
 @celery_app.task(bind=True, name="app.tasks.dicom_task.process_dicom_study")
 def process_dicom_study(self, study_id: int, temp_path: str) -> dict:
     db = SessionLocal()
@@ -68,10 +90,18 @@ def process_dicom_study(self, study_id: int, temp_path: str) -> dict:
         if not study:
             return {"status": "failed", "error": "Study not found"}
 
+        if study.status == "ready" and not study.study_uid.startswith("pending-"):
+            return {
+                "status": "ready",
+                "study_uid": study.study_uid,
+                "num_instances": study.num_instances,
+            }
+
         study.status = "processing"
         db.commit()
 
         parsed = parser.parse_dicom_file(temp_path)
+        ensure_unique_dicom_ids(db, study, parsed)
 
         frame_tuples = [(f["instance_uid"], f["frame_number"], f["png_bytes"]) for f in parsed["frames"]]
         image_paths = storage.store_frames(
@@ -80,30 +110,8 @@ def process_dicom_study(self, study_id: int, temp_path: str) -> dict:
             frames=frame_tuples,
         )
 
-        series = DicomSeries(
-            study_id=study.id,
-            series_uid=parsed["series_uid"],
-            series_number=parsed.get("series_number"),
-            series_description=parsed.get("series_description"),
-            modality=parsed.get("modality"),
-            num_instances=len(parsed["frames"]),
-        )
-        db.add(series)
-        db.flush()
-
-        for fmeta, img_path in zip(parsed["frames"], image_paths, strict=True):
-            db.add(
-                DicomFrame(
-                    series_id=series.id,
-                    instance_uid=fmeta["instance_uid"],
-                    frame_number=fmeta["frame_number"],
-                    image_path=img_path,
-                    width=fmeta.get("width"),
-                    height=fmeta.get("height"),
-                    bit_depth=fmeta.get("bit_depth"),
-                    pixel_spacing=fmeta.get("pixel_spacing"),
-                )
-            )
+        series = get_or_create_series(db, study, parsed)
+        add_frames_to_series(db, series, parsed["frames"], image_paths)
 
         study.study_uid = parsed["study_uid"]
         study.study_date = parsed.get("study_date") or study.study_date
@@ -139,21 +147,20 @@ def process_dicom_study(self, study_id: int, temp_path: str) -> dict:
     except DicomParseError as exc:
         logger.warning("DICOM parse failed for study %s: %s", study_id, exc)
         db.rollback()
-        if study := db.query(DicomStudy).filter(DicomStudy.id == study_id).first():
-            study.status = "failed"
-            study.error_message = str(exc)
-            study.processed_at = datetime.utcnow()
-            db.commit()
+        _mark_study_failed(db, study_id, str(exc), remove_row=True)
         return {"status": "failed", "error": str(exc)}
+    except IntegrityError as exc:
+        logger.warning("DICOM integrity error for study %s: %s", study_id, exc)
+        db.rollback()
+        message = friendly_integrity_error(exc) or "Конфликт данных DICOM (дубликат)."
+        _mark_study_failed(db, study_id, message, remove_row=True)
+        return {"status": "failed", "error": message}
     except Exception as exc:
         logger.exception("DICOM processing failed for study %s: %s", study_id, exc)
         db.rollback()
-        if study := db.query(DicomStudy).filter(DicomStudy.id == study_id).first():
-            study.status = "failed"
-            study.error_message = str(exc)
-            study.processed_at = datetime.utcnow()
-            db.commit()
-        return {"status": "failed", "error": str(exc)}
+        message = friendly_integrity_error(exc) if isinstance(exc, IntegrityError) else str(exc)
+        _mark_study_failed(db, study_id, message)
+        return {"status": "failed", "error": message}
     finally:
         db.close()
         try:

@@ -236,12 +236,97 @@ def test_dicom_api_delete() -> None:
     print("PASS dicom API delete")
 
 
+def test_dicom_duplicate_study_uid() -> None:
+    from datetime import date
+
+    from app.auth import hash_password
+    from app.database import Base, SessionLocal, bootstrap_system, engine
+    from app.models import Department, DicomStudy, Patient, Tenant, User
+    from app.services.dicom_parser import DicomParser
+    from app.services.dicom_persistence import ensure_unique_dicom_ids
+    from app.services.dicom_parser import DicomParseError
+
+    Base.metadata.create_all(bind=engine)
+    bootstrap_system()
+    db = SessionLocal()
+    try:
+        tenant = db.query(Tenant).first()
+        user = db.query(User).filter(User.email == "dicom@example.com").first()
+        patient = db.query(Patient).first()
+        if not user or not patient:
+            dept = Department(tenant_id=tenant.id, name="Dup Rad")
+            db.add(dept)
+            db.commit()
+            user = User(
+                tenant_id=tenant.id,
+                email="dup@example.com",
+                password_hash=hash_password("secret"),
+                full_name="Dup Doc",
+                role="doctor",
+                department_id=dept.id,
+            )
+            db.add(user)
+            patient = Patient(
+                tenant_id=tenant.id,
+                user_id=user.id,
+                department_id=dept.id,
+                first_name="P",
+                last_name="Dup",
+                birth_date=date(1985, 1, 1),
+                gender="M",
+                phone="+7111",
+            )
+            db.add(patient)
+            db.commit()
+            db.refresh(user)
+            db.refresh(patient)
+
+        sample = Path(tempfile.mkdtemp()) / "dup.dcm"
+        _make_sample_dicom(sample)
+        parsed = DicomParser().parse_dicom_file(str(sample))
+
+        existing = DicomStudy(
+            patient_id=patient.id,
+            tenant_id=tenant.id,
+            user_id=user.id,
+            study_uid=parsed["study_uid"],
+            status="ready",
+            num_series=1,
+            num_instances=1,
+        )
+        db.add(existing)
+        db.commit()
+
+        pending = DicomStudy(
+            patient_id=patient.id,
+            tenant_id=tenant.id,
+            user_id=user.id,
+            study_uid="pending-dup-test",
+            status="processing",
+            num_series=0,
+            num_instances=0,
+        )
+        db.add(pending)
+        db.commit()
+        db.refresh(pending)
+
+        try:
+            ensure_unique_dicom_ids(db, pending, parsed)
+            raise AssertionError("expected DicomParseError for duplicate study_uid")
+        except DicomParseError:
+            pass
+        print("PASS duplicate study_uid detection")
+    finally:
+        db.close()
+
+
 def main() -> None:
     test_parser_validate_and_metadata()
     test_storage_frames()
     test_process_dicom_study_db()
     test_dicom_api_list()
     test_dicom_api_delete()
+    test_dicom_duplicate_study_uid()
     print("\nAll DICOM tests passed.")
 
 
