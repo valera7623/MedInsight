@@ -918,6 +918,9 @@ DEFAULT_THEME=light   # light | dark | system — для новых пользо
 | `GET` | `/api/dicom/frames/{instance_uid}` | PNG-кадр (JWT, range-friendly) |
 | `GET` | `/api/dicom/studies/{study_uid}/thumbnail` | Превью (первый кадр) |
 | `DELETE` | `/api/dicom/studies/{study_uid}` | Удаление (admin) |
+| `POST` | `/api/dicom/upload-zip` | multipart: `zip_file`, `patient_id` |
+| `GET` | `/api/dicom/upload-zip/status/{job_id}` | Прогресс обработки ZIP |
+| `GET` | `/api/dicom/studies/{study_uid}/archive` | Скачать оригинальный ZIP |
 
 ```bash
 TOKEN=...  # JWT врача
@@ -948,6 +951,25 @@ DICOM_THUMBNAIL_SIZE=256x256
 - `/dicom/viewer/{study_uid}` — просмотр (canvas, навигация по кадрам)
 
 Тест: `python scripts/test_dicom.py` (синтетический DICOM + парсинг + БД).
+
+### DICOM ZIP Support
+
+Загрузка **ZIP-архивов** с множеством `.dcm` файлов (стандартный экспорт с КТ/МРТ).
+
+- `POST /api/dicom/upload-zip` — multipart: `zip_file`, `patient_id`
+- `GET /api/dicom/upload-zip/status/{job_id}?study_id=` — прогресс обработки
+- `GET /api/dicom/studies/{study_uid}/archive` — скачать оригинальный ZIP (зашифрован на диске)
+- Celery: `process_dicom_zip` (таймаут 30 мин, прогресс каждые 100 файлов)
+- Группировка по Study/Series UID; защита от zip-бомб (лимит файлов и размера)
+
+```env
+DICOM_ZIP_MAX_SIZE_MB=2048
+DICOM_ZIP_TEMP_DIR=./temp/dicom_zip
+DICOM_ZIP_MAX_FILES=5000
+DICOM_ZIP_TASK_TIMEOUT_SEC=1800
+```
+
+Тест: `python scripts/test_dicom_zip.py`
 
 ## Фаза 8: Резервное копирование (Backup & Restore)
 

@@ -525,6 +525,25 @@ select.btn {
   background: var(--bg-secondary);
 }
 .dicom-dropzone-active { border-color: var(--accent-primary); background: var(--bg-hover); }
+.dicom-zip-progress {
+  margin: 1rem 0 1.5rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+.dicom-zip-progress-label { margin: 0 0 0.5rem; font-size: 0.9rem; }
+.dicom-zip-progress-track {
+  height: 8px;
+  background: var(--bg-hover);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.dicom-zip-progress-bar {
+  height: 100%;
+  background: var(--accent-primary);
+  transition: width 0.3s ease;
+}
 .dicom-viewer-body { overflow: hidden; }
 .dicom-viewer-layout {
   display: grid;

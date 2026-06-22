@@ -1,6 +1,23 @@
-/** DICOM studies list page — upload, filters, pagination. */
-
 let dicomPage = 1;
+
+async function downloadDicomArchive(studyUid, filename) {
+  try {
+    const res = await apiFetch(`/api/dicom/studies/${encodeURIComponent(studyUid)}/archive`);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(formatApiError(data.detail) || 'Не удалось скачать архив');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || `${studyUid}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert(err.message || 'Ошибка скачивания');
+  }
+}
 
 function formatStudyDate(value) {
   if (!value) return '—';
@@ -80,11 +97,22 @@ function renderDicomGrid(items) {
             ${study.patient_name_dicom || ''} · ${formatStudyDate(study.study_date)}
             · ${study.body_part || '—'}
           </p>
-          <p class="text-muted" style="font-size:0.8rem">Кадров: ${study.num_instances} · Пациент #${study.patient_id}</p>
+          <p class="text-muted" style="font-size:0.8rem">
+            Кадров: ${study.num_instances}
+            ${study.total_files ? ` · Файлов в архиве: ${study.total_files}` : ''}
+            · Пациент #${study.patient_id}
+          </p>
+          ${study.has_zip_archive && study.status === 'ready'
+            ? `<button type="button" class="btn btn-secondary btn-sm" data-archive-uid="${study.study_uid}">Скачать ZIP</button>`
+            : ''}
           <div class="dicom-card-actions">${viewBtn}</div>
         </div>
       </article>`;
   }).join('');
+
+  grid.querySelectorAll('[data-archive-uid]').forEach(btn => {
+    btn.addEventListener('click', () => downloadDicomArchive(btn.dataset.archiveUid));
+  });
 }
 
 function updatePagination(data) {
@@ -195,6 +223,7 @@ function initDicomPage() {
   setupModals();
   setupDicomUploadForm(() => loadDicomStudies(dicomPage));
   setupDicomControls();
+  initDicomZipUpload(() => loadDicomStudies(dicomPage));
 
   document.getElementById('upload-dicom-btn')?.addEventListener('click', async () => {
     await loadPatientsForSelect('dicom-patient');

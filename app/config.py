@@ -111,6 +111,10 @@ class Settings(BaseSettings):
     DICOM_MAX_FILE_SIZE_MB: int = 500
     DICOM_STORAGE_PATH: str = "./storage/dicom"
     DICOM_THUMBNAIL_SIZE: str = "256x256"
+    DICOM_ZIP_MAX_SIZE_MB: int = 2048
+    DICOM_ZIP_TEMP_DIR: str = "./temp/dicom_zip"
+    DICOM_ZIP_MAX_FILES: int = 5000
+    DICOM_ZIP_TASK_TIMEOUT_SEC: int = 1800
 
     # Phase 9: OpenTelemetry (distributed tracing)
     OTEL_ENABLED: bool = False

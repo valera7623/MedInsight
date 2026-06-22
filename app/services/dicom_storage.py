@@ -76,6 +76,25 @@ class DicomStorage:
         matches = list(out_dir.glob(f"{safe_uid}*.png"))
         return str(matches[0]) if matches else None
 
+    def store_encrypted_zip(
+        self,
+        zip_path: str,
+        *,
+        tenant_id: int,
+        patient_id: int,
+        study_uid: str,
+        filename: str,
+    ) -> str:
+        """Encrypt original ZIP archive and return stored path."""
+        src = Path(zip_path)
+        enc_path, _ = encrypt_bytes(
+            src.read_bytes(),
+            tenant_id,
+            patient_id,
+            f"dicom_zip_{study_uid}_{Path(filename).name}",
+        )
+        return enc_path
+
     def delete_study(self, patient_id: int, study_uid: str) -> bool:
         path = self.study_dir(patient_id, study_uid)
         if not path.exists():

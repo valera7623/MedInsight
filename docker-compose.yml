@@ -33,6 +33,7 @@ services:
     volumes:
       - ./storage:/app/storage
       - ./secrets:/app/secrets
+      - ./temp/dicom_zip:/app/temp/dicom_zip
       - medinsight-data:/app/data
       - medinsight-chroma:/app/chroma_data
       - medinsight-backups:/backups
@@ -66,6 +67,7 @@ services:
     volumes:
       - ./storage:/app/storage
       - ./secrets:/app/secrets
+      - ./temp/dicom_zip:/app/temp/dicom_zip
       - medinsight-data:/app/data
       - medinsight-chroma:/app/chroma_data
       - medinsight-backups:/backups

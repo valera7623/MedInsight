@@ -52,6 +52,10 @@ class DicomStudySummary(BaseModel):
     status: str
     created_at: datetime
     processed_at: datetime | None
+    total_files: int = 0
+    processed_files: int = 0
+    zip_size_mb: float | None = None
+    has_zip_archive: bool = False
     thumbnail_url: str | None = None
 
     model_config = {"from_attributes": True}
@@ -91,6 +95,10 @@ def _serialize_study(study: DicomStudy, viewer: DicomViewer | None = None) -> di
     thumb = viewer.get_thumbnail(study.study_uid) if viewer and study.status == "ready" else None
     data = DicomStudySummary.model_validate(study).model_dump()
     data["thumbnail_url"] = thumb
+    data["has_zip_archive"] = bool(study.zip_original_path)
+    if study.total_files:
+        data["total_files"] = study.total_files
+        data["processed_files"] = study.processed_files
     return data
 
 
@@ -375,6 +383,12 @@ def delete_dicom_study(
             Path(study.file_path_encrypted).unlink(missing_ok=True)
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to delete encrypted DICOM %s: %s", study.file_path_encrypted, exc)
+
+    if study.zip_original_path:
+        try:
+            Path(study.zip_original_path).unlink(missing_ok=True)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to delete ZIP archive %s: %s", study.zip_original_path, exc)
 
     storage.delete_study(study.patient_id, study.study_uid)
     study_id = study.id

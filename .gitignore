@@ -9,6 +9,8 @@ storage/*
 !storage/exports/
 storage/exports/*
 !storage/exports/.gitkeep
+temp/dicom_zip/*
+!temp/dicom_zip/.gitkeep
 backups/
 secrets/*
 !secrets/.gitkeep

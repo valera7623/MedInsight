@@ -326,6 +326,10 @@ class DicomStudy(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    zip_original_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    zip_size_mb: Mapped[float | None] = mapped_column(Float, nullable=True)
+    total_files: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    processed_files: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     patient: Mapped["Patient"] = relationship("Patient", foreign_keys=[patient_id])
     series: Mapped[list["DicomSeries"]] = relationship(
@@ -343,6 +347,7 @@ class DicomSeries(Base):
     series_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     modality: Mapped[str | None] = mapped_column(String(16), nullable=True)
     num_instances: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     study: Mapped["DicomStudy"] = relationship("DicomStudy", back_populates="series")
