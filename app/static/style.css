@@ -597,12 +597,17 @@ select.btn {
 #dicom-canvas { image-rendering: auto; }
 .dicom-frame-slider { width: 100%; padding: 0.5rem 1rem; background: var(--bg-card); }
 
-.dicom-canvas-stack { position: relative; display: inline-block; }
+.dicom-canvas-stack { position: relative; display: inline-block; line-height: 0; }
 .dicom-canvas-stack canvas { display: block; }
-.annotation-overlay {
+.annotation-overlay,
+#annotation-canvas {
   position: absolute;
   left: 0;
   top: 0;
+  cursor: crosshair;
+  pointer-events: auto;
+}
+.annotation-overlay {
   pointer-events: none;
 }
 .dicom-annotate-body { overflow: hidden; }
@@ -616,6 +621,16 @@ select.btn {
   flex-direction: column;
   background: #000;
   min-width: 0;
+  overflow: hidden;
+}
+.dicom-annotate-canvas-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-height: 0;
+  padding: 12px;
 }
 .dicom-annotate-sidebar {
   background: var(--bg-card);
@@ -624,9 +639,11 @@ select.btn {
   overflow-y: auto;
 }
 .annotation-toolbar {
+  flex-shrink: 0;
   background: var(--bg-card);
   border-top: 1px solid var(--border-primary);
   padding: 0.5rem 1rem;
+  min-height: 120px;
 }
 .ann-toolbar-row {
   display: flex;

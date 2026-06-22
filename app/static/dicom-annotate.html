@@ -22,9 +22,11 @@
 
   <div class="dicom-annotate-layout">
     <section class="dicom-annotate-viewport">
-      <div class="dicom-canvas-stack" id="canvas-stack">
-        <canvas id="dicom-canvas"></canvas>
-        <canvas id="annotation-canvas"></canvas>
+      <div class="dicom-annotate-canvas-wrap" id="canvas-stack-wrap">
+        <div class="dicom-canvas-stack" id="canvas-stack">
+          <canvas id="dicom-canvas"></canvas>
+          <canvas id="annotation-canvas"></canvas>
+        </div>
       </div>
       <div id="annotation-toolbar" class="annotation-toolbar"></div>
     </section>
@@ -121,7 +123,30 @@
       canvas.height = annotateState.img.naturalHeight;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(annotateState.img, 0, 0);
+      fitCanvasToViewport();
       annotateState.tool?.redraw();
+    }
+
+    function fitCanvasToViewport() {
+      const wrap = document.getElementById('canvas-stack-wrap');
+      const canvas = document.getElementById('dicom-canvas');
+      const overlay = document.getElementById('annotation-canvas');
+      if (!wrap || !canvas || !annotateState.img) return;
+
+      const pad = 24;
+      const maxW = Math.max(100, wrap.clientWidth - pad);
+      const maxH = Math.max(100, wrap.clientHeight - pad);
+      const iw = annotateState.img.naturalWidth || canvas.width;
+      const ih = annotateState.img.naturalHeight || canvas.height;
+      const scale = Math.min(maxW / iw, maxH / ih);
+      const displayW = Math.max(1, Math.round(iw * scale));
+      const displayH = Math.max(1, Math.round(ih * scale));
+
+      for (const el of [canvas, overlay]) {
+        if (!el) continue;
+        el.style.width = `${displayW}px`;
+        el.style.height = `${displayH}px`;
+      }
     }
 
     async function loadFrameImage(frame) {
@@ -144,7 +169,7 @@
     }
 
     async function startSession() {
-      await apiFetch('/api/dicom/annotations/session', {
+      const res = await apiFetch('/api/dicom/annotations/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -153,12 +178,16 @@
           frame_instance_uid: annotateState.frameInstanceUid,
         }),
       });
+      if (!res.ok) {
+        console.warn('Annotation session failed', res.status);
+      }
     }
 
     async function initAnnotatePage() {
       if (!requireAuth()) return;
       setupLogout();
 
+      try {
       const path = parsePath();
       annotateState.studyUid = path.studyUid;
       annotateState.seriesUid = path.seriesUid;
@@ -191,8 +220,6 @@
         `Кадр ${annotateState.frame.frame_number + 1} · ${annotateState.frame.instance_uid.slice(0, 20)}…`;
 
       annotateState.img = await loadFrameImage(annotateState.frame);
-      await drawImage();
-      await startSession();
 
       const imageCanvas = document.getElementById('dicom-canvas');
       const overlayCanvas = document.getElementById('annotation-canvas');
@@ -216,8 +243,26 @@
         onClearAll: () => annotateState.tool.clearAll(),
       });
 
-      await annotateState.tool.loadAnnotations(annotateState.frame.id);
+      await drawImage();
+
+      window.addEventListener('resize', () => {
+        fitCanvasToViewport();
+        annotateState.tool?.redraw();
+      });
+
+      await startSession();
+
+      if (annotateState.frame.id) {
+        await annotateState.tool.loadAnnotations(annotateState.frame.id);
+      } else {
+        document.getElementById('ann-frame-info').textContent += ' · ⚠️ frame_id отсутствует';
+      }
       renderAnnotationList(annotateState.tool.annotations);
+      } catch (err) {
+        console.error('Annotate page init failed', err);
+        const info = document.getElementById('ann-frame-info');
+        if (info) info.textContent = `Ошибка загрузки: ${err.message || err}`;
+      }
     }
 
     document.addEventListener('DOMContentLoaded', initAnnotatePage);
