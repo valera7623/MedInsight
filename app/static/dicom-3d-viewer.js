@@ -119,15 +119,21 @@ function fitImageToCanvas(canvas, img) {
   if (!container) return;
   const maxW = Math.max(container.clientWidth, 1);
   const maxH = Math.max(container.clientHeight, 1);
-  let scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
-  if (canvas.id === 'vr-fallback-canvas') {
+  // Allow upscale — coronal/sagittal MPR are often few pixels tall (one row per slice).
+  let scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
+  const isVr = canvas.id === 'vr-fallback-canvas';
+  if (isVr) {
     scale *= viewer3dState.zoom;
   }
   const w = Math.max(1, Math.round(img.naturalWidth * scale));
   const h = Math.max(1, Math.round(img.naturalHeight * scale));
   canvas.width = w;
   canvas.height = h;
+  canvas.style.width = `${w}px`;
+  canvas.style.height = `${h}px`;
   const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   ctx.clearRect(0, 0, w, h);
   ctx.drawImage(img, 0, 0, w, h);
 }
