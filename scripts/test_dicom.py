@@ -206,11 +206,42 @@ def test_dicom_api_list() -> None:
     print("PASS dicom API list")
 
 
+def test_dicom_api_delete() -> None:
+    from fastapi.testclient import TestClient
+
+    from app.auth import create_access_token
+    from app.database import SessionLocal
+    from app.main import app
+    from app.models import DicomStudy, User
+
+    db = SessionLocal()
+    user = db.query(User).filter(User.email == "dicom@example.com").first()
+    study = db.query(DicomStudy).filter(DicomStudy.status == "ready").first()
+    if not user or not study:
+        print("SKIP dicom API delete (no ready study)")
+        db.close()
+        return
+    study_uid = study.study_uid
+    token = create_access_token(user)
+    db.close()
+
+    client = TestClient(app)
+    headers = {"Authorization": f"Bearer {token}"}
+    r = client.delete(f"/api/dicom/studies/{study_uid}", headers=headers)
+    assert r.status_code == 204, r.text
+
+    db = SessionLocal()
+    assert db.query(DicomStudy).filter(DicomStudy.study_uid == study_uid).first() is None
+    db.close()
+    print("PASS dicom API delete")
+
+
 def main() -> None:
     test_parser_validate_and_metadata()
     test_storage_frames()
     test_process_dicom_study_db()
     test_dicom_api_list()
+    test_dicom_api_delete()
     print("\nAll DICOM tests passed.")
 
 

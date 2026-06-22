@@ -18,7 +18,7 @@ from app.config import settings
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
 from app.models import DicomStudy, Patient, User
-from app.services.access import can_view_patient, effective_tenant_id, is_admin, is_super_admin
+from app.services.access import can_delete_dicom_study, can_view_patient, effective_tenant_id, is_super_admin
 from app.services.audit import log_audit
 from app.services.dicom_storage import DicomStorage
 from app.services.dicom_viewer import DicomViewer
@@ -57,6 +57,7 @@ class DicomStudySummary(BaseModel):
     zip_size_mb: float | None = None
     has_zip_archive: bool = False
     thumbnail_url: str | None = None
+    can_delete: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -99,11 +100,12 @@ def _get_study_or_404(
     return study
 
 
-def _serialize_study(study: DicomStudy, viewer: DicomViewer | None = None) -> dict:
+def _serialize_study(study: DicomStudy, viewer: DicomViewer | None = None, user: User | None = None) -> dict:
     thumb = viewer.get_thumbnail(study.study_uid) if viewer and study.status == "ready" else None
     data = DicomStudySummary.model_validate(study).model_dump()
     data["thumbnail_url"] = thumb
     data["has_zip_archive"] = bool(study.zip_original_path)
+    data["can_delete"] = can_delete_dicom_study(user, study) if user is not None else False
     if study.total_files:
         data["total_files"] = study.total_files
         data["processed_files"] = study.processed_files
@@ -283,7 +285,7 @@ def list_dicom_studies(
         model=DicomStudy,
         search_fields=DICOM_SEARCH_FIELDS,
         allowed_sort=DICOM_SORT,
-        serializer=lambda s: _serialize_study(s, viewer),
+        serializer=lambda s: _serialize_study(s, viewer, current_user),
     )
 
 
@@ -301,6 +303,7 @@ def get_dicom_study(
     if not info:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DICOM study not found")
     info["thumbnail_url"] = viewer.get_thumbnail(study.study_uid)
+    info["can_delete"] = can_delete_dicom_study(current_user, study)
     return info
 
 
@@ -406,11 +409,12 @@ def delete_dicom_study(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     _ensure_dicom_enabled()
-    if not is_admin(current_user):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-
     study = _get_study_or_404(db, study_uid, current_user, request)
+    if not can_delete_dicom_study(current_user, study):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete this DICOM study")
+
     storage = DicomStorage()
+    zip_path = study.zip_original_path
 
     if study.file_path_encrypted:
         try:
@@ -418,17 +422,23 @@ def delete_dicom_study(
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to delete encrypted DICOM %s: %s", study.file_path_encrypted, exc)
 
-    if study.zip_original_path:
-        try:
-            Path(study.zip_original_path).unlink(missing_ok=True)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Failed to delete ZIP archive %s: %s", study.zip_original_path, exc)
-
     storage.delete_study(study.patient_id, study.study_uid)
     study_id = study.id
     tenant_id = study.tenant_id
     db.delete(study)
     db.commit()
+
+    if zip_path:
+        others = (
+            db.query(DicomStudy)
+            .filter(DicomStudy.zip_original_path == zip_path)
+            .count()
+        )
+        if others == 0:
+            try:
+                Path(zip_path).unlink(missing_ok=True)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed to delete ZIP archive %s: %s", zip_path, exc)
 
     log_audit(
         db,

@@ -245,6 +245,28 @@ async function initDicomViewer(studyUid) {
   viewerState.study = await res.json();
   document.title = `DICOM — ${viewerState.study.modality || studyUid}`;
 
+  const deleteBtn = document.getElementById('delete-study-btn');
+  if (deleteBtn) {
+    if (viewerState.study.can_delete) {
+      deleteBtn.classList.remove('hidden');
+      deleteBtn.onclick = async () => {
+        const label = viewerState.study.study_description || viewerState.study.modality || 'DICOM';
+        if (!confirm(`Удалить DICOM-исследование «${label}»? Файлы и кадры будут удалены безвозвратно.`)) {
+          return;
+        }
+        const del = await apiFetch(`/api/dicom/studies/${encodeURIComponent(studyUid)}`, { method: 'DELETE' });
+        if (!del.ok) {
+          const data = await del.json().catch(() => ({}));
+          alert(formatApiError(data.detail) || 'Ошибка удаления');
+          return;
+        }
+        window.location.href = '/dicom';
+      };
+    } else {
+      deleteBtn.classList.add('hidden');
+    }
+  }
+
   renderMeta();
   renderSeriesList();
   updateFrameSlider();

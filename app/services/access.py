@@ -122,6 +122,20 @@ def can_upload_document(user: User) -> bool:
     return user.role in WRITE_ROLES
 
 
+def can_delete_dicom_study(user: User, study) -> bool:
+    """Admin, uploader, or staff who may modify the patient."""
+    patient = getattr(study, "patient", None)
+    if patient is not None and not can_view_patient(user, patient):
+        return False
+    if is_super_admin(user) or is_admin(user):
+        return True
+    if user.role in WRITE_ROLES and study.user_id == user.id:
+        return True
+    if patient is not None and can_modify_patient(user, patient):
+        return True
+    return False
+
+
 def can_predict(user: User) -> bool:
     return user.role in WRITE_ROLES
 

@@ -514,7 +514,7 @@ select.btn {
 .dicom-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
 .dicom-card-desc { font-size: 0.95rem; margin-bottom: 0.35rem; }
 .dicom-card-meta { font-size: 0.85rem; }
-.dicom-card-actions { margin-top: 0.75rem; }
+.dicom-card-actions { margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
 .dicom-dropzone {
   border: 2px dashed var(--border-primary);
   border-radius: 8px;

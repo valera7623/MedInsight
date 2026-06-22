@@ -9,7 +9,6 @@ function stopDicomStatusPoll() {
 }
 
 function startDicomStatusPoll(studyId) {
-  stopDicomStatusPoll();
   const panel = document.getElementById('dicom-processing-panel');
   const label = document.getElementById('dicom-processing-label');
   if (panel) panel.classList.remove('hidden');
@@ -38,6 +37,25 @@ function startDicomStatusPoll(studyId) {
 
   poll();
   dicomPollTimer = setInterval(poll, 2000);
+}
+
+async function deleteDicomStudy(studyUid, label) {
+  const name = label || studyUid;
+  if (!confirm(`Удалить DICOM-исследование «${name}»? Файлы и кадры будут удалены безвозвратно.`)) {
+    return;
+  }
+  try {
+    const res = await apiFetch(`/api/dicom/studies/${encodeURIComponent(studyUid)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(formatApiError(data.detail) || `Ошибка удаления (${res.status})`);
+    }
+    loadDicomStudies(dicomPage);
+  } catch (err) {
+    alert(err.message || 'Ошибка удаления');
+  }
 }
 
 async function downloadDicomArchive(studyUid, filename) {
@@ -124,6 +142,9 @@ function renderDicomGrid(items) {
     const viewBtn = canView
       ? `<a href="/dicom/viewer/${encodeURIComponent(study.study_uid)}" class="btn btn-primary btn-sm">Просмотр</a>`
       : '';
+    const deleteBtn = study.can_delete
+      ? `<button type="button" class="btn btn-danger btn-sm" data-delete-uid="${study.study_uid}" data-delete-label="${(study.study_description || study.modality || 'DICOM').replace(/"/g, '&quot;')}">Удалить</button>`
+      : '';
     return `
       <article class="dicom-card">
         ${thumb}
@@ -145,13 +166,16 @@ function renderDicomGrid(items) {
           ${study.has_zip_archive && study.status === 'ready'
             ? `<button type="button" class="btn btn-secondary btn-sm" data-archive-uid="${study.study_uid}">Скачать ZIP</button>`
             : ''}
-          <div class="dicom-card-actions">${viewBtn}</div>
+          <div class="dicom-card-actions">${viewBtn}${deleteBtn}</div>
         </div>
       </article>`;
   }).join('');
 
   grid.querySelectorAll('[data-archive-uid]').forEach(btn => {
     btn.addEventListener('click', () => downloadDicomArchive(btn.dataset.archiveUid));
+  });
+  grid.querySelectorAll('[data-delete-uid]').forEach(btn => {
+    btn.addEventListener('click', () => deleteDicomStudy(btn.dataset.deleteUid, btn.dataset.deleteLabel));
   });
 }
 
