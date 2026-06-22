@@ -86,8 +86,8 @@ function setupDicomZipUpload(onSuccess) {
         body: formData,
         headers: {},
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(formatApiError(data.detail) || 'Ошибка загрузки ZIP');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(formatApiError(data.detail) || `Ошибка загрузки ZIP (${res.status})`);
 
       closeDicomZipModal();
 

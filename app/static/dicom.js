@@ -188,8 +188,8 @@ function setupDicomUploadForm(onSuccess) {
         body: formData,
         headers: {},
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(formatApiError(data.detail) || 'Ошибка загрузки');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(formatApiError(data.detail) || `Ошибка загрузки (${res.status})`);
 
       document.getElementById('dicom-upload-modal').classList.add('hidden');
       form.reset();

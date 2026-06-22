@@ -116,6 +116,16 @@ def run_migrations():
             _add_column_if_missing(conn, "patients", "department_id", "INTEGER")
             _add_column_if_missing(conn, "patients", "attending_doctor_id", "INTEGER")
 
+        # Phase 12b: DICOM ZIP columns (migration 015)
+        if "dicom_studies" in tables:
+            _add_column_if_missing(conn, "dicom_studies", "zip_original_path", "TEXT")
+            _add_column_if_missing(conn, "dicom_studies", "zip_size_mb", "REAL")
+            _add_column_if_missing(conn, "dicom_studies", "total_files", "INTEGER", "0")
+            _add_column_if_missing(conn, "dicom_studies", "processed_files", "INTEGER", "0")
+
+        if "dicom_series" in tables:
+            _add_column_if_missing(conn, "dicom_series", "original_filename", "VARCHAR(255)")
+
         # Backfill NULL tenant_id for legacy rows
         if "users" in tables and "tenants" in tables:
             conn.execute(
