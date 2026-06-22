@@ -119,7 +119,6 @@ function fitImageToCanvas(canvas, img) {
   if (!container) return;
   const maxW = Math.max(container.clientWidth, 1);
   const maxH = Math.max(container.clientHeight, 1);
-  // Allow upscale — coronal/sagittal MPR are often few pixels tall (one row per slice).
   let scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
   const isVr = canvas.id === 'vr-fallback-canvas';
   if (isVr) {
@@ -127,15 +126,18 @@ function fitImageToCanvas(canvas, img) {
   }
   const w = Math.max(1, Math.round(img.naturalWidth * scale));
   const h = Math.max(1, Math.round(img.naturalHeight * scale));
-  canvas.width = w;
-  canvas.height = h;
-  canvas.style.width = `${w}px`;
-  canvas.style.height = `${h}px`;
+  // Fill the viewport; draw image centered (avoids CSS max-width skew on <canvas>).
+  canvas.width = maxW;
+  canvas.height = maxH;
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.clearRect(0, 0, w, h);
-  ctx.drawImage(img, 0, 0, w, h);
+  ctx.clearRect(0, 0, maxW, maxH);
+  const x = Math.round((maxW - w) / 2);
+  const y = Math.round((maxH - h) / 2);
+  ctx.drawImage(img, x, y, w, h);
 }
 
 function drawBase64OnCanvas(canvas, b64) {
