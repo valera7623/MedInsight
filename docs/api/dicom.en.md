@@ -2,11 +2,11 @@
 
 # DICOM
 
-Auto-generated reference for **DICOM** endpoints (10 operations).
+Auto-generated reference for **DICOM** endpoints (11 operations).
 
 **OpenAPI tags:** dicom
 
-**Endpoints:** 10
+**Endpoints:** 11
 
 ---
 
@@ -306,6 +306,34 @@ Get Dicom Zip Status
 
 ```bash
 curl -X GET https://fileguardian.com.ru/api/dicom/upload-zip/status/{job_id} \
+  -H "Authorization: Bearer $JWT"
+```
+
+## GET /api/dicom/upload/status/{study_id}
+
+Get Dicom Upload Status
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| study_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"study_id": 0, "study_uid": "string", "status": "string", "num_instances": 0, "error_message": "string"}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/dicom/upload/status/{study_id} \
   -H "Authorization: Bearer $JWT"
 ```
 
