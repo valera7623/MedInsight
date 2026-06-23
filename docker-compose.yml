@@ -4,6 +4,9 @@ x-app-build: &app-build
   network: host
   args:
     INSTALL_SPACY_MODEL: "0"
+    BUILD_DOCS: "0"
+
+x-app-image: &app-image medinsight-app:latest
 
 services:
   postgres:
@@ -51,6 +54,7 @@ services:
   app:
     build:
       <<: *app-build
+    image: *app-image
     container_name: medinsight-app
     restart: unless-stopped
     env_file:
@@ -86,8 +90,7 @@ services:
       - medinsight-net
 
   celery_worker:
-    build:
-      <<: *app-build
+    image: *app-image
     container_name: medinsight-celery-worker
     restart: unless-stopped
     env_file:
@@ -118,8 +121,7 @@ services:
       - medinsight-net
 
   celery_beat:
-    build:
-      <<: *app-build
+    image: *app-image
     container_name: medinsight-celery-beat
     restart: unless-stopped
     env_file:
@@ -146,8 +148,7 @@ services:
       - medinsight-net
 
   telegram_bot:
-    build:
-      <<: *app-build
+    image: *app-image
     container_name: medinsight-telegram-bot
     restart: unless-stopped
     env_file:

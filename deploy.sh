@@ -57,7 +57,10 @@ fi
 
 echo "Rebuilding and restarting containers (spaCy model skipped for fast build)..."
 docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" down
-docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" build --build-arg INSTALL_SPACY_MODEL=0
+
+BUILD_ARGS=(--build-arg INSTALL_SPACY_MODEL=0 --build-arg BUILD_DOCS=0)
+echo "Building app image once (BUILD_DOCS=0, shared by celery/telegram)..."
+docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" build "${BUILD_ARGS[@]}" app
 docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" up -d
 
 if [ "$MODE" = "production" ] && [ -x scripts/docker_cleanup.sh ]; then

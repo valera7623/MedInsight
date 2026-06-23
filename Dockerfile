@@ -32,6 +32,8 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
+ARG BUILD_DOCS=0
+
 # Runtime OS packages only (no build-essential, no postgresql-client meta-package).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -49,9 +51,15 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
 
-RUN pip install --no-cache-dir --retries 3 --timeout 120 -r requirements-docs.txt \
-    && python scripts/generate_api_docs.py --import-app \
-    && mkdocs build
+# MkDocs + mkdocs-material are heavy PyPI downloads — skip on VPS/production builds.
+# /help/ is optional; app mounts site/ only when present (see app/main.py).
+RUN if [ "$BUILD_DOCS" = "1" ]; then \
+      pip install --no-cache-dir --retries 5 --timeout 600 -r requirements-docs.txt \
+      && python scripts/generate_api_docs.py --import-app \
+      && mkdocs build; \
+    else \
+      echo "Skipping MkDocs build (BUILD_DOCS=0, /help/ disabled)"; \
+    fi
 
 RUN mkdir -p storage data chroma_data secrets
 
