@@ -37,7 +37,7 @@ Obtain a token via `POST /api/auth/login`.
 | [Documents](documents.md) | 5 endpoint(s) |
 | [DICOM](dicom.md) | 11 endpoint(s) |
 | [Analytics](analytics.md) | 1 endpoint(s) |
-| [Predictions](predictions.md) | 7 endpoint(s) |
+| [Predictions](predictions.md) | 8 endpoint(s) |
 | [Export](exports.md) | 7 endpoint(s) |
 | [Webhooks](webhooks.md) | 7 endpoint(s) |
 | [Payments](payments.md) | 6 endpoint(s) |
@@ -65,4 +65,4 @@ Obtain a token via `POST /api/auth/login`.
 
 ---
 
-*Generated from OpenAPI 3.1.0 — 2026-06-22 14:25 UTC*
+*Generated from OpenAPI 3.1.0 — 2026-06-23 08:20 UTC*

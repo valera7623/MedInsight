@@ -2,11 +2,11 @@
 
 # Predictions
 
-Auto-generated reference for **Predictions** endpoints (7 operations).
+Auto-generated reference for **Predictions** endpoints (8 operations).
 
 **OpenAPI tags:** predictions
 
-**Endpoints:** 7
+**Endpoints:** 8
 
 ---
 
@@ -63,6 +63,34 @@ Patient Insights
 
 ```bash
 curl -X POST https://fileguardian.com.ru/api/analytics/insights/{patient_id} \
+  -H "Authorization: Bearer $JWT"
+```
+
+## POST /api/analytics/predict-with-dicom/{patient_id}
+
+Predict With Dicom
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| patient_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"job_id": "string", "status": "string", "prediction_id": 0, "prediction": {}, "dicom_sources": [{}]}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/analytics/predict-with-dicom/{patient_id} \
   -H "Authorization: Bearer $JWT"
 ```
 
