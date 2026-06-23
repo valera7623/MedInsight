@@ -30,13 +30,26 @@ from app.tasks.dicom_zip_task import process_dicom_zip
 router = APIRouter(prefix="/dicom", tags=["dicom"])
 logger = logging.getLogger(__name__)
 
-ALLOWED_ZIP_MIMES = {
+ALLOWED_ARCHIVE_MIMES = {
     "application/zip",
     "application/x-zip-compressed",
     "application/x-7z-compressed",
+    "application/x-7z",
+    "application/x-compressed",
     "application/octet-stream",
+    "binary/octet-stream",
     "multipart/x-zip",
 }
+
+
+def _archive_upload_mime_ok(content_type: str | None, filename: str) -> bool:
+    """Extension is authoritative; browser MIME labels for archives are often wrong."""
+    if not content_type:
+        return True
+    ctype = content_type.split(";")[0].strip().lower()
+    if ctype in ALLOWED_ARCHIVE_MIMES:
+        return True
+    return Path(filename).suffix.lower() in SUPPORTED_ARCHIVE_SUFFIXES
 
 
 def _archive_media_type(filename: str) -> str:
@@ -126,7 +139,7 @@ async def upload_dicom_zip(
             detail="Only .zip and .7z archives are supported",
         )
 
-    if zip_file.content_type and zip_file.content_type not in ALLOWED_ZIP_MIMES:
+    if not _archive_upload_mime_ok(zip_file.content_type, zip_file.filename):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported MIME type: {zip_file.content_type}",
