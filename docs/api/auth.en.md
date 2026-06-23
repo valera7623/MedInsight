@@ -2,11 +2,11 @@
 
 # Authentication
 
-Auto-generated reference for **Authentication** endpoints (9 operations).
+Auto-generated reference for **Authentication** endpoints (11 operations).
 
 **OpenAPI tags:** auth, preferences
 
-**Endpoints:** 9
+**Endpoints:** 11
 
 ---
 
@@ -164,6 +164,39 @@ curl -X POST https://fileguardian.com.ru/api/auth/request-reset \
   -d '{"email":"user@example.com","subdomain":"string"}'
 ```
 
+## POST /api/auth/resend-verification
+
+Resend Verification
+
+**Authentication:** none
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com",
+  "subdomain": "string"
+}
+```
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 202 | Successful Response | `{"detail": "string", "email_verified": true}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/auth/resend-verification \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","subdomain":"string"}'
+```
+
 ## GET /api/auth/tenants
 
 List Public Tenants
@@ -183,6 +216,34 @@ List Public Tenants
 
 ```bash
 curl -X GET https://fileguardian.com.ru/api/auth/tenants \
+  -H "Authorization: Bearer $JWT"
+```
+
+## POST /api/auth/verify-email
+
+Verify Email
+
+**Authentication:** none
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| token | query | string | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"detail": "string", "email_verified": true}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/auth/verify-email \
   -H "Authorization: Bearer $JWT"
 ```
 
