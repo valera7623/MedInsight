@@ -953,11 +953,11 @@ DICOM_THUMBNAIL_SIZE=256x256
 
 Тест: `python scripts/test_dicom.py` (синтетический DICOM + парсинг + БД).
 
-### DICOM ZIP Support
+### DICOM ZIP / 7z Support
 
-Загрузка **ZIP-архивов** с множеством `.dcm` файлов (стандартный экспорт с КТ/МРТ).
+Загрузка **ZIP или 7z архивов** с множеством `.dcm` файлов (стандартный экспорт с КТ/МРТ).
 
-- `POST /api/dicom/upload-zip` — multipart: `zip_file`, `patient_id`
+- `POST /api/dicom/upload-zip` — multipart: `zip_file` (`.zip` или `.7z`), `patient_id`
 - `GET /api/dicom/upload-zip/status/{job_id}?study_id=` — прогресс обработки
 - `GET /api/dicom/studies/{study_uid}/archive` — скачать оригинальный ZIP (зашифрован на диске)
 - Celery: `process_dicom_zip` (таймаут 30 мин, прогресс каждые 100 файлов)

@@ -1,4 +1,9 @@
-/** DICOM ZIP archive upload modal and API integration. */
+const DICOM_ARCHIVE_EXTENSIONS = ['.zip', '.7z'];
+
+function isDicomArchiveFile(name) {
+  const lower = name.toLowerCase();
+  return DICOM_ARCHIVE_EXTENSIONS.some(ext => lower.endsWith(ext));
+}
 
 function openDicomZipModal() {
   const modal = document.getElementById('dicom-zip-upload-modal');
@@ -61,14 +66,14 @@ function setupDicomZipUpload(onSuccess) {
       return;
     }
     if (!fileInput.files?.length) {
-      errEl.textContent = 'Выберите ZIP-архив';
+      errEl.textContent = 'Выберите архив (.zip или .7z)';
       errEl.classList.remove('hidden');
       return;
     }
 
     const file = fileInput.files[0];
-    if (!file.name.toLowerCase().endsWith('.zip')) {
-      errEl.textContent = 'Только .zip архивы';
+    if (!isDicomArchiveFile(file.name)) {
+      errEl.textContent = 'Поддерживаются только .zip и .7z архивы';
       errEl.classList.remove('hidden');
       return;
     }

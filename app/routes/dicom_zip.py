@@ -22,7 +22,7 @@ from app.routes.dicom import _ensure_dicom_enabled, _get_study_or_404
 from app.services.access import can_view_patient, effective_tenant_id, is_super_admin
 from app.services.audit import log_audit
 from app.services.dicom_storage import DicomStorage
-from app.services.dicom_zip_processor import DicomZipProcessor, DicomZipError
+from app.services.dicom_zip_processor import DicomZipProcessor, DicomZipError, SUPPORTED_ARCHIVE_SUFFIXES
 from app.services.encryption import decrypt_file
 from app.tasks.celery_app import celery_app, redis_available
 from app.tasks.dicom_zip_task import process_dicom_zip
@@ -33,9 +33,16 @@ logger = logging.getLogger(__name__)
 ALLOWED_ZIP_MIMES = {
     "application/zip",
     "application/x-zip-compressed",
+    "application/x-7z-compressed",
     "application/octet-stream",
     "multipart/x-zip",
 }
+
+
+def _archive_media_type(filename: str) -> str:
+    if filename.lower().endswith(".7z"):
+        return "application/x-7z-compressed"
+    return "application/zip"
 
 
 class DicomZipUploadResponse(BaseModel):
@@ -113,8 +120,11 @@ async def upload_dicom_zip(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Filename is required")
 
     suffix = Path(zip_file.filename).suffix.lower()
-    if suffix != ".zip":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only .zip archives are supported")
+    if suffix not in SUPPORTED_ARCHIVE_SUFFIXES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only .zip and .7z archives are supported",
+        )
 
     if zip_file.content_type and zip_file.content_type not in ALLOWED_ZIP_MIMES:
         raise HTTPException(
@@ -131,18 +141,18 @@ async def upload_dicom_zip(
         )
 
     processor = DicomZipProcessor()
-    zip_path = processor.temp_zip_path(".zip")
+    zip_path = processor.temp_zip_path(suffix)
     zip_path.write_bytes(content)
 
-    if not processor.validate_zip(str(zip_path)):
+    if not processor.validate_archive(str(zip_path)):
         zip_path.unlink(missing_ok=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="ZIP must contain valid .dcm files and pass safety checks",
+            detail="Archive must contain valid .dcm files and pass safety checks",
         )
 
     try:
-        entries = processor.iter_zip_dicom_paths(str(zip_path))
+        entries = processor.iter_archive_dicom_paths(str(zip_path))
         total_files = len(entries)
     except DicomZipError as exc:
         zip_path.unlink(missing_ok=True)
@@ -280,7 +290,7 @@ def download_dicom_archive(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to decrypt archive") from exc
 
     filename = study.original_filename or f"{study_uid}.zip"
-    if not filename.lower().endswith(".zip"):
+    if not any(filename.lower().endswith(ext) for ext in SUPPORTED_ARCHIVE_SUFFIXES):
         filename = f"{filename}.zip"
 
     log_audit(
@@ -297,6 +307,6 @@ def download_dicom_archive(
 
     return Response(
         content=data,
-        media_type="application/zip",
+        media_type=_archive_media_type(filename),
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

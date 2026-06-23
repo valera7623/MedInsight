@@ -32,7 +32,7 @@
       <h1>DICOM-исследования</h1>
       <div class="page-header-actions" style="display:flex;gap:0.5rem;flex-wrap:wrap">
         <button class="btn btn-primary" id="upload-dicom-btn">+ Загрузить DICOM</button>
-        <button class="btn btn-secondary" id="upload-dicom-zip-btn">📦 Загрузить ZIP</button>
+        <button class="btn btn-secondary" id="upload-dicom-zip-btn">📦 Загрузить ZIP/7z</button>
       </div>
     </header>
 
@@ -110,7 +110,7 @@
   <div class="modal hidden" id="dicom-zip-upload-modal">
     <div class="modal-backdrop"></div>
     <div class="modal-content">
-      <h2>Загрузка ZIP-архива DICOM</h2>
+      <h2>Загрузка архива DICOM (ZIP / 7z)</h2>
       <p class="text-muted" style="font-size:0.9rem;margin-bottom:1rem">
         Архив с несколькими .dcm файлами (экспорт с томографа, МРТ и т.д.)
       </p>
@@ -120,8 +120,8 @@
           <select id="dicom-zip-patient" required></select>
         </div>
         <div class="dicom-dropzone" id="dicom-zip-dropzone">
-          <p>Перетащите .zip архив сюда или нажмите для выбора</p>
-          <input type="file" id="dicom-zip-file" accept=".zip,application/zip" hidden>
+          <p>Перетащите .zip или .7z архив сюда или нажмите для выбора</p>
+          <input type="file" id="dicom-zip-file" accept=".zip,.7z,application/zip,application/x-7z-compressed" hidden>
           <span id="dicom-zip-file-name" class="text-muted"></span>
         </div>
         <div id="dicom-zip-upload-error" class="error-message hidden"></div>

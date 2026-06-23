@@ -50,14 +50,14 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
         study.status = "processing"
         db.commit()
 
-        entries = processor.iter_zip_dicom_paths(zip_path)
+        entries = processor.iter_archive_dicom_paths(zip_path)
         total_files = len(entries)
         study.total_files = total_files
         db.commit()
 
         _update_progress(self, 0, total_files, study.study_uid)
 
-        temp_dir = processor.extract_zip(zip_path)
+        temp_dir = processor.extract_archive(zip_path)
         dicom_files = processor.scan_files(temp_dir)
         if not dicom_files:
             raise DicomZipError("No DICOM files after extraction")

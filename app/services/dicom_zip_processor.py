@@ -17,6 +17,7 @@ from app.services.dicom_parser import DicomParser, DicomParseError
 logger = logging.getLogger(__name__)
 
 DICOM_EXTENSIONS = {".dcm", ".dicom"}
+SUPPORTED_ARCHIVE_SUFFIXES = frozenset({".zip", ".7z"})
 
 
 class DicomZipError(Exception):
@@ -45,11 +46,37 @@ class DicomZipProcessor:
 
     def validate_zip(self, zip_path: str) -> bool:
         """Return True if archive contains at least one DICOM file and passes safety checks."""
+        return self.validate_archive(zip_path)
+
+    def validate_archive(self, archive_path: str) -> bool:
         try:
-            self._scan_zip_entries(zip_path)
+            self._scan_archive_entries(archive_path)
             return True
         except DicomZipError:
             return False
+
+    def _archive_suffix(self, archive_path: str) -> str:
+        suffix = Path(archive_path).suffix.lower()
+        if suffix not in SUPPORTED_ARCHIVE_SUFFIXES:
+            raise DicomZipError(f"Unsupported archive format: {suffix or '(none)'}")
+        return suffix
+
+    def _scan_archive_entries(self, archive_path: str) -> list[str]:
+        suffix = self._archive_suffix(archive_path)
+        if suffix == ".zip":
+            return [e.filename for e in self._scan_zip_entries(archive_path)]
+        return self._scan_7z_entries(archive_path)
+
+    def _check_archive_size_limits(
+        self, path: Path, dicom_names: list[str], total_uncompressed: int
+    ) -> None:
+        if len(dicom_names) > settings.DICOM_ZIP_MAX_FILES:
+            raise DicomZipError(f"Too many DICOM files (max {settings.DICOM_ZIP_MAX_FILES})")
+        compressed = path.stat().st_size
+        if compressed > 0 and total_uncompressed > compressed * 200:
+            raise DicomZipError("Archive compression ratio suspicious (zip bomb?)")
+        if total_uncompressed > self._max_zip_bytes() * 4:
+            raise DicomZipError("Uncompressed size exceeds safety limit")
 
     def _scan_zip_entries(self, zip_path: str) -> list[zipfile.ZipInfo]:
         path = Path(zip_path)
@@ -79,18 +106,9 @@ class DicomZipProcessor:
                     dicom_entries.append(info)
                     total_uncompressed += info.file_size
 
-                    if len(dicom_entries) > settings.DICOM_ZIP_MAX_FILES:
-                        raise DicomZipError(
-                            f"Too many DICOM files (max {settings.DICOM_ZIP_MAX_FILES})"
-                        )
-
-                # Zip-bomb guard: uncompressed total vs compressed size
-                compressed = path.stat().st_size
-                if compressed > 0 and total_uncompressed > compressed * 200:
-                    raise DicomZipError("ZIP compression ratio suspicious (zip bomb?)")
-
-                if total_uncompressed > self._max_zip_bytes() * 4:
-                    raise DicomZipError("Uncompressed size exceeds safety limit")
+                self._check_archive_size_limits(
+                    path, [e.filename for e in dicom_entries], total_uncompressed
+                )
 
         except zipfile.BadZipFile as exc:
             raise DicomZipError("Invalid ZIP file") from exc
@@ -100,8 +118,60 @@ class DicomZipProcessor:
 
         return dicom_entries
 
+    def _scan_7z_entries(self, archive_path: str) -> list[str]:
+        try:
+            import py7zr
+        except ImportError as exc:
+            raise DicomZipError("py7zr is required for .7z archives") from exc
+
+        path = Path(archive_path)
+        if not path.is_file():
+            raise DicomZipError(f"7z archive not found: {archive_path}")
+
+        if path.stat().st_size > self._max_zip_bytes():
+            raise DicomZipError(f"Archive exceeds {settings.DICOM_ZIP_MAX_SIZE_MB} MB limit")
+
+        dicom_names: list[str] = []
+        total_uncompressed = 0
+
+        try:
+            with py7zr.SevenZipFile(archive_path, mode="r") as zf:
+                for info in zf.list():
+                    if info.is_directory:
+                        continue
+                    name = info.filename
+                    if not self._is_safe_zip_member(name):
+                        logger.warning("Skipping unsafe 7z path: %s", name)
+                        continue
+                    if not self._is_dicom_name(name):
+                        continue
+                    dicom_names.append(name)
+                    total_uncompressed += int(info.uncompressed or 0)
+
+                self._check_archive_size_limits(path, dicom_names, total_uncompressed)
+        except py7zr.Bad7zFile as exc:
+            raise DicomZipError("Invalid 7z archive") from exc
+        except Exception as exc:  # noqa: BLE001
+            if isinstance(exc, DicomZipError):
+                raise
+            raise DicomZipError(f"Failed to read 7z archive: {exc}") from exc
+
+        if not dicom_names:
+            raise DicomZipError("7z archive contains no .dcm files")
+
+        return dicom_names
+
     def extract_zip(self, zip_path: str) -> str:
         """Extract archive to a new temp directory; returns directory path."""
+        return self.extract_archive(zip_path)
+
+    def extract_archive(self, archive_path: str) -> str:
+        suffix = self._archive_suffix(archive_path)
+        if suffix == ".zip":
+            return self._extract_zip(archive_path)
+        return self._extract_7z(archive_path)
+
+    def _extract_zip(self, zip_path: str) -> str:
         entries = self._scan_zip_entries(zip_path)
         dest = self.temp_root / uuid.uuid4().hex
         dest.mkdir(parents=True, exist_ok=True)
@@ -110,11 +180,24 @@ class DicomZipProcessor:
             for info in entries:
                 safe_name = Path(info.filename).name
                 target = dest / safe_name
-                # Handle duplicate basenames
                 if target.exists():
                     target = dest / f"{uuid.uuid4().hex[:8]}_{safe_name}"
                 with zf.open(info) as src, open(target, "wb") as dst:
                     shutil.copyfileobj(src, dst)
+
+        return str(dest)
+
+    def _extract_7z(self, archive_path: str) -> str:
+        try:
+            import py7zr
+        except ImportError as exc:
+            raise DicomZipError("py7zr is required for .7z archives") from exc
+
+        dest = self.temp_root / uuid.uuid4().hex
+        dest.mkdir(parents=True, exist_ok=True)
+
+        with py7zr.SevenZipFile(archive_path, mode="r") as zf:
+            zf.extractall(path=dest)
 
         return str(dest)
 
@@ -130,9 +213,12 @@ class DicomZipProcessor:
         return files
 
     def iter_zip_dicom_paths(self, zip_path: str) -> list[tuple[str, str]]:
-        """List (zip_internal_name, display_filename) without full extraction."""
-        entries = self._scan_zip_entries(zip_path)
-        return [(e.filename, Path(e.filename).name) for e in entries]
+        """List (archive_internal_name, display_filename) without full extraction."""
+        return self.iter_archive_dicom_paths(zip_path)
+
+    def iter_archive_dicom_paths(self, archive_path: str) -> list[tuple[str, str]]:
+        names = self._scan_archive_entries(archive_path)
+        return [(name, Path(name).name) for name in names]
 
     def group_files(self, files: list[str]) -> dict[str, dict[str, list[str]]]:
         """Group file paths by study_uid → series_uid in a single metadata read per file."""
