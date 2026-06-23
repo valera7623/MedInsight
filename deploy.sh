@@ -4,6 +4,23 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Stable compose project name (avoids orphan containers after path/profile changes).
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-medinsight}"
+
+remove_stale_medinsight_containers() {
+  local ids
+  ids="$(docker ps -aq --filter "name=^medinsight-" 2>/dev/null || true)"
+  if [ -n "$ids" ]; then
+    echo "Removing stale medinsight containers from a previous deploy..."
+    # shellcheck disable=SC2086
+    docker rm -f $ids >/dev/null 2>&1 || true
+  fi
+}
+
+compose() {
+  docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" "$@"
+}
+
 if [ ! -f .env ]; then
   echo "Creating .env from .env.example..."
   cp .env.example .env
@@ -56,12 +73,13 @@ else
 fi
 
 echo "Rebuilding and restarting containers (spaCy model skipped for fast build)..."
-docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" down
+compose down --remove-orphans 2>/dev/null || true
+remove_stale_medinsight_containers
 
 BUILD_ARGS=(--build-arg INSTALL_SPACY_MODEL=0 --build-arg BUILD_DOCS=0)
 echo "Building app image once (BUILD_DOCS=0, shared by celery/telegram)..."
-docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" build "${BUILD_ARGS[@]}" app
-docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" up -d
+compose build "${BUILD_ARGS[@]}" app
+compose up -d
 
 if [ "$MODE" = "production" ] && [ -x scripts/docker_cleanup.sh ]; then
   echo "Pruning stopped containers and unused images from previous builds..."
@@ -72,7 +90,7 @@ echo "Waiting for app startup..."
 sleep 8
 
 echo "Initializing database schema..."
-docker compose "${COMPOSE_FILES[@]}" exec -T app bash -c '
+compose exec -T app bash -c '
   python -c "
 from app.core.database import Base, bootstrap_system, engine, is_postgresql, is_sqlite, run_migrations, sqlite_db_path
 from app.config import settings
