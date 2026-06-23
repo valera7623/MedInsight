@@ -1,4 +1,31 @@
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: medinsight-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-medinsight}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password}
+      POSTGRES_DB: ${POSTGRES_DB:-medinsight}
+    command:
+      - postgres
+      - -c
+      - max_connections=200
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - work_mem=16MB
+    volumes:
+      - medinsight-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-medinsight} -d ${POSTGRES_DB:-medinsight}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - medinsight-net
+
   redis:
     image: redis:7-alpine
     container_name: medinsight-redis
@@ -24,10 +51,12 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: sqlite:////app/data/medinsight.db
+      DATABASE_URL: ${DATABASE_URL:-postgresql://medinsight:secure_password@postgres:5432/medinsight}
       ENCRYPTION_KEY_PATH: /app/secrets/encryption_key.txt
       CHROMA_PERSIST_DIR: /app/chroma_data
       BACKUP_DIR: /backups
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
     ports:
       - "${APP_PORT:-8000}:8000"
     volumes:
@@ -44,6 +73,8 @@ services:
       retries: 3
       start_period: 40s
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -59,10 +90,12 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: sqlite:////app/data/medinsight.db
+      DATABASE_URL: ${DATABASE_URL:-postgresql://medinsight:secure_password@postgres:5432/medinsight}
       ENCRYPTION_KEY_PATH: /app/secrets/encryption_key.txt
       CHROMA_PERSIST_DIR: /app/chroma_data
       BACKUP_DIR: /backups
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
     command: ["bash", "scripts/start_celery_worker.sh"]
     volumes:
       - ./storage:/app/storage
@@ -72,6 +105,8 @@ services:
       - medinsight-chroma:/app/chroma_data
       - medinsight-backups:/backups
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       app:
@@ -89,15 +124,19 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: sqlite:////app/data/medinsight.db
+      DATABASE_URL: ${DATABASE_URL:-postgresql://medinsight:secure_password@postgres:5432/medinsight}
       CHROMA_PERSIST_DIR: /app/chroma_data
       BACKUP_DIR: /backups
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
     command: ["bash", "scripts/start_celery_beat.sh"]
     volumes:
       - medinsight-data:/app/data
       - medinsight-chroma:/app/chroma_data
       - medinsight-backups:/backups
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       app:
@@ -115,12 +154,16 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: sqlite:////app/data/medinsight.db
+      DATABASE_URL: ${DATABASE_URL:-postgresql://medinsight:secure_password@postgres:5432/medinsight}
       TELEGRAM_BOT_ENABLED: "true"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
     command: ["python", "-m", "app.bot.main"]
     volumes:
       - medinsight-data:/app/data
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       app:
@@ -197,6 +240,7 @@ services:
 
 volumes:
   medinsight-data:
+  medinsight-postgres:
   medinsight-chroma:
   medinsight-backups:
   jaeger-data:

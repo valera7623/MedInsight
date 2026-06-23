@@ -4,7 +4,7 @@
 
 ## Стек
 
-- **Backend:** FastAPI, SQLAlchemy, SQLite
+- **Backend:** FastAPI, SQLAlchemy, SQLite (dev) / PostgreSQL (production)
 - **Auth:** JWT (7 дней)
 - **NLP:** spaCy `ru_core_news_lg`
 - **Parsing:** python-docx, PyPDF2
@@ -56,9 +56,50 @@ celery -A app.tasks.celery_app worker --loglevel=info
 ```bash
 cp .env.example .env
 chmod +x deploy.sh
-./deploy.sh          # dev: app + redis + celery
-./deploy.sh production  # prod на :8000
+./deploy.sh          # dev: SQLite + app + redis + celery
+./deploy.sh production  # prod: PostgreSQL + Traefik HTTPS
 ```
+
+## PostgreSQL (production)
+
+Production использует **PostgreSQL 15** вместо SQLite:
+
+| Возможность | SQLite (dev) | PostgreSQL (prod) |
+|-------------|--------------|-------------------|
+| Конкурентные записи | блокировка файла | MVCC, пул соединений |
+| JSON-поля | JSON (TEXT) | **JSONB** + GIN-индексы |
+| Поиск | ILIKE | **полнотекстовый** (`tsvector`, `to_tsquery`) |
+| Публичные ID | `public_id` (UUID string) | **UUID** (native) |
+| Бэкап | копия `.db` | **pg_dump** / **pg_restore** |
+| Аудит | приложение | **триггеры** в БД → `audit_logs.details` (JSONB) |
+
+### Быстрый старт (production)
+
+```bash
+cp .env.example .env
+# Задайте POSTGRES_PASSWORD и PRODUCTION_DATABASE_URL
+./deploy.sh production
+```
+
+Docker Compose поднимает сервис `postgres:15-alpine` с healthcheck и volume `medinsight-postgres`.
+
+### Миграция SQLite → PostgreSQL
+
+```bash
+docker compose exec app python scripts/migrate_to_postgres.py \
+  --sqlite-url sqlite:////app/data/medinsight.db \
+  --postgres-url "postgresql://medinsight:PASSWORD@postgres:5432/medinsight"
+```
+
+### Проверка PostgreSQL
+
+```bash
+docker compose exec app python scripts/test_postgres.py
+```
+
+Проверяет: подключение, миграции (019), полнотекстовый поиск по пациентам.
+
+Подробнее: **[DEPLOY.md](DEPLOY.md)** (раздел «PostgreSQL в production»).
 
 ## API documentation generation
 
@@ -209,7 +250,10 @@ curl -X POST http://localhost:8000/api/analytics/insights/1 \
 | Переменная | Описание | По умолчанию |
 |------------|----------|--------------|
 | `SECRET_KEY` | Ключ для JWT | — |
-| `DATABASE_URL` | URL базы данных | `sqlite:///./medinsight.db` |
+| `DATABASE_URL` | URL базы данных | `sqlite:///./medinsight.db` (dev) |
+| `DEVELOPMENT_DATABASE_URL` | SQLite для локальной разработки | `sqlite:///./medinsight.db` |
+| `PRODUCTION_DATABASE_URL` | PostgreSQL для production | `postgresql://…@postgres:5432/medinsight` |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Учётные данные контейнера postgres | см. `.env.example` |
 | `STORAGE_PATH` | Путь к файлам | `./storage` |
 | `REDIS_URL` | Redis брокер Celery | `redis://redis:6379/0` |
 | `CELERY_RESULT_BACKEND` | Redis для результатов | `redis://redis:6379/1` |

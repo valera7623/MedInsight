@@ -1,15 +1,16 @@
-"""Backup & restore for the SQLite DB and the ``storage/`` tree.
+"""Backup & restore for the database (SQLite or PostgreSQL) and the ``storage/`` tree.
 
 Layout under ``BACKUP_DIR``::
 
     backups/
       full/      backup_<ts>.tar.gz          (db + storage + sanitized config + metadata)
-      db/        backup_<ts>.db.gz           (gzipped sqlite snapshot)
+      db/        backup_<ts>.db.gz           (SQLite) or backup_<ts>.sql.gz (PostgreSQL)
       storage/   backup_<ts>.storage.tar.gz  (storage tree)
       metadata/  backup_<ts>.json            (version, sizes, sha256 checksums)
 
 Design notes:
-* DB snapshots use ``sqlite3.Connection.backup`` (consistent, no app downtime).
+* SQLite: ``sqlite3.Connection.backup`` (consistent, no app downtime).
+* PostgreSQL: ``pg_dump`` custom format, restore via ``pg_restore``.
 * ``.env`` is sanitised (secrets stripped) before being placed in a full backup.
 * Optional age passphrase encryption (pyrage) when BACKUP_ENCRYPTION_ENABLED.
 * Every method is defensive and records a ``BackupLog`` row + Prometheus metrics.
@@ -24,6 +25,7 @@ import logging
 import os
 import shutil
 import sqlite3
+import subprocess
 import tarfile
 import tempfile
 import time
@@ -38,7 +40,7 @@ from app.core.metrics import (
     backup_size_bytes,
     backup_status_total,
 )
-from app.database import sqlite_db_path
+from app.database import is_postgresql, sqlite_db_path
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +104,20 @@ class BackupService:
                 dst.close()
         finally:
             src.close()
+
+    def _pg_dump_snapshot(self, dest: Path) -> None:
+        """PostgreSQL logical backup via pg_dump (custom format)."""
+        url = settings.DATABASE_URL
+        cmd = ["pg_dump", "--format=custom", "--no-owner", "--dbname", url, "--file", str(dest)]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            raise RuntimeError(f"pg_dump failed: {result.stderr.strip()}")
+
+    def _db_snapshot(self, dest: Path) -> None:
+        if is_postgresql():
+            self._pg_dump_snapshot(dest)
+        else:
+            self._sqlite_snapshot(dest)
 
     def _sanitized_env(self) -> str:
         """Return .env contents with secret values blanked out."""
@@ -188,11 +204,12 @@ class BackupService:
         ts = _now()
         backup_id = backup_id or f"backup_{ts.strftime(TS_FMT)}"
         start = time.monotonic()
-        dest = self.base / "db" / f"{backup_id}.db.gz"
+        ext = ".sql.gz" if is_postgresql() else ".db.gz"
+        dest = self.base / "db" / f"{backup_id}{ext}"
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                snap = Path(tmp) / "snapshot.db"
-                self._sqlite_snapshot(snap)
+                snap = Path(tmp) / ("snapshot.dump" if is_postgresql() else "snapshot.db")
+                self._db_snapshot(snap)
                 with open(snap, "rb") as fin, gzip.open(dest, "wb") as fout:
                     shutil.copyfileobj(fin, fout)
             final = self._maybe_encrypt(dest)
@@ -259,8 +276,9 @@ class BackupService:
                 (staging / "config").mkdir(parents=True, exist_ok=True)
 
                 # 1) DB snapshot
-                db_dest = staging / "medinsight.db"
-                self._sqlite_snapshot(db_dest)
+                db_name = "medinsight.dump" if is_postgresql() else "medinsight.db"
+                db_dest = staging / db_name
+                self._db_snapshot(db_dest)
 
                 # 2) storage tree
                 if self.storage_path.exists():
@@ -286,7 +304,7 @@ class BackupService:
                     "db_size_mb": round(db_size / 1e6, 2),
                     "storage_size_mb": round(storage_size / 1e6, 2),
                     "checksums": {
-                        "medinsight.db": _sha256_file(db_dest),
+                        db_name: _sha256_file(db_dest),
                         "storage/": _sha256_dir(staging / "storage"),
                     },
                 }
@@ -396,6 +414,24 @@ class BackupService:
         return True
 
     def _restore_db_gz(self, gz_path: Path, db_path: Path | None) -> None:
+        if is_postgresql():
+            with tempfile.TemporaryDirectory() as tmp:
+                dump_path = Path(tmp) / "restore.dump"
+                with gzip.open(gz_path, "rb") as fin, open(dump_path, "wb") as fout:
+                    shutil.copyfileobj(fin, fout)
+                cmd = [
+                    "pg_restore",
+                    "--clean",
+                    "--if-exists",
+                    "--no-owner",
+                    "--dbname",
+                    settings.DATABASE_URL,
+                    str(dump_path),
+                ]
+                result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+                if result.returncode != 0:
+                    raise RuntimeError(f"pg_restore failed: {result.stderr.strip()}")
+            return
         if db_path is None:
             raise ValueError("DB restore requires a SQLite DATABASE_URL")
         with gzip.open(gz_path, "rb") as fin, open(db_path, "wb") as fout:
@@ -416,7 +452,21 @@ class BackupService:
             root = Path(tmp) / "backup"
             self._verify_checksums(root)
             db_file = root / "medinsight.db"
-            if db_file.exists() and db_path is not None:
+            db_dump = root / "medinsight.dump"
+            if db_dump.exists() and is_postgresql():
+                cmd = [
+                    "pg_restore",
+                    "--clean",
+                    "--if-exists",
+                    "--no-owner",
+                    "--dbname",
+                    settings.DATABASE_URL,
+                    str(db_dump),
+                ]
+                result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+                if result.returncode != 0:
+                    raise RuntimeError(f"pg_restore failed: {result.stderr.strip()}")
+            elif db_file.exists() and db_path is not None:
                 shutil.copy2(db_file, db_path)
             storage_dir = root / "storage"
             if storage_dir.exists():

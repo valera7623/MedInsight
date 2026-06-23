@@ -1,18 +1,25 @@
+"""SQLAlchemy ORM models — JSONB/UUID on PostgreSQL, JSON on SQLite."""
+
+from __future__ import annotations
+
+import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.core.database import Base
+from app.db.types import PortableJSON, PortableTSVector, PortableUUID, uuid_default
 
 
 class Tenant(Base):
     __tablename__ = "tenants"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    public_id: Mapped[uuid.UUID] = mapped_column(PortableUUID, default=uuid_default, unique=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     subdomain: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
-    settings: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
+    settings: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
@@ -39,6 +46,7 @@ class User(Base):
     __table_args__ = (UniqueConstraint("tenant_id", "email", name="uq_user_tenant_email"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    public_id: Mapped[uuid.UUID] = mapped_column(PortableUUID, default=uuid_default, unique=True, index=True)
     tenant_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=True, index=True)
     department_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
     email: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
@@ -75,7 +83,7 @@ class UserPreference(Base):
     )
     theme: Mapped[str] = mapped_column(String(20), nullable=False, default="light")
     system_theme: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    settings: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
+    settings: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -86,8 +94,12 @@ class UserPreference(Base):
 
 class Patient(Base):
     __tablename__ = "patients"
+    __table_args__ = (
+        Index("ix_patients_tenant_last_name", "tenant_id", "last_name"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    public_id: Mapped[uuid.UUID] = mapped_column(PortableUUID, default=uuid_default, unique=True, index=True)
     tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     department_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
@@ -99,6 +111,7 @@ class Patient(Base):
     gender: Mapped[str] = mapped_column(String(1), nullable=False)
     phone: Mapped[str] = mapped_column(String(50), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    search_vector: Mapped[str | None] = mapped_column(PortableTSVector, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -119,8 +132,12 @@ class Patient(Base):
 
 class Document(Base):
     __tablename__ = "documents"
+    __table_args__ = (
+        Index("ix_documents_patient_status", "patient_id", "status"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    public_id: Mapped[uuid.UUID] = mapped_column(PortableUUID, default=uuid_default, unique=True, index=True)
     tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     patient_id: Mapped[int] = mapped_column(Integer, ForeignKey("patients.id"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -130,7 +147,8 @@ class Document(Base):
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     document_type: Mapped[str] = mapped_column(String(50), nullable=False, default="discharge")
     is_encrypted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    parsed_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    parsed_data: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
+    search_vector: Mapped[str | None] = mapped_column(PortableTSVector, nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="uploaded")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     parsed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -143,6 +161,9 @@ class Document(Base):
 
 class AnalysisJob(Base):
     __tablename__ = "analysis_jobs"
+    __table_args__ = (
+        Index("ix_analysis_jobs_status_created", "status", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
@@ -152,7 +173,7 @@ class AnalysisJob(Base):
     type: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
     celery_task_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    result: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -173,9 +194,9 @@ class Prediction(Base):
     analysis_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("analysis_jobs.id"), nullable=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     type: Mapped[str] = mapped_column(String(50), nullable=False, default="readmission")
-    features: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    prediction: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    probabilities: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    features: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
+    prediction: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
+    probabilities: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
     confidence_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -190,6 +211,9 @@ class Prediction(Base):
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
+    __table_args__ = (
+        Index("ix_audit_logs_tenant_created", "tenant_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
@@ -199,7 +223,7 @@ class AuditLog(Base):
     resource_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    details: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
     user: Mapped["User | None"] = relationship("User", back_populates="audit_logs")
@@ -222,7 +246,7 @@ class ErrorFix(Base):
     agent_name: Mapped[str] = mapped_column(String(100), nullable=False, default="unknown", index=True)
     stack_trace: Mapped[str | None] = mapped_column(Text, nullable=True)
     solution_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
-    solution_code: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    solution_code: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
     was_successful: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     success_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     fail_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -238,7 +262,7 @@ class Webhook(Base):
     tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     url: Mapped[str] = mapped_column(String(1000), nullable=False)
     secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    events: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    events: Mapped[list | None] = mapped_column(PortableJSON, nullable=True, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     last_triggered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -292,7 +316,7 @@ class TelegramUser(Base):
     last_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     subscription_events: Mapped[list] = mapped_column(
-        JSON,
+        PortableJSON,
         nullable=False,
         default=lambda: ["prediction.ready", "analysis.completed"],
     )
@@ -308,6 +332,9 @@ class DicomStudy(Base):
     """DICOM study metadata (Phase 12)."""
 
     __tablename__ = "dicom_studies"
+    __table_args__ = (
+        Index("ix_dicom_studies_patient_modality", "patient_id", "modality"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     patient_id: Mapped[int] = mapped_column(Integer, ForeignKey("patients.id"), nullable=False, index=True)
@@ -326,15 +353,16 @@ class DicomStudy(Base):
     original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="uploaded")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    search_vector: Mapped[str | None] = mapped_column(PortableTSVector, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     zip_original_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     zip_size_mb: Mapped[float | None] = mapped_column(Float, nullable=True)
     total_files: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     processed_files: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    radiology_findings: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    radiology_findings: Mapped[list | None] = mapped_column(PortableJSON, nullable=True)
     radiology_impression: Mapped[str | None] = mapped_column(Text, nullable=True)
-    extracted_measurements: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    extracted_measurements: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
     clinical_context: Mapped[str | None] = mapped_column(Text, nullable=True)
     clinical_context_processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -374,7 +402,7 @@ class DicomFrame(Base):
     width: Mapped[int | None] = mapped_column(Integer, nullable=True)
     height: Mapped[int | None] = mapped_column(Integer, nullable=True)
     bit_depth: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    pixel_spacing: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    pixel_spacing: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     series: Mapped["DicomSeries"] = relationship("DicomSeries", back_populates="frames")
@@ -392,7 +420,7 @@ class DicomAnnotation(Base):
     frame_id: Mapped[int] = mapped_column(Integer, ForeignKey("dicom_frames.id"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     type: Mapped[str] = mapped_column(String(32), nullable=False)
-    coordinates: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    coordinates: Mapped[dict] = mapped_column(PortableJSON, nullable=False, default=dict)
     color: Mapped[str] = mapped_column(String(16), nullable=False, default="#FF0000")
     label: Mapped[str | None] = mapped_column(String(255), nullable=True)
     measurement_value: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -430,8 +458,8 @@ class AnnotationHistory(Base):
     )
     frame_id: Mapped[int] = mapped_column(Integer, ForeignKey("dicom_frames.id"), nullable=False, index=True)
     action: Mapped[str] = mapped_column(String(32), nullable=False)
-    before_state: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    after_state: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    before_state: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
+    after_state: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

@@ -2,10 +2,8 @@ services:
   app:
     container_name: medinsight-app
     restart: unless-stopped
-    # Port mapping (incl. :80) is defined in the base docker-compose.yml so the
-    # domain works under any `docker compose up`, dev or prod.
     environment:
-      DATABASE_URL: sqlite:////app/data/medinsight.db
+      DATABASE_URL: ${PRODUCTION_DATABASE_URL:-postgresql://medinsight:secure_password@postgres:5432/medinsight}
       STORAGE_PATH: /app/storage
       REDIS_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
@@ -22,7 +20,7 @@ services:
     restart: unless-stopped
     command: ["bash", "scripts/start_celery_worker.sh"]
     environment:
-      DATABASE_URL: sqlite:////app/data/medinsight.db
+      DATABASE_URL: ${PRODUCTION_DATABASE_URL:-postgresql://medinsight:secure_password@postgres:5432/medinsight}
       STORAGE_PATH: /app/storage
       REDIS_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
@@ -40,7 +38,7 @@ services:
     restart: unless-stopped
     command: ["bash", "scripts/start_celery_beat.sh"]
     environment:
-      DATABASE_URL: sqlite:////app/data/medinsight.db
+      DATABASE_URL: ${PRODUCTION_DATABASE_URL:-postgresql://medinsight:secure_password@postgres:5432/medinsight}
       REDIS_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       CHROMA_PERSIST_DIR: /app/chroma_data

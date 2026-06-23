@@ -10,6 +10,19 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_DAYS: int = 7
     DATABASE_URL: str = "sqlite:///./medinsight.db"
+    DEVELOPMENT_DATABASE_URL: str = "sqlite:///./medinsight.db"
+    PRODUCTION_DATABASE_URL: str = "postgresql://medinsight:secure_password@postgres:5432/medinsight"
+    # PostgreSQL connection (used by docker-compose postgres service)
+    POSTGRES_USER: str = "medinsight"
+    POSTGRES_PASSWORD: str = "secure_password"
+    POSTGRES_DB: str = "medinsight"
+    POSTGRES_HOST: str = "postgres"
+    POSTGRES_PORT: int = 5432
+    # SQLAlchemy connection pool (PostgreSQL only)
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE: int = 1800
     STORAGE_PATH: str = "./storage"
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:8000"
     SPACY_MODEL: str = "ru_core_news_lg"

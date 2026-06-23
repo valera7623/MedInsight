@@ -80,7 +80,12 @@ jobs:
               sed -i "s|^CORS_ORIGINS=.*|CORS_ORIGINS=${CORS_ORIGINS}|" .env
             fi
 
-            sed -i 's|^DATABASE_URL=.*|DATABASE_URL=sqlite:////app/data/medinsight.db|' .env
+            if [ -n "${POSTGRES_PASSWORD:-}" ]; then
+              sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=${POSTGRES_PASSWORD}|" .env
+              PG_URL="postgresql://medinsight:${POSTGRES_PASSWORD}@postgres:5432/medinsight"
+              sed -i "s|^PRODUCTION_DATABASE_URL=.*|PRODUCTION_DATABASE_URL=${PG_URL}|" .env
+              sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${PG_URL}|" .env
+            fi
 
             mkdir -p storage
             chmod +x deploy.sh scripts/*.sh 2>/dev/null || true
