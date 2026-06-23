@@ -39,8 +39,15 @@
 
     <div class="section-card">
       <h2>Отделения</h2>
-      <form id="dept-form" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
-        <input type="text" id="dept-name" placeholder="Название отделения" required style="flex:1;min-width:220px">
+      <form id="dept-form" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end">
+        <div class="form-group hidden" id="dept-tenant-group" style="flex:1;min-width:220px;margin:0">
+          <label for="dept-tenant">Клиника</label>
+          <select id="dept-tenant"></select>
+        </div>
+        <div class="form-group" style="flex:1;min-width:220px;margin:0">
+          <label for="dept-name">Название</label>
+          <input type="text" id="dept-name" placeholder="Название отделения" required>
+        </div>
         <button type="submit" class="btn btn-primary btn-sm">+ Создать отделение</button>
       </form>
       <table class="data-table" id="departments-table">
@@ -75,6 +82,40 @@
   <script src="/static/dashboard.js"></script>
   <script>
     let currentAdmin = null;
+    let selectedAdminTenantId = null;
+
+    function adminTenantQuery() {
+      if (currentAdmin?.role === 'super_admin' && selectedAdminTenantId) {
+        return `?tenant_id=${encodeURIComponent(selectedAdminTenantId)}`;
+      }
+      return '';
+    }
+
+    async function setupAdminTenant() {
+      if (!currentAdmin || currentAdmin.role !== 'super_admin') return;
+      const group = document.getElementById('dept-tenant-group');
+      const sel = document.getElementById('dept-tenant');
+      if (!group || !sel) return;
+      const res = await apiFetch('/api/admin/tenants');
+      const tenants = await res.json();
+      if (!res.ok || !tenants.length) {
+        alert(formatApiError(tenants.detail) || 'Не удалось загрузить список клиник');
+        return;
+      }
+      group.classList.remove('hidden');
+      sel.innerHTML = tenants.map(t => `<option value="${t.id}">${t.name} (${t.subdomain})</option>`).join('');
+      const stored = getTenantId();
+      if (stored && tenants.some(t => String(t.id) === stored)) {
+        sel.value = stored;
+      }
+      selectedAdminTenantId = sel.value;
+      localStorage.setItem('tenant_id', selectedAdminTenantId);
+      sel.addEventListener('change', async () => {
+        selectedAdminTenantId = sel.value;
+        localStorage.setItem('tenant_id', selectedAdminTenantId);
+        await loadDepartmentsAdmin();
+      });
+    }
 
     async function loadUsers() {
       const users = await apiFetch('/api/admin/users');
@@ -137,9 +178,12 @@
     async function loadDepartmentsAdmin() {
       const tbody = document.querySelector('#departments-table tbody');
       if (!tbody) return;
-      const res = await apiFetch('/api/admin/departments');
+      const res = await apiFetch(`/api/admin/departments${adminTenantQuery()}`);
       const data = await res.json();
-      if (!res.ok) return;
+      if (!res.ok) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#ef4444">${formatApiError(data.detail) || 'Ошибка загрузки отделений'}</td></tr>`;
+        return;
+      }
       tbody.innerHTML = data.length
         ? data.map(d => `
             <tr>
@@ -170,7 +214,11 @@
         e.preventDefault();
         const name = document.getElementById('dept-name').value.trim();
         if (!name) return;
-        const res = await apiFetch('/api/admin/departments', { method: 'POST', body: JSON.stringify({ name }) });
+        const body = { name };
+        if (currentAdmin?.role === 'super_admin' && selectedAdminTenantId) {
+          body.tenant_id = parseInt(selectedAdminTenantId, 10);
+        }
+        const res = await apiFetch('/api/admin/departments', { method: 'POST', body: JSON.stringify(body) });
         const d = await res.json().catch(() => ({}));
         if (!res.ok) { alert(formatApiError(d.detail) || 'Ошибка создания'); return; }
         form.reset();
@@ -199,6 +247,7 @@
       `;
 
       setupDeptForm();
+      await setupAdminTenant();
       await loadDepartmentsAdmin();
       await loadUsers();
 

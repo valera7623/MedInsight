@@ -25,6 +25,7 @@ from app.models import (
     User,
     UserPreference,
 )
+from app.middleware.tenant import get_request_tenant_id
 from app.services.access import ROLES, is_super_admin
 from app.services.audit import log_audit
 from app.services.encryption import rotate_encryption_key
@@ -438,11 +439,28 @@ def delete_user(
         ) from exc
 
 
-def _resolve_admin_tenant(current_user: User, requested_tenant_id: int | None) -> int:
+def _resolve_admin_tenant(
+    current_user: User,
+    requested_tenant_id: int | None,
+    db: Session,
+    request: Request | None = None,
+) -> int:
     if is_super_admin(current_user):
-        if requested_tenant_id is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="tenant_id required")
-        return requested_tenant_id
+        tid = requested_tenant_id
+        if tid is None and request is not None:
+            tid = get_request_tenant_id(request)
+        if tid is None:
+            default = (
+                db.query(Tenant)
+                .filter(Tenant.subdomain == settings.DEFAULT_TENANT_SUBDOMAIN, Tenant.is_active.is_(True))
+                .first()
+            )
+            if default is None:
+                default = db.query(Tenant).filter(Tenant.is_active.is_(True)).order_by(Tenant.id).first()
+            if default is None:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No tenant available")
+            tid = default.id
+        return tid
     if current_user.tenant_id is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No tenant")
     return current_user.tenant_id
@@ -451,10 +469,11 @@ def _resolve_admin_tenant(current_user: User, requested_tenant_id: int | None) -
 @router.post("/departments", response_model=DepartmentResponse, status_code=status.HTTP_201_CREATED)
 def create_department(
     data: DepartmentCreate,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_admin)],
 ):
-    tenant_id = _resolve_admin_tenant(current_user, data.tenant_id)
+    tenant_id = _resolve_admin_tenant(current_user, data.tenant_id, db, request)
     dept = Department(tenant_id=tenant_id, name=data.name, head_doctor_id=data.head_doctor_id)
     db.add(dept)
     db.commit()
