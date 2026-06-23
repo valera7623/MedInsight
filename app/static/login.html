@@ -72,6 +72,7 @@
         <select id="reg-department"></select>
       </div>
       <div id="register-error" class="error-message hidden"></div>
+      <div id="register-success" class="hidden" style="margin:0.75rem 0;padding:0.75rem;border-radius:8px;background:var(--bg-hover);color:var(--text-secondary);font-size:0.9rem;line-height:1.45"></div>
       <button type="submit" class="btn btn-primary btn-block">Создать аккаунт</button>
       <button type="button" class="btn btn-secondary btn-block" id="show-login">Назад к входу</button>
     </form>
@@ -177,7 +178,11 @@
         localStorage.setItem('role', data.role);
         window.location.href = '/';
       } catch (err) {
-        errEl.textContent = err.message;
+        if (err.message && err.message.includes('Подтвердите email')) {
+          errEl.innerHTML = err.message + ' <a href="/verify-email">Повторить подтверждение</a>';
+        } else {
+          errEl.textContent = err.message;
+        }
         errEl.classList.remove('hidden');
       }
     });
@@ -185,7 +190,9 @@
     document.getElementById('register-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const errEl = document.getElementById('register-error');
+      const okEl = document.getElementById('register-success');
       errEl.classList.add('hidden');
+      okEl.classList.add('hidden');
       const subdomain = document.getElementById('reg-subdomain').value;
       const tenantOpt = document.getElementById('reg-subdomain').selectedOptions[0];
 
@@ -208,6 +215,14 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Ошибка регистрации');
+
+        if (data.email_verification_required) {
+          okEl.innerHTML = 'Аккаунт создан. Мы отправили письмо с ссылкой для подтверждения на <strong>'
+            + body.email + '</strong>. Откройте письмо и перейдите по ссылке, затем войдите.';
+          okEl.classList.remove('hidden');
+          document.getElementById('register-form').querySelector('button[type="submit"]').disabled = true;
+          return;
+        }
 
         const loginRes = await fetch(`${API}/api/auth/login`, {
           method: 'POST',

@@ -309,6 +309,11 @@ def login_page():
     return FileResponse(static_dir / "login.html")
 
 
+@app.get("/verify-email")
+def verify_email_page():
+    return FileResponse(static_dir / "verify-email.html")
+
+
 @app.get("/")
 def dashboard_page():
     return FileResponse(static_dir / "index.html")

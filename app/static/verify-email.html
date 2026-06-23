@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — Подтверждение email</title>
+  <link rel="stylesheet" href="/static/styles/themes.css">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/components/theme-toggle.js"></script>
+</head>
+<body class="auth-page">
+  <div class="auth-card" style="position:relative;max-width:480px">
+    <div style="position:absolute;top:1rem;right:1rem" data-theme-toggle></div>
+    <div class="auth-logo">
+      <h1>MedInsight</h1>
+      <p>Подтверждение email</p>
+    </div>
+    <div id="verify-status" class="text-muted">Проверяем ссылку…</div>
+    <div id="verify-error" class="error-message hidden"></div>
+    <div id="verify-success" class="hidden" style="margin-top:1rem">
+      <p>Email подтверждён. Теперь можно войти в систему.</p>
+      <a href="/login" class="btn btn-primary btn-block" style="display:inline-block;text-align:center;margin-top:1rem">Перейти ко входу</a>
+    </div>
+    <form id="resend-form" class="hidden" style="margin-top:1.25rem">
+      <p class="text-muted" style="font-size:0.9rem">Не пришло письмо? Отправим повторно.</p>
+      <div class="form-group">
+        <label for="resend-email">Email</label>
+        <input type="email" id="resend-email" required>
+      </div>
+      <div class="form-group">
+        <label for="resend-subdomain">Клиника (subdomain)</label>
+        <input type="text" id="resend-subdomain" required placeholder="default">
+      </div>
+      <div id="resend-msg" class="error-message hidden"></div>
+      <button type="submit" class="btn btn-secondary btn-block">Отправить письмо снова</button>
+    </form>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const statusEl = document.getElementById('verify-status');
+    const errEl = document.getElementById('verify-error');
+    const okEl = document.getElementById('verify-success');
+    const resendForm = document.getElementById('resend-form');
+
+    async function verify() {
+      if (!token) {
+        statusEl.classList.add('hidden');
+        errEl.textContent = 'Ссылка недействительна: отсутствует token';
+        errEl.classList.remove('hidden');
+        resendForm.classList.remove('hidden');
+        return;
+      }
+      try {
+        const res = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`, {
+          method: 'POST',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || 'Не удалось подтвердить email');
+        statusEl.classList.add('hidden');
+        okEl.classList.remove('hidden');
+      } catch (err) {
+        statusEl.classList.add('hidden');
+        errEl.textContent = err.message || 'Ошибка подтверждения';
+        errEl.classList.remove('hidden');
+        resendForm.classList.remove('hidden');
+      }
+    }
+
+    resendForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('resend-msg');
+      msg.classList.add('hidden');
+      try {
+        const res = await fetch('/api/auth/resend-verification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('resend-email').value,
+            subdomain: document.getElementById('resend-subdomain').value,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || 'Ошибка отправки');
+        msg.style.color = 'var(--success, #2ecc71)';
+        msg.textContent = data.detail || 'Письмо отправлено, если аккаунт существует';
+        msg.classList.remove('hidden');
+      } catch (err) {
+        msg.style.color = '';
+        msg.textContent = err.message;
+        msg.classList.remove('hidden');
+      }
+    });
+
+    verify();
+  </script>
+</body>
+</html>

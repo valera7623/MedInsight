@@ -108,6 +108,8 @@ def run_migrations():
             _add_column_if_missing(conn, "users", "is_blocked", "BOOLEAN", "0")
             _add_column_if_missing(conn, "users", "department_id", "INTEGER")
             _add_column_if_missing(conn, "users", "can_see_all_patients", "BOOLEAN", "0")
+            _add_column_if_missing(conn, "users", "email_verified", "BOOLEAN", "1")
+            _add_column_if_missing(conn, "users", "email_verified_at", "DATETIME")
 
         if "documents" in tables:
             _add_column_if_missing(conn, "documents", "is_encrypted", "BOOLEAN", "0")
@@ -150,6 +152,8 @@ def run_migrations():
 
 def bootstrap_system():
     """Create default tenant, super admin, and encryption key on first run."""
+    from datetime import datetime
+
     from app.auth import hash_password
     from app.models import Tenant, User
     from app.services.encryption import ensure_encryption_key
@@ -179,6 +183,8 @@ def bootstrap_system():
                 password_hash=hash_password(settings.SUPER_ADMIN_PASSWORD),
                 full_name="Super Admin",
                 role="super_admin",
+                email_verified=True,
+                email_verified_at=datetime.utcnow(),
             )
             db.add(super_admin)
             db.commit()

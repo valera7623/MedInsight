@@ -61,9 +61,14 @@ class UserResponse(BaseModel):
     tenant_id: int | None
     department_id: int | None = None
     department_name: str | None = None
+    email_verified: bool = True
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class RegisterResponse(UserResponse):
+    email_verification_required: bool = False
 
 
 def user_to_response(user: User, db: Session) -> UserResponse:
@@ -79,6 +84,7 @@ def user_to_response(user: User, db: Session) -> UserResponse:
         tenant_id=user.tenant_id,
         department_id=user.department_id,
         department_name=dept_name,
+        email_verified=bool(getattr(user, "email_verified", True)),
         created_at=user.created_at,
     )
 
@@ -122,6 +128,26 @@ def create_email_token(email: str, purpose: str, expire_hours: int) -> str:
     expire = datetime.utcnow() + timedelta(hours=expire_hours)
     payload = {"sub": email, "type": purpose, "exp": expire}
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def decode_email_token(token: str, *, purpose: str) -> str:
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except JWTError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        ) from exc
+    if payload.get("type") != purpose:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token type")
+    email = payload.get("sub")
+    if not email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token payload")
+    return str(email)
+
+
+def email_verification_required() -> bool:
+    return bool(settings.EMAIL_VERIFICATION_ENABLED and get_email_service().is_configured)
 
 
 def get_tenant_from_subdomain(db: Session, subdomain: str) -> Tenant:
@@ -214,7 +240,17 @@ class PasswordResetRequest(BaseModel):
     subdomain: str | None = None
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+    subdomain: str | None = None
+
+
+class MessageResponse(BaseModel):
+    detail: str
+    email_verified: bool | None = None
+
+
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 @rate_limit(
     limit=settings.RATE_LIMIT_REGISTER_PER_HOUR,
     period=3600,
@@ -259,6 +295,7 @@ def register(
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
+    needs_verification = email_verification_required()
     user = User(
         tenant_id=tenant.id,
         department_id=department_id,
@@ -266,18 +303,24 @@ def register(
         password_hash=hash_password(data.password),
         full_name=data.full_name,
         role=data.role,
+        email_verified=not needs_verification,
+        email_verified_at=datetime.utcnow() if not needs_verification else None,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    if settings.EMAIL_VERIFICATION_ENABLED:
+    if needs_verification:
         token = create_email_token(user.email, "verify", settings.EMAIL_VERIFICATION_EXPIRE_HOURS)
         background_tasks.add_task(
             get_email_service().send_verification_email, user.email, token, settings.FRONTEND_URL
         )
 
-    return user_to_response(user, db)
+    base = user_to_response(user, db)
+    return RegisterResponse(
+        **base.model_dump(),
+        email_verification_required=needs_verification,
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -301,6 +344,15 @@ def login(data: UserLogin, request: Request, db: Annotated[Session, Depends(get_
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
     if user.is_blocked:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is blocked")
+    if (
+        email_verification_required()
+        and user.role != "super_admin"
+        and not getattr(user, "email_verified", True)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Подтвердите email. Проверьте почту или запросите повторную отправку письма.",
+        )
 
     log_audit(
         db,
@@ -359,6 +411,74 @@ def request_reset(
         )
 
     return {"detail": "If the email exists, reset instructions have been sent."}
+
+
+@router.post("/verify-email", response_model=MessageResponse)
+def verify_email(
+    db: Annotated[Session, Depends(get_db)],
+    token: str = Query(..., min_length=10),
+):
+    email = decode_email_token(token, purpose="verify")
+    user = db.query(User).filter(User.email == email).order_by(User.id.desc()).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if user.email_verified:
+        return MessageResponse(detail="Email already verified", email_verified=True)
+
+    user.email_verified = True
+    user.email_verified_at = datetime.utcnow()
+    db.commit()
+    log_audit(
+        db,
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+        action="email_verified",
+        resource_type="user",
+        resource_id=user.id,
+    )
+    return MessageResponse(detail="Email verified successfully", email_verified=True)
+
+
+@router.post("/resend-verification", status_code=status.HTTP_202_ACCEPTED, response_model=MessageResponse)
+@rate_limit(
+    limit=settings.RATE_LIMIT_RESET_PER_HOUR,
+    period=3600,
+    name="auth_resend_verification",
+)
+def resend_verification(
+    request: Request,
+    data: ResendVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Resend verification email (generic response to avoid account enumeration)."""
+    if not email_verification_required():
+        return MessageResponse(detail="Email verification is not required")
+
+    tenant = resolve_tenant_for_auth(db, data.subdomain)
+    query = db.query(User).filter(User.email == data.email)
+    if tenant is not None:
+        query = query.filter(User.tenant_id == tenant.id)
+    user = query.first()
+
+    if user and not user.email_verified:
+        token = create_email_token(user.email, "verify", settings.EMAIL_VERIFICATION_EXPIRE_HOURS)
+        background_tasks.add_task(
+            get_email_service().send_verification_email, user.email, token, settings.FRONTEND_URL
+        )
+        log_audit(
+            db,
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            action="verification_resent",
+            resource_type="user",
+            resource_id=user.id,
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+        )
+
+    return MessageResponse(detail="If the account exists and is unverified, a verification email was sent.")
 
 
 @router.get("/me", response_model=UserResponse)

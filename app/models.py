@@ -47,6 +47,8 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="doctor")
     can_see_all_patients: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     tenant: Mapped["Tenant | None"] = relationship("Tenant", back_populates="users")
