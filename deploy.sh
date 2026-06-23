@@ -62,6 +62,17 @@ if [ "$MODE" = "production" ]; then
     echo "APP_PORT=8000" >> .env
   fi
   echo "Starting MedInsight (production, PostgreSQL + HTTPS via Traefik)..."
+  for key_val in \
+    "OTEL_ENABLED=false" \
+    "CHROMA_EMBEDDINGS_ENABLED=false"; do
+    key="${key_val%%=*}"
+    val="${key_val#*=}"
+    if grep -q "^${key}=" .env; then
+      sed -i "s|^${key}=.*|${key}=${val}|" .env
+    else
+      echo "${key}=${val}" >> .env
+    fi
+  done
 else
   SQLITE_URL="${DEVELOPMENT_DATABASE_URL:-sqlite:////app/data/medinsight.db}"
   if grep -q '^DATABASE_URL=' .env; then

@@ -70,6 +70,9 @@ class ErrorKnowledgeBase:
         self._init_chroma()
 
     def _init_chroma(self) -> None:
+        if not settings.CHROMA_EMBEDDINGS_ENABLED:
+            logger.info("Self-healing: ChromaDB embeddings disabled — keyword search only")
+            return
         try:
             import chromadb
             from chromadb.config import Settings as ChromaSettings

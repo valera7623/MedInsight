@@ -172,19 +172,24 @@ async def lifespan(app: FastAPI):
     run_migrations()
     bootstrap_system()
 
-    if settings.SELF_HEALING_ENABLED:
-        try:
-            from app.services.self_healing.vector_store import seed_knowledge_base
-
-            imported, skipped = seed_knowledge_base()
-            logger.info("Self-healing seed fixes: %d imported, %d skipped", imported, skipped)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Self-healing seed failed: %s", exc)
-
     executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="medinsight")
     app.state.executor = executor
     _register_shutdown_handlers(executor)
     _install_signal_handlers()
+
+    # Seed self-healing KB in background (Chroma ONNX download can take minutes on slow VPS).
+    if settings.SELF_HEALING_ENABLED:
+
+        def _seed_self_healing() -> None:
+            try:
+                from app.services.self_healing.vector_store import seed_knowledge_base
+
+                imported, skipped = seed_knowledge_base()
+                logger.info("Self-healing seed fixes: %d imported, %d skipped", imported, skipped)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Self-healing seed failed: %s", exc)
+
+        executor.submit(_seed_self_healing)
 
     # Start the WebSocket Redis fan-in listener (cross-process event delivery).
     if settings.WEBSOCKET_ENABLED:

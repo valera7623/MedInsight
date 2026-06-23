@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     # Phase 4: Self-Healing RAG
     SELF_HEALING_ENABLED: bool = True
     CHROMA_PERSIST_DIR: str = "./chroma_data"
+    # When false: keyword search only (no 79MB ONNX download from Chroma on startup).
+    CHROMA_EMBEDDINGS_ENABLED: bool = False
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
     SIMILARITY_THRESHOLD: float = 0.75
     MAX_RETRY_ATTEMPTS: int = 2
