@@ -87,6 +87,41 @@ def _make_zip_with_dicoms(count: int = 10) -> Path:
     return zip_path
 
 
+def _make_zip_with_extensionless_dicoms(count: int = 3) -> Path:
+    import pydicom
+    from pydicom.uid import generate_uid
+
+    study_uid = generate_uid()
+    series_uid = generate_uid()
+    tmp = Path(tempfile.mkdtemp())
+    zip_path = tmp / "siemens_like.zip"
+
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for i in range(count):
+            dcm = tmp / f"IM-{i:04d}"
+            _make_sample_dicom(dcm, study_uid=study_uid, series_uid=series_uid, instance_suffix=str(i))
+            zf.write(dcm, arcname=f"PA000001/ST000001/SE000001/IM-{i:04d}")
+
+    return zip_path
+
+
+def test_zip_extensionless_dicom_paths() -> None:
+    from app.services.dicom_zip_processor import DicomZipProcessor
+
+    zip_path = _make_zip_with_extensionless_dicoms(4)
+    processor = DicomZipProcessor()
+
+    assert processor.validate_archive(str(zip_path)) is True
+    entries = processor.iter_archive_dicom_paths(str(zip_path))
+    assert len(entries) == 4
+
+    temp_dir = processor.extract_archive(str(zip_path))
+    files = processor.scan_files(temp_dir)
+    assert len(files) == 4
+    processor.cleanup_temp(temp_dir)
+    print("OK test_zip_extensionless_dicom_paths")
+
+
 def test_zip_processor_validate_and_group() -> None:
     from app.services.dicom_zip_processor import DicomZipProcessor
 
@@ -264,6 +299,7 @@ def test_zip_api_route_validation() -> None:
 
 
 def main() -> None:
+    test_zip_extensionless_dicom_paths()
     test_zip_processor_validate_and_group()
     test_zip_celery_task_db()
     test_zip_api_route_validation()

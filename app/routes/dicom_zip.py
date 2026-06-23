@@ -157,19 +157,19 @@ async def upload_dicom_zip(
     zip_path = processor.temp_zip_path(suffix)
     zip_path.write_bytes(content)
 
-    if not processor.validate_archive(str(zip_path)):
-        zip_path.unlink(missing_ok=True)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Archive must contain valid .dcm files and pass safety checks",
-        )
-
     try:
         entries = processor.iter_archive_dicom_paths(str(zip_path))
         total_files = len(entries)
     except DicomZipError as exc:
         zip_path.unlink(missing_ok=True)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    if total_files < 1:
+        zip_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Archive must contain DICOM files and pass safety checks",
+        )
 
     placeholder_uid = f"pending-zip-{uuid.uuid4().hex}"
     zip_size_mb = round(len(content) / (1024 * 1024), 2)

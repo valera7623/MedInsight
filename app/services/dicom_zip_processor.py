@@ -18,6 +18,14 @@ logger = logging.getLogger(__name__)
 
 DICOM_EXTENSIONS = {".dcm", ".dicom"}
 SUPPORTED_ARCHIVE_SUFFIXES = frozenset({".zip", ".7z"})
+SKIP_EXTENSIONS = frozenset({
+    ".txt", ".xml", ".json", ".html", ".htm", ".pdf", ".jpg", ".jpeg", ".png",
+    ".gif", ".bmp", ".md", ".csv", ".ini", ".cfg", ".exe", ".dll", ".bat",
+    ".zip", ".7z", ".rar", ".tar", ".gz", ".log", ".sql", ".db", ".sqlite",
+})
+SKIP_BASENAMES = frozenset({
+    "dicomdir", "lockfile", "readme", "thorium.html", "index.htm", "autorun.inf",
+})
 
 
 class DicomZipError(Exception):
@@ -39,7 +47,50 @@ class DicomZipProcessor:
         return True
 
     def _is_dicom_name(self, name: str) -> bool:
-        return Path(name).suffix.lower() in DICOM_EXTENSIONS
+        return self._is_dicom_candidate_name(name)
+
+    def _is_dicom_candidate_name(self, name: str) -> bool:
+        """Accept .dcm/.dicom and extensionless files (common in PACS/Siemens exports)."""
+        basename = Path(name).name
+        if not basename or basename.startswith("."):
+            return False
+        if basename.lower() in SKIP_BASENAMES:
+            return False
+        suffix = Path(name).suffix.lower()
+        if suffix in DICOM_EXTENSIONS:
+            return True
+        if suffix in SKIP_EXTENSIONS:
+            return False
+        return True
+
+    @staticmethod
+    def _file_has_dicom_preamble(path: Path) -> bool:
+        try:
+            with path.open("rb") as fh:
+                preamble = fh.read(132)
+            return len(preamble) >= 132 and preamble[128:132] == b"DICM"
+        except OSError:
+            return False
+
+    def _is_probable_dicom_file(self, path: Path) -> bool:
+        if not path.is_file():
+            return False
+        if path.name.lower() in SKIP_BASENAMES:
+            return False
+        suffix = path.suffix.lower()
+        if suffix in DICOM_EXTENSIONS:
+            return True
+        if suffix in SKIP_EXTENSIONS:
+            return False
+        if self._file_has_dicom_preamble(path):
+            return True
+        try:
+            import pydicom
+
+            pydicom.dcmread(str(path), stop_before_pixels=True, force=True)
+            return True
+        except Exception:  # noqa: BLE001
+            return False
 
     def _max_zip_bytes(self) -> int:
         return settings.DICOM_ZIP_MAX_SIZE_MB * 1024 * 1024
@@ -100,7 +151,7 @@ class DicomZipProcessor:
                     if not self._is_safe_zip_member(info.filename):
                         logger.warning("Skipping unsafe ZIP path: %s", info.filename)
                         continue
-                    if not self._is_dicom_name(info.filename):
+                    if not self._is_dicom_candidate_name(info.filename):
                         continue
 
                     dicom_entries.append(info)
@@ -114,7 +165,7 @@ class DicomZipProcessor:
             raise DicomZipError("Invalid ZIP file") from exc
 
         if not dicom_entries:
-            raise DicomZipError("ZIP contains no .dcm files")
+            raise DicomZipError("ZIP contains no DICOM files")
 
         return dicom_entries
 
@@ -143,7 +194,7 @@ class DicomZipProcessor:
                     if not self._is_safe_zip_member(name):
                         logger.warning("Skipping unsafe 7z path: %s", name)
                         continue
-                    if not self._is_dicom_name(name):
+                    if not self._is_dicom_candidate_name(name):
                         continue
                     dicom_names.append(name)
                     total_uncompressed += int(info.uncompressed or 0)
@@ -157,7 +208,7 @@ class DicomZipProcessor:
             raise DicomZipError(f"Failed to read 7z archive: {exc}") from exc
 
         if not dicom_names:
-            raise DicomZipError("7z archive contains no .dcm files")
+            raise DicomZipError("7z archive contains no DICOM files")
 
         return dicom_names
 
@@ -202,13 +253,13 @@ class DicomZipProcessor:
         return str(dest)
 
     def scan_files(self, directory: str) -> list[str]:
-        """Return all .dcm paths under directory (recursive)."""
+        """Return DICOM file paths under directory (recursive), including extensionless."""
         root = Path(directory)
         if not root.is_dir():
             return []
         files: list[str] = []
         for path in sorted(root.rglob("*")):
-            if path.is_file() and path.suffix.lower() in DICOM_EXTENSIONS:
+            if self._is_probable_dicom_file(path):
                 files.append(str(path))
         return files
 
