@@ -1,3 +1,10 @@
+# Use host DNS during image build (avoids systemd-resolved 127.0.0.53 issues on VPS).
+x-app-build: &app-build
+  context: .
+  network: host
+  args:
+    INSTALL_SPACY_MODEL: "0"
+
 services:
   postgres:
     image: postgres:15-alpine
@@ -43,9 +50,7 @@ services:
 
   app:
     build:
-      context: .
-      args:
-        INSTALL_SPACY_MODEL: "0"
+      <<: *app-build
     container_name: medinsight-app
     restart: unless-stopped
     env_file:
@@ -82,9 +87,7 @@ services:
 
   celery_worker:
     build:
-      context: .
-      args:
-        INSTALL_SPACY_MODEL: "0"
+      <<: *app-build
     container_name: medinsight-celery-worker
     restart: unless-stopped
     env_file:
@@ -116,9 +119,7 @@ services:
 
   celery_beat:
     build:
-      context: .
-      args:
-        INSTALL_SPACY_MODEL: "0"
+      <<: *app-build
     container_name: medinsight-celery-beat
     restart: unless-stopped
     env_file:
@@ -146,9 +147,7 @@ services:
 
   telegram_bot:
     build:
-      context: .
-      args:
-        INSTALL_SPACY_MODEL: "0"
+      <<: *app-build
     container_name: medinsight-telegram-bot
     restart: unless-stopped
     env_file:

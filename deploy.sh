@@ -16,6 +16,14 @@ MODE="${1:-dev}"
 COMPOSE_FILES=(-f docker-compose.yml)
 PROFILE_ARGS=()
 
+if [ -d .git ]; then
+  echo "Pulling latest code from origin/main..."
+  git fetch origin main
+  git merge --ff-only origin/main || {
+    echo "WARNING: fast-forward failed — run 'git pull --rebase origin main' manually" >&2
+  }
+fi
+
 if [ "$MODE" = "production" ]; then
   COMPOSE_FILES+=(-f docker-compose.prod.yml)
   PROFILE_ARGS=(--profile production)
