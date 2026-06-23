@@ -163,6 +163,7 @@ OPENAI_MODEL=gpt-4o-mini
 | Метод | Путь | Описание |
 |-------|------|----------|
 | POST | `/api/analytics/predict/{patient_id}` | Запустить асинхронный прогноз |
+| POST | `/api/analytics/predict-with-dicom/{patient_id}` | Прогноз с DICOM-контекстом (метаданные, находки, измерения) |
 | GET | `/api/analytics/predict/status/{job_id}` | Статус задачи прогноза |
 | GET | `/api/analytics/predictions/{patient_id}` | Все прогнозы пациента |
 | POST | `/api/analytics/insights/{patient_id}` | AI-инсайты (GPT) |
@@ -1073,6 +1074,41 @@ DICOM_3D_CACHE_TTL_SECONDS=3600
 Fallback на диск: `{DICOM_STORAGE_PATH}/{patient_id}/{study_uid}/volume/`.
 
 Тест: `python scripts/test_3d_render.py`
+
+### DICOM + AI Predictions (интеграция метаданных в GPT-прогнозы)
+
+Серверный пайплайн извлекает из DICOM-исследований метаданные, измерения (аннотации),
+находки и заключения, формирует структурированный клинический контекст и передаёт его
+в GPT вместе с данными документов и лабораторными показателями.
+
+**Сервисы:**
+- `app/services/dicom_text_extractor.py` — метаданные, SR-текст, сборка контекста
+- `app/services/dicom_measurement_extractor.py` — органы, опухоли, кости, сосуды
+- `app/services/dicom_radiology_parser.py` — находки, impression, рекомендации
+- `app/services/dicom_rag.py` — индексация контекста в ChromaDB (семантический поиск)
+- `app/prompts/dicom_prompts.py` — шаблоны промптов и клинические рекомендации по модальностям
+
+**API:**
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| `GET` | `/api/dicom/study/{study_uid}/clinical-context` | Структурированный клинический контекст |
+| `POST` | `/api/dicom/study/{study_uid}/process` | Извлечение метаданных, находок, измерений |
+| `POST` | `/api/analytics/predict-with-dicom/{patient_id}` | Прогноз с учётом DICOM + источники |
+
+Обычный `POST /api/analytics/predict/{id}` также автоматически включает DICOM-данные,
+если у пациента есть готовые исследования (`status=ready`).
+
+**Поля `DicomStudy`:** `radiology_findings`, `radiology_impression`, `extracted_measurements`,
+`clinical_context`, `clinical_context_processed_at`.
+
+```env
+DICOM_RAG_ENABLED=true
+DICOM_RAG_CHUNK_SIZE=512
+DICOM_RAG_OVERLAP=50
+```
+
+Тест: `python scripts/test_dicom_context.py`
 
 ## Фаза 8: Резервное копирование (Backup & Restore)
 

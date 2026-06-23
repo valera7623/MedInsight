@@ -330,6 +330,11 @@ class DicomStudy(Base):
     zip_size_mb: Mapped[float | None] = mapped_column(Float, nullable=True)
     total_files: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     processed_files: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    radiology_findings: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    radiology_impression: Mapped[str | None] = mapped_column(Text, nullable=True)
+    extracted_measurements: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    clinical_context: Mapped[str | None] = mapped_column(Text, nullable=True)
+    clinical_context_processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     patient: Mapped["Patient"] = relationship("Patient", foreign_keys=[patient_id])
     series: Mapped[list["DicomSeries"]] = relationship(

@@ -137,6 +137,11 @@ class Settings(BaseSettings):
     DICOM_3D_SYNC_BUILD_MAX_SLICES: int = 120
     DICOM_3D_FRAME_LOAD_WORKERS: int = 8
 
+    # Phase 12e: DICOM metadata → GPT predictions (RAG index)
+    DICOM_RAG_ENABLED: bool = True
+    DICOM_RAG_CHUNK_SIZE: int = 512
+    DICOM_RAG_OVERLAP: int = 50
+
     # Phase 9: OpenTelemetry (distributed tracing)
     OTEL_ENABLED: bool = False
     OTEL_SERVICE_NAME: str = "medinsight"

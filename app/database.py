@@ -122,6 +122,11 @@ def run_migrations():
             _add_column_if_missing(conn, "dicom_studies", "zip_size_mb", "REAL")
             _add_column_if_missing(conn, "dicom_studies", "total_files", "INTEGER", "0")
             _add_column_if_missing(conn, "dicom_studies", "processed_files", "INTEGER", "0")
+            _add_column_if_missing(conn, "dicom_studies", "radiology_findings", "JSON")
+            _add_column_if_missing(conn, "dicom_studies", "radiology_impression", "TEXT")
+            _add_column_if_missing(conn, "dicom_studies", "extracted_measurements", "JSON")
+            _add_column_if_missing(conn, "dicom_studies", "clinical_context", "TEXT")
+            _add_column_if_missing(conn, "dicom_studies", "clinical_context_processed_at", "DATETIME")
 
         if "dicom_series" in tables:
             _add_column_if_missing(conn, "dicom_series", "original_filename", "VARCHAR(255)")

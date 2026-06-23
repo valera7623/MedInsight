@@ -19,7 +19,7 @@ from app.database import Base, bootstrap_system, close_db_connection, engine, ru
 from app.middleware.audit import AuditMiddleware
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
-from app.routes import admin, admin_backup, analytics, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_volume, dicom_zip, documents, export, export_excel, health, patients, payments, predictions, preferences, telegram, users, webhooks
+from app.routes import admin, admin_backup, analytics, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, documents, export, export_excel, health, patients, payments, predictions, preferences, telegram, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
@@ -254,6 +254,8 @@ app.include_router(dicom_annotations_edit.router, prefix="/api")
 app.include_router(dicom_annotations_export.router, prefix="/api")
 app.include_router(dicom_zip.router, prefix="/api")
 app.include_router(dicom_volume.router, prefix="/api")
+app.include_router(dicom_context.dicom_router, prefix="/api")
+app.include_router(dicom_context.analytics_router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(predictions.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
