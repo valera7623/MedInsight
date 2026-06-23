@@ -168,7 +168,9 @@ class Settings(BaseSettings):
     # Phase 5: App version (exposed via /health)
     APP_VERSION: str = "1.0.0"
 
-    # Phase 6: Email (SMTP)
+    # Phase 6: Email (SMTP or HTTP API — many VPS block outbound SMTP ports)
+    EMAIL_BACKEND: str = "smtp"  # smtp | resend
+    RESEND_API_KEY: str = ""
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USER: str = ""

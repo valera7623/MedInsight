@@ -12,6 +12,7 @@ from email.message import EmailMessage
 from pathlib import Path
 
 import aiosmtplib
+import httpx
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.config import settings
@@ -56,12 +57,23 @@ class EmailService:
 
     @property
     def is_configured(self) -> bool:
-        return bool(settings.EMAIL_ENABLED and self.smtp_host and self.from_email)
+        if not settings.EMAIL_ENABLED:
+            return False
+        backend = (settings.EMAIL_BACKEND or "smtp").lower()
+        if backend == "resend":
+            return bool(settings.RESEND_API_KEY and self.from_email)
+        return bool(self.smtp_host and self.from_email)
 
     async def send_email(self, to: str, subject: str, html: str, text: str | None = None) -> bool:
         if not settings.EMAIL_ENABLED:
             logger.info("Email disabled — skipping send", to=to, subject=subject)
             return False
+        backend = (settings.EMAIL_BACKEND or "smtp").lower()
+        if backend == "resend":
+            return await self._send_resend(to, subject, html, text)
+        return await self._send_smtp(to, subject, html, text)
+
+    async def _send_smtp(self, to: str, subject: str, html: str, text: str | None = None) -> bool:
         if not self.smtp_host:
             logger.warning("SMTP not configured — skipping send", to=to, subject=subject)
             return False
@@ -84,10 +96,49 @@ class EmailService:
                 use_tls=self.use_ssl,
                 timeout=self.timeout,
             )
-            logger.info("Email sent", to=to, subject=subject)
+            logger.info("Email sent via SMTP", to=to, subject=subject)
             return True
         except Exception as exc:  # noqa: BLE001 — email must never break a request
-            logger.error("Email send failed", to=to, subject=subject, error=str(exc))
+            logger.error("SMTP send failed", to=to, subject=subject, error=str(exc))
+            return False
+
+    async def _send_resend(self, to: str, subject: str, html: str, text: str | None = None) -> bool:
+        if not settings.RESEND_API_KEY:
+            logger.warning("Resend API key not configured — skipping send", to=to, subject=subject)
+            return False
+
+        payload: dict[str, object] = {
+            "from": self.from_email,
+            "to": [to],
+            "subject": subject,
+            "html": html,
+        }
+        if text:
+            payload["text"] = text
+
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={
+                        "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+            if response.status_code in (200, 201):
+                logger.info("Email sent via Resend", to=to, subject=subject)
+                return True
+            logger.error(
+                "Resend send failed",
+                to=to,
+                subject=subject,
+                status=response.status_code,
+                error=response.text,
+            )
+            return False
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Resend send failed", to=to, subject=subject, error=str(exc))
             return False
 
     # -- high-level templated messages -------------------------------------

@@ -96,7 +96,11 @@ async def test_emails(to: str | None) -> bool:
     print("\n=== ТЕСТ EMAIL-ШАБЛОНОВ ===")
     service = EmailService()
     configured = service.is_configured
-    print(f"  SMTP host: {service.smtp_host or '(не задан)'} | EMAIL_ENABLED={settings.EMAIL_ENABLED}")
+    print(f"  Backend: {settings.EMAIL_BACKEND} | EMAIL_ENABLED={settings.EMAIL_ENABLED}")
+    if (settings.EMAIL_BACKEND or "smtp").lower() == "resend":
+        print(f"  Resend API key: {'set' if settings.RESEND_API_KEY else '(не задан)'}")
+    else:
+        print(f"  SMTP host: {service.smtp_host or '(не задан)'}")
     print(f"  Режим: {'РЕАЛЬНАЯ ОТПРАВКА' if (configured and to) else 'DRY-RUN (только рендер)'}")
 
     recipient = to or "test@example.com"
