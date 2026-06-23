@@ -128,7 +128,34 @@ PRODUCTION_DATABASE_URL=postgresql://medinsight:<пароль>@postgres:5432/med
 DATABASE_URL=postgresql://medinsight:<пароль>@postgres:5432/medinsight
 ```
 
-## 8. HTTPS через nginx (опционально)
+## 8. DNS на VPS (Docker / git)
+
+Симптомы:
+
+```
+lookup registry-1.docker.io on 127.0.0.53:53: server misbehaving
+Could not resolve host: github.com
+```
+
+`dig @127.0.0.53` может работать, а Docker/git — нет: демон Docker читает `/etc/resolv.conf`, а не `daemon.json.dns`.
+
+**Исправление (один раз, sudo):**
+
+```bash
+cd ~/medinsight
+sudo bash scripts/fix-vps-dns.sh
+```
+
+Скрипт отключает stub `127.0.0.53`, настраивает `8.8.8.8` / `1.1.1.1` + DNS провайдера, перезапускает `systemd-resolved` и Docker.
+
+Проверка:
+
+```bash
+docker pull hello-world
+./deploy.sh production
+```
+
+## 9. HTTPS через nginx (опционально)
 
 На VPS уже работает nginx на 80/443. Пример конфига: `scripts/nginx-medinsight.conf.example`
 

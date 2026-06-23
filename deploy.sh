@@ -18,10 +18,11 @@ PROFILE_ARGS=()
 
 if [ -d .git ]; then
   echo "Pulling latest code from origin/main..."
-  git fetch origin main
-  git merge --ff-only origin/main || {
+  if ! git fetch origin main; then
+    echo "WARNING: git fetch failed (DNS?) — continuing with current checkout" >&2
+  elif ! git merge --ff-only origin/main; then
     echo "WARNING: fast-forward failed — run 'git pull --rebase origin main' manually" >&2
-  }
+  fi
 fi
 
 if [ "$MODE" = "production" ]; then
