@@ -107,8 +107,13 @@ class BackupService:
 
     def _pg_dump_snapshot(self, dest: Path) -> None:
         """PostgreSQL logical backup via pg_dump (custom format)."""
+        pg_dump = shutil.which("pg_dump")
+        if not pg_dump:
+            raise RuntimeError(
+                "pg_dump not found in PATH — rebuild the app image (Dockerfile copies it from postgres:15-bookworm)"
+            )
         url = settings.DATABASE_URL
-        cmd = ["pg_dump", "--format=custom", "--no-owner", "--dbname", url, "--file", str(dest)]
+        cmd = [pg_dump, "--format=custom", "--no-owner", "--dbname", url, "--file", str(dest)]
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         if result.returncode != 0:
             raise RuntimeError(f"pg_dump failed: {result.stderr.strip()}")

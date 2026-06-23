@@ -1,24 +1,20 @@
-FROM python:3.12-slim
+# pg_dump/pg_restore without apt install postgresql-client (slow/unreliable on VPS).
+FROM postgres:15-bookworm AS pgclient
+
+# Build Python wheels that need a compiler.
+FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    fonts-dejavu-core \
-    ca-certificates \
-    curl \
-    postgresql-client \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt requirements-nlp.txt ./
 
-# spaCy model ~500MB with GitHub — часто падает на VPS (SSL EOF).
-# По умолчанию ПРОПУСКАЕМ: приложение работает в regex-only режиме.
-# Для установки модели: docker compose build --build-arg INSTALL_SPACY_MODEL=1
 ARG INSTALL_SPACY_MODEL=0
 ARG SPACY_MODEL_URL=https://github.com/explosion/spacy-models/releases/download/ru_core_news_lg-3.8.0/ru_core_news_lg-3.8.0-py3-none-any.whl
 
-# VPS builds often hit slow PyPI; default pip timeout (15s) is too short for large wheels.
 ENV PIP_DEFAULT_TIMEOUT=300 \
     PIP_RETRIES=5
 
@@ -31,6 +27,25 @@ RUN pip install --no-cache-dir --retries 5 --timeout 300 -r requirements.txt \
        else \
          echo "Skipping spaCy model download (INSTALL_SPACY_MODEL=0, regex-only NER)"; \
        fi
+
+FROM python:3.12-slim-bookworm
+
+WORKDIR /app
+
+# Runtime OS packages only (no build-essential, no postgresql-client meta-package).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        fonts-dejavu-core \
+        ca-certificates \
+        curl \
+        libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=pgclient /usr/lib/postgresql/15/bin/pg_dump /usr/local/bin/pg_dump
+COPY --from=pgclient /usr/lib/postgresql/15/bin/pg_restore /usr/local/bin/pg_restore
+
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
 
