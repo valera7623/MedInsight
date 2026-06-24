@@ -1,4 +1,4 @@
-"""Map MedInsight domain objects to/from HL7 FHIR R4 resources."""
+"""Map MedInsight domain objects to/from HL7 FHIR R4/R4B resources."""
 
 from __future__ import annotations
 
@@ -6,23 +6,27 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from fhir.resources.bundle import Bundle, BundleEntry, BundleEntryRequest
-from fhir.resources.codeableconcept import CodeableConcept
-from fhir.resources.coding import Coding
-from fhir.resources.contactpoint import ContactPoint
-from fhir.resources.diagnosticreport import DiagnosticReport
-from fhir.resources.encounter import Encounter
-from fhir.resources.humanname import HumanName
-from fhir.resources.identifier import Identifier
-from fhir.resources.imagingstudy import ImagingStudy, ImagingStudySeries
-from fhir.resources.meta import Meta
-from fhir.resources.observation import Observation
-from fhir.resources.patient import Patient
-from fhir.resources.period import Period
-from fhir.resources.quantity import Quantity
-from fhir.resources.reference import Reference
-
 from app.config import settings
+from app.services.fhir.fhir_models import (
+    Bundle,
+    BundleEntry,
+    BundleEntryRequest,
+    CodeableConcept,
+    Coding,
+    ContactPoint,
+    DiagnosticReport,
+    Encounter,
+    HumanName,
+    Identifier,
+    ImagingStudy,
+    ImagingStudySeries,
+    Meta,
+    Observation,
+    Patient,
+    Period,
+    Quantity,
+    Reference,
+)
 
 _GENDER_TO_FHIR = {"M": "male", "F": "female", "O": "other"}
 _GENDER_FROM_FHIR = {v: k for k, v in _GENDER_TO_FHIR.items()}
@@ -58,9 +62,7 @@ class FhirMapper:
             telecom.append(ContactPoint(system="phone", value=medinsight_patient["phone"]))
         if medinsight_patient.get("email"):
             telecom.append(ContactPoint(system="email", value=medinsight_patient["email"]))
-        identifiers = [
-            Identifier(system=f"{_SYSTEM_MEDINSIGHT}/patient", value=pid),
-        ]
+        identifiers = [Identifier(system=f"{_SYSTEM_MEDINSIGHT}/patient", value=pid)]
         if medinsight_patient.get("id"):
             identifiers.append(
                 Identifier(system=f"{_SYSTEM_MEDINSIGHT}/internal-id", value=str(medinsight_patient["id"]))
@@ -121,12 +123,11 @@ class FhirMapper:
         start = medinsight_encounter.get("start") or medinsight_encounter.get("created_at")
         end = medinsight_encounter.get("end") or medinsight_encounter.get("updated_at")
         period = Period(start=start, end=end) if start or end else None
-        status = medinsight_encounter.get("status", "finished")
         enc_class = Coding(system="http://terminology.hl7.org/CodeSystem/v3-ActCode", code="AMB", display="ambulatory")
         return Encounter(
             id=eid,
             meta=_meta(),
-            status=status,
+            status=medinsight_encounter.get("status", "finished"),
             class_fhir=enc_class,
             subject=_patient_ref(patient_id),
             period=period,
@@ -183,7 +184,11 @@ class FhirMapper:
 
     @classmethod
     def to_fhir_diagnostic_report(cls, medinsight_document: dict[str, Any]) -> DiagnosticReport:
-        did = str(medinsight_document.get("fhir_id") or medinsight_document.get("public_id") or medinsight_document.get("id"))
+        did = str(
+            medinsight_document.get("fhir_id")
+            or medinsight_document.get("public_id")
+            or medinsight_document.get("id")
+        )
         patient_id = str(
             medinsight_document.get("patient_fhir_id")
             or medinsight_document.get("patient_public_id")
@@ -227,7 +232,10 @@ class FhirMapper:
             series.append(
                 ImagingStudySeries(
                     uid=f"{sid}.1",
-                    modality=Coding(system="http://dicom.nema.org/resources/ontology/DCM", code=dicom_study.get("modality") or "OT")
+                    modality=Coding(
+                        system="http://dicom.nema.org/resources/ontology/DCM",
+                        code=dicom_study.get("modality") or "OT",
+                    )
                     if dicom_study.get("modality")
                     else None,
                     numberOfInstances=dicom_study.get("num_instances"),
@@ -266,18 +274,3 @@ class FhirMapper:
             timestamp=datetime.utcnow(),
             entry=entries,
         )
-
-    @classmethod
-    def to_transaction_bundle(cls, resources: list[Any]) -> Bundle:
-        entries = []
-        for resource in resources:
-            rtype = resource.resource_type
-            rid = resource.id
-            entries.append(
-                BundleEntry(
-                    fullUrl=f"{settings.FHIR_BASE_URL}/{rtype}/{rid}",
-                    resource=resource,
-                    request=BundleEntryRequest(method="PUT", url=f"{rtype}/{rid}"),
-                )
-            )
-        return Bundle(id=str(uuid.uuid4()), meta=_meta(), type="transaction", entry=entries)

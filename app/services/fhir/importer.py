@@ -6,9 +6,7 @@ import logging
 import uuid
 from typing import Any
 
-from fhir.resources.bundle import Bundle
-from fhir.resources.encounter import Encounter
-from fhir.resources.patient import Patient
+from app.services.fhir.fhir_models import Bundle, Encounter, Patient
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -113,7 +111,7 @@ class FhirImporter:
             mime_type="application/fhir+json",
             document_type=fhir_encounter.type[0].text if fhir_encounter.type else "encounter",
             status="parsed",
-            parsed_data={"fhir_encounter": fhir_encounter.dict()},
+            parsed_data={"fhir_encounter": fhir_encounter.model_dump(mode="json") if hasattr(fhir_encounter, "model_dump") else fhir_encounter.dict()},
         )
         self.db.add(doc)
         self.db.flush()

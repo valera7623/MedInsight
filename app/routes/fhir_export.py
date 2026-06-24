@@ -16,6 +16,7 @@ from app.middleware.tenant import get_request_tenant_id
 from app.models import User
 from app.services.access import effective_tenant_id, require_tenant_access
 from app.services.fhir.exporter import FhirExporter
+from app.services.fhir.fhir_models import fhir_dump
 from app.services.list_queries import patients_scope
 
 router = APIRouter(prefix="/fhir/export", tags=["fhir-export"])
@@ -36,9 +37,7 @@ def _require_fhir() -> None:
 
 
 def _fhir_json(resource: Any) -> dict:
-    if hasattr(resource, "dict"):
-        return resource.dict()
-    return dict(resource)
+    return fhir_dump(resource)
 
 
 @router.get("/patient/{patient_id}")

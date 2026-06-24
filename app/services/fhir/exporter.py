@@ -5,12 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from fhir.resources.bundle import Bundle
-from fhir.resources.patient import Patient
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import DicomStudy, Document, Patient as PatientModel, Prediction
+from app.services.fhir.fhir_models import Bundle, Patient
 from app.services.fhir.mapper import FhirMapper
 from app.services.list_queries import dicom_studies_scope, documents_scope, patients_scope, predictions_scope
 

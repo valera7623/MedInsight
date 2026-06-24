@@ -280,9 +280,9 @@ app.include_router(payments.router, prefix="/api")
 app.include_router(telegram.router, prefix="/api")
 app.include_router(preferences.router, prefix="/api")
 if settings.FHIR_ENABLED:
-    from app.routes.fhir import fhir_app
+    from app.routes.fhir import router as fhir_router
 
-    app.mount("/fhir", fhir_app)
+    app.include_router(fhir_router, prefix="/fhir")
     app.include_router(fhir_export.router, prefix="/api")
     app.include_router(fhir_import.router, prefix="/api")
 # Inbound payment provider webhooks (no /api prefix, no auth — verified by signature)

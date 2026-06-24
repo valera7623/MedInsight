@@ -51,9 +51,8 @@ numpy>=1.26.0
 scipy>=1.11.0
 py7zr>=0.22.0
 
-# Phase 14: HL7 FHIR R4/R5 interoperability
-fhir.resources==6.4.0
-fhirstarter>=2.3.0,<3.0.0
+# Phase 14: HL7 FHIR R4/R4B interoperability (pydantic v2 compatible)
+fhir.resources>=7.1.0,<8.0.0
 
 # Phase 4: Payments
 stripe>=11.0.0

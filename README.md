@@ -1464,9 +1464,8 @@ python scripts/test_siem_export.py --format syslog --target sentinel --send
 
 ## FHIR Integration (Фаза 14: HL7 FHIR Import/Export)
 
-MedInsight поддерживает импорт и экспорт клинических данных в формате **HL7 FHIR R4**
-(совместимость с R5 через `fhir.resources`). Используются библиотеки `fhir.resources`
-и `fhirstarter` для валидации и FHIR REST API.
+MedInsight поддерживает импорт и экспорт клинических данных в формате **HL7 FHIR R4/R4B**
+(пакет `fhir.resources` 7.x, pydantic v2). FHIR REST API реализован на FastAPI.
 
 ### Поддерживаемые ресурсы
 
@@ -1488,9 +1487,9 @@ MedInsight DB → FhirMapper → FHIR Resources
          EHR (EPIC, Cerner) via SMART on FHIR
 ```
 
-### FHIR REST API (FHIRStarter)
+### FHIR REST API
 
-При `FHIR_ENABLED=true` монтируется ASGI-приложение FHIRStarter на `/fhir`:
+При `FHIR_ENABLED=true` доступен FHIR REST API на `/fhir`:
 
 | Endpoint | Описание |
 |----------|----------|

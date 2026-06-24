@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from fhir.resources.patient import Patient  # noqa: E402
+from app.services.fhir.fhir_models import Patient, fhir_dump  # noqa: E402
 
 from app.config import settings  # noqa: E402
 from app.database import SessionLocal  # noqa: E402
@@ -77,7 +77,7 @@ def main() -> int:
         fhir_patient = exporter.export_patient(patient.id)
         print(f"Exported FHIR Patient id={fhir_patient.id} name={fhir_patient.name[0].family}")
 
-        fhir_json = fhir_patient.dict()
+        fhir_json = fhir_dump(fhir_patient)
         roundtrip = Patient(**fhir_json)
         importer = FhirImporter(db)
         imported = importer.import_patient(roundtrip, tenant_id=tenant_id, user_id=user_id)

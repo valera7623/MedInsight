@@ -5,8 +5,7 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fhir.resources.bundle import Bundle
-from fhir.resources.patient import Patient
+from app.services.fhir.fhir_models import Bundle, Encounter, Observation, Patient, fhir_dump
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -104,16 +103,15 @@ def import_from_ehr(
     result = importer.import_patient(patient, tenant_id=tenant_id, user_id=current_user.id)
     pid = result["id"]
 
-    from fhir.resources.bundle import Bundle as FhirBundle
-    from fhir.resources.bundle import BundleEntry
+    from app.services.fhir.fhir_models import Bundle as FhirBundle, BundleEntry
 
     entries = [BundleEntry(resource=Patient(**patient_data))]
     for enc in encounters:
-        from fhir.resources.encounter import Encounter
+        from app.services.fhir.fhir_models import Encounter
 
         entries.append(BundleEntry(resource=Encounter(**enc)))
     for obs in observations:
-        from fhir.resources.observation import Observation
+        from app.services.fhir.fhir_models import Observation
 
         entries.append(BundleEntry(resource=Observation(**obs)))
     bundle = FhirBundle(type="collection", entry=entries)

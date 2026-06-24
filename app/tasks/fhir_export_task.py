@@ -11,6 +11,7 @@ from app.config import settings
 from app.database import SessionLocal
 from app.models import User
 from app.services.fhir.exporter import FhirExporter
+from app.services.fhir.fhir_models import fhir_dump
 from app.services.fhir.smart_on_fhir import SmartOnFhirClient
 from app.tasks.celery_app import celery_app
 
@@ -39,7 +40,7 @@ def export_fhir_batch(self, tenant_id: int, resource_types: list[str], since_iso
         )
         _EXPORT_DIR.mkdir(parents=True, exist_ok=True)
         out = _EXPORT_DIR / f"fhir_batch_{tenant_id}_{self.request.id}.json"
-        out.write_text(json.dumps(bundle.dict(), default=str), encoding="utf-8")
+        out.write_text(json.dumps(fhir_dump(bundle), default=str), encoding="utf-8")
         logger.info("FHIR batch export written to %s", out)
         return str(out)
     finally:
@@ -64,7 +65,7 @@ def export_to_external_ehr(patient_id: int, ehr_config: dict) -> dict:
         pushed = []
         for entry in bundle.entry or []:
             if entry.resource:
-                resource = entry.resource.dict()
+                resource = fhir_dump(entry.resource)
                 pushed.append(client.push_resource(resource))
         return {"status": "ok", "patient_id": patient_id, "resources_pushed": len(pushed)}
     except Exception as exc:
