@@ -229,5 +229,19 @@ class Settings(BaseSettings):
     AUDIT_ARCHIVE_DIR: str = "./storage/audit_archives"
     AUDIT_JSONL_ARCHIVE_DIR: str = "./storage/audit_jsonl"
 
+    # Phase 14: HL7 FHIR import/export
+    FHIR_ENABLED: bool = False
+    FHIR_VERSION: str = "R4"  # R4 | R5
+    FHIR_BASE_URL: str = "https://medinsight.com/fhir"
+    FHIR_PUBLISHER: str = "MedInsight"
+    SMART_ENABLED: bool = False
+    SMART_AUTHORIZATION_URL: str = "https://ehr.example.com/auth"
+    SMART_TOKEN_URL: str = "https://ehr.example.com/token"
+    SMART_CLIENT_ID: str = ""
+    SMART_CLIENT_SECRET: str = ""
+    SMART_SCOPES: str = "patient/Patient.read patient/Observation.read"
+    FHIR_EXPORT_BATCH_SIZE: int = 1000
+    FHIR_EXPORT_MAX_RESOURCES: int = 10000
+
 
 settings = Settings()

@@ -1461,3 +1461,90 @@ python scripts/test_siem_export.py --format syslog --target sentinel --send
 - `021_add_audit_signing.sql` — колонки подписи и статуса экспорта
 - `022_add_audit_export_tables.sql` — `audit_export_logs`, `audit_keys`
 - `023_add_audit_append_only_trigger.sql` — PostgreSQL append-only trigger
+
+## FHIR Integration (Фаза 14: HL7 FHIR Import/Export)
+
+MedInsight поддерживает импорт и экспорт клинических данных в формате **HL7 FHIR R4**
+(совместимость с R5 через `fhir.resources`). Используются библиотеки `fhir.resources`
+и `fhirstarter` для валидации и FHIR REST API.
+
+### Поддерживаемые ресурсы
+
+| MedInsight | FHIR Resource |
+|------------|---------------|
+| Patient | `Patient` |
+| Document | `DiagnosticReport` + `Encounter` |
+| Prediction | `Observation` |
+| DicomStudy | `ImagingStudy` |
+
+### Архитектура
+
+```
+MedInsight DB → FhirMapper → FHIR Resources
+                    ↓
+         FHIRStarter API (/fhir/*)
+         REST Export/Import (/api/fhir/*)
+                    ↓
+         EHR (EPIC, Cerner) via SMART on FHIR
+```
+
+### FHIR REST API (FHIRStarter)
+
+При `FHIR_ENABLED=true` монтируется ASGI-приложение FHIRStarter на `/fhir`:
+
+| Endpoint | Описание |
+|----------|----------|
+| `GET /fhir/metadata` | CapabilityStatement |
+| `GET /fhir/Patient/{id}` | Чтение пациента |
+| `GET /fhir/Patient?family=&given=` | Поиск пациентов |
+| `POST /fhir/Patient` | Создание пациента |
+| `GET /fhir/Observation?patient=` | Прогнозы как Observation |
+| `GET /fhir/DiagnosticReport?patient=` | Документы |
+| `GET /fhir/ImagingStudy?patient=` | DICOM-исследования |
+| `GET /fhir/Encounter?patient=` | Встречи/документы |
+
+### MedInsight REST API
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/fhir/export/patient/{id}` | Bundle пациента |
+| GET | `/api/fhir/export/tenant/{tenant_id}` | Все пациенты тенанта |
+| GET | `/api/fhir/export/dicom/{study_uid}` | ImagingStudy |
+| POST | `/api/fhir/export/batch` | Экспорт по дате/типу |
+| POST | `/api/fhir/import/bundle` | Импорт Bundle |
+| POST | `/api/fhir/import/patient` | Импорт Patient |
+| POST | `/api/fhir/import/from-ehr` | Импорт из EHR (SMART) |
+
+### Переменные окружения
+
+```env
+FHIR_ENABLED=true
+FHIR_VERSION=R4
+FHIR_BASE_URL=https://medinsight.com/fhir
+FHIR_PUBLISHER=MedInsight
+
+# SMART on FHIR (EPIC, Cerner)
+SMART_ENABLED=false
+SMART_AUTHORIZATION_URL=https://ehr.example.com/auth
+SMART_TOKEN_URL=https://ehr.example.com/token
+SMART_CLIENT_ID=client_id
+SMART_CLIENT_SECRET=client_secret
+
+FHIR_EXPORT_BATCH_SIZE=1000
+FHIR_EXPORT_MAX_RESOURCES=10000
+```
+
+### Celery
+
+- `export_fhir_batch` — асинхронный batch-экспорт в JSON-файл
+- `export_to_external_ehr` — push Bundle во внешнюю EHR
+
+### Тестирование
+
+```bash
+python scripts/test_fhir.py
+```
+
+### Миграции
+
+- `025_add_fhir_mapping.sql` — таблица `fhir_mapping` (MedInsight ID ↔ FHIR ID)

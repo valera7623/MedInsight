@@ -281,6 +281,28 @@ class AuditKey(Base):
 
 
 # ---------------------------------------------------------------------------
+# Phase 14: HL7 FHIR interoperability
+# ---------------------------------------------------------------------------
+
+
+class FhirMapping(Base):
+    """Maps MedInsight internal IDs to FHIR resource identifiers."""
+
+    __tablename__ = "fhir_mapping"
+    __table_args__ = (
+        Index("ix_fhir_mapping_resource_medinsight", "resource_type", "medinsight_id"),
+        UniqueConstraint("resource_type", "medinsight_id", name="uq_fhir_mapping_resource_medinsight"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    resource_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    medinsight_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    fhir_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    fhir_version: Mapped[str] = mapped_column(String(10), nullable=False, default="R4")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+# ---------------------------------------------------------------------------
 # Phase 4: Self-healing RAG, Webhooks, Payments
 # ---------------------------------------------------------------------------
 

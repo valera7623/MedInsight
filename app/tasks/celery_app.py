@@ -22,6 +22,7 @@ celery_app = Celery(
         "app.tasks.dicom_volume_task",
         "app.tasks.audit_export_task",
         "app.tasks.audit_sync_task",
+        "app.tasks.fhir_export_task",
     ],
 )
 

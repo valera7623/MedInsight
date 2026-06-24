@@ -21,7 +21,7 @@ from app.middleware.audit_collector import AuditCollectorMiddleware
 from app.middleware.audit_append_only import register_append_only_listeners
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
-from app.routes import admin, admin_backup, analytics, audit_export, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, documents, export, export_excel, health, patients, payments, predictions, preferences, telegram, users, webhooks
+from app.routes import admin, admin_backup, analytics, audit_export, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, documents, export, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, telegram, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
@@ -279,6 +279,12 @@ app.include_router(webhooks.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
 app.include_router(telegram.router, prefix="/api")
 app.include_router(preferences.router, prefix="/api")
+if settings.FHIR_ENABLED:
+    from app.routes.fhir import fhir_app
+
+    app.mount("/fhir", fhir_app)
+    app.include_router(fhir_export.router, prefix="/api")
+    app.include_router(fhir_import.router, prefix="/api")
 # Inbound payment provider webhooks (no /api prefix, no auth — verified by signature)
 app.include_router(stripe_webhook.router)
 app.include_router(yookassa_webhook.router)

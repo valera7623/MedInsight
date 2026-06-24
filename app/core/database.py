@@ -210,7 +210,7 @@ def run_migrations():
         from pathlib import Path
 
         migrations_dir = Path(__file__).resolve().parent.parent / "db" / "migrations"
-        for migration_file in ("019_migrate_to_postgresql.py", "024_migrate_audit_siem.py"):
+        for migration_file in ("019_migrate_to_postgresql.py", "024_migrate_audit_siem.py", "025_migrate_fhir.py"):
             migration_path = migrations_dir / migration_file
             spec = importlib.util.spec_from_file_location(migration_file.replace(".py", ""), migration_path)
             if spec and spec.loader:
