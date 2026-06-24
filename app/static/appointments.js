@@ -13,6 +13,7 @@
   let doctors = [];
   let editingId = null;
 
+  const CANCELLABLE_STATUSES = new Set(['scheduled', 'confirmed', 'in_progress']);
   const STATUS_LABELS = {
     scheduled: 'Запланирован',
     confirmed: 'Подтверждён',
@@ -219,19 +220,32 @@
     if (isScheduleView()) loadSchedule();
   }
 
+  async function cancelAppointment(appointmentId) {
+    const reason = prompt('Причина отмены:');
+    if (!reason) return;
+    const res = await apiFetch(`/api/appointments/${appointmentId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(formatApiError(err));
+      return;
+    }
+    calendar?.refetchEvents();
+    loadSchedule();
+    loadSlots();
+  }
+
   async function appointmentAction(action) {
     if (!editingId) return;
-    let body = undefined;
     if (action === 'cancel') {
-      const reason = prompt('Причина отмены:');
-      if (!reason) return;
-      body = JSON.stringify({ reason });
-    } else if (action === 'complete') {
-      body = JSON.stringify({ notes: '' });
+      await cancelAppointment(editingId);
+      closeModal();
+      return;
     }
-    const path = action === 'cancel'
-      ? `/api/appointments/${editingId}/cancel`
-      : `/api/appointments/${editingId}/${action}`;
+    const path = `/api/appointments/${editingId}/${action}`;
+    const body = action === 'complete' ? JSON.stringify({ notes: '' }) : undefined;
     const res = await apiFetch(path, { method: 'POST', body });
     if (!res.ok) {
       alert('Ошибка операции');
@@ -255,13 +269,24 @@
       return;
     }
     list.innerHTML = `<table class="data-table"><thead><tr><th>Время</th><th>Пациент</th><th>Тип</th><th>Статус</th></tr></thead><tbody>${
-      data.appointments.map((a) => `<tr>
+      data.appointments.map((a) => {
+        const cancelBtn = CANCELLABLE_STATUSES.has(a.status)
+          ? `<button type="button" class="btn btn-danger btn-sm schedule-cancel-btn" data-id="${a.id}">Отменить приём</button>`
+          : '';
+        return `<tr>
         <td>${new Date(a.start_time).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</td>
         <td>${a.patient_name || '—'}</td>
         <td>${a.type_name || '—'}</td>
-        <td><span class="status-badge status-${a.status}">${STATUS_LABELS[a.status] || a.status}</span></td>
-      </tr>`).join('')
+        <td class="schedule-status-cell">
+          <span class="status-badge status-${a.status}">${STATUS_LABELS[a.status] || a.status}</span>
+          ${cancelBtn}
+        </td>
+      </tr>`;
+      }).join('')
     }</tbody></table>`;
+    list.querySelectorAll('.schedule-cancel-btn').forEach((btn) => {
+      btn.addEventListener('click', () => cancelAppointment(parseInt(btn.dataset.id, 10)));
+    });
   }
 
   async function loadSlots() {
