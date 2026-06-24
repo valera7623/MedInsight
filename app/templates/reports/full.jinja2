@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Полный клинический обзор</title>
+    <style>
+        body { font-family: Helvetica, 'DejaVu Sans', sans-serif; font-size: 11px; }
+        h1 { color: #2563eb; text-align: center; }
+        h2 { color: #1e293b; border-bottom: 1px solid #cbd5e1; margin-top: 24px; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        th, td { border: 1px solid #e2e8f0; padding: 6px; }
+        th { background: #f8fafc; }
+        .page-break { page-break-before: always; }
+        img { max-width: 90%; margin: 8px 0; }
+    </style>
+</head>
+<body>
+    <h1>{{ title | default('Полный клинический обзор') }}</h1>
+    <p style="text-align:center">{{ patient.last_name }} {{ patient.first_name }} | {{ generated_at }}</p>
+
+    <h2>Пациент</h2>
+    <p>Дата рождения: {{ patient.birth_date }} | Пол: {{ patient.gender }} | Тел: {{ patient.phone }}</p>
+
+    <h2>Диагнозы и терапия</h2>
+    <p><strong>Диагнозы:</strong> {{ diagnoses | join(', ') if diagnoses else '—' }}</p>
+    <p><strong>Лекарства:</strong> {{ medications | join(', ') if medications else '—' }}</p>
+
+    <h2>Лаборатория</h2>
+    <table>
+        <tr><th>Показатель</th><th>Значение</th><th>Референс</th></tr>
+        {% for lab in lab_results %}<tr><td>{{ lab.name }}</td><td>{{ lab.value }}</td><td>{{ lab.reference }}</td></tr>{% endfor %}
+    </table>
+
+    <h2>Прогнозы</h2>
+    <table>
+        <tr><th>Тип</th><th>Риск %</th></tr>
+        {% for p in predictions %}<tr><td>{{ p.type }}</td><td>{{ p.risk }}</td></tr>{% endfor %}
+    </table>
+
+    {% if dicom_study %}
+    <div class="page-break"></div>
+    <h2>DICOM: {{ dicom_study.study_description }}</h2>
+    <p>Модальность: {{ dicom_study.modality }} | Область: {{ dicom_study.body_part }}</p>
+    {% if findings %}<ul>{% for f in findings %}<li>{{ f }}</li>{% endfor %}</ul>{% endif %}
+    {% for image in images %}<img src="{{ image }}" />{% endfor %}
+    {% endif %}
+
+    <p style="text-align:center;margin-top:40px;color:#94a3b8">MedInsight Full Clinical Overview</p>
+</body>
+</html>

@@ -303,6 +303,76 @@ class FhirMapping(Base):
 
 
 # ---------------------------------------------------------------------------
+# Phase 15: PDF report templates
+# ---------------------------------------------------------------------------
+
+
+class ReportTemplate(Base):
+    """Jinja2 HTML template for PDF clinical reports."""
+
+    __tablename__ = "report_templates"
+    __table_args__ = (Index("ix_report_templates_tenant_type", "tenant_id", "template_type"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    template_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    template_html: Mapped[str] = mapped_column(Text, nullable=False)
+    template_css: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
+    created_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    variables: Mapped[list["ReportTemplateVariable"]] = relationship(
+        "ReportTemplateVariable", back_populates="template", cascade="all, delete-orphan"
+    )
+    reports: Mapped[list["GeneratedReport"]] = relationship("GeneratedReport", back_populates="template")
+
+
+class ReportTemplateVariable(Base):
+    """Declared variable for a report template."""
+
+    __tablename__ = "report_template_variables"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    template_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("report_templates.id"), nullable=False, index=True
+    )
+    variable_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    variable_type: Mapped[str] = mapped_column(String(20), nullable=False, default="text")
+    variable_description: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    default_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    template: Mapped["ReportTemplate"] = relationship("ReportTemplate", back_populates="variables")
+
+
+class GeneratedReport(Base):
+    """Generated PDF report instance."""
+
+    __tablename__ = "generated_reports"
+    __table_args__ = (Index("ix_generated_reports_patient_created", "patient_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    template_id: Mapped[int] = mapped_column(Integer, ForeignKey("report_templates.id"), nullable=False, index=True)
+    patient_id: Mapped[int] = mapped_column(Integer, ForeignKey("patients.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    report_data: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
+    pdf_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    template: Mapped["ReportTemplate"] = relationship("ReportTemplate", back_populates="reports")
+
+
+# ---------------------------------------------------------------------------
 # Phase 4: Self-healing RAG, Webhooks, Payments
 # ---------------------------------------------------------------------------
 

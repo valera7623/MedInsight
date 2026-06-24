@@ -11,6 +11,7 @@ python-multipart>=0.0.20
 python-docx>=1.1.2
 PyPDF2>=3.0.1
 reportlab>=4.2.5
+xhtml2pdf>=0.2.14
 aiofiles>=24.1.0
 celery>=5.3.0
 redis>=5.0.0

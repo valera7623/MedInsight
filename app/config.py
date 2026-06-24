@@ -243,5 +243,10 @@ class Settings(BaseSettings):
     FHIR_EXPORT_BATCH_SIZE: int = 1000
     FHIR_EXPORT_MAX_RESOURCES: int = 10000
 
+    # Phase 15: Report templates (PDF)
+    REPORTS_STORAGE_PATH: str = "./storage/reports"
+    REPORTS_MAX_FILE_SIZE_MB: int = 50
+    REPORTS_TEMPLATES_DIR: str = "./app/templates/reports"
+
 
 settings = Settings()

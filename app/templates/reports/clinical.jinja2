@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Клиническая выписка</title>
+    <style>
+        body { font-family: Helvetica, 'DejaVu Sans', sans-serif; }
+        .header { text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 20px; }
+        .header h1 { color: #2563eb; }
+        .section { margin: 20px 0; }
+        .section h2 { color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+        .row { margin: 10px 0; }
+        .label { font-weight: bold; width: 200px; display: inline-block; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+        th { background-color: #f1f5f9; }
+        .footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Клиническая выписка</h1>
+        <p>Дата: {{ generated_at }}</p>
+    </div>
+
+    <div class="section">
+        <h2>Информация о пациенте</h2>
+        <div class="row"><span class="label">ФИО:</span> {{ patient.last_name }} {{ patient.first_name }}{% if patient.middle_name %} {{ patient.middle_name }}{% endif %}</div>
+        <div class="row"><span class="label">Дата рождения:</span> {{ patient.birth_date }}</div>
+        <div class="row"><span class="label">Пол:</span> {{ patient.gender }}</div>
+        <div class="row"><span class="label">Телефон:</span> {{ patient.phone }}</div>
+    </div>
+
+    <div class="section">
+        <h2>Диагнозы</h2>
+        <ul>{% for diagnosis in diagnoses %}<li>{{ diagnosis }}</li>{% else %}<li>Нет данных</li>{% endfor %}</ul>
+    </div>
+
+    <div class="section">
+        <h2>Лекарства</h2>
+        <ul>{% for medication in medications %}<li>{{ medication }}</li>{% else %}<li>Нет данных</li>{% endfor %}</ul>
+    </div>
+
+    <div class="section">
+        <h2>Результаты анализов</h2>
+        <table>
+            <thead><tr><th>Показатель</th><th>Значение</th><th>Референс</th></tr></thead>
+            <tbody>
+            {% for lab in lab_results %}
+                <tr><td>{{ lab.name }}</td><td>{{ lab.value }}</td><td>{{ lab.reference }}</td></tr>
+            {% else %}
+                <tr><td colspan="3">Нет данных</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Прогноз рисков</h2>
+        <table>
+            <thead><tr><th>Риск</th><th>Вероятность</th></tr></thead>
+            <tbody>
+            {% for prediction in predictions %}
+                <tr><td>{{ prediction.type }}</td><td>{{ prediction.risk }}%</td></tr>
+            {% else %}
+                <tr><td colspan="2">Нет данных</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer"><p>Сгенерировано в MedInsight | {{ generated_at }}</p></div>
+</body>
+</html>

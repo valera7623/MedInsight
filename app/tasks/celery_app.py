@@ -23,6 +23,7 @@ celery_app = Celery(
         "app.tasks.audit_export_task",
         "app.tasks.audit_sync_task",
         "app.tasks.fhir_export_task",
+        "app.tasks.report_task",
     ],
 )
 

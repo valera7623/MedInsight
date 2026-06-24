@@ -1547,3 +1547,77 @@ python scripts/test_fhir.py
 ### Миграции
 
 - `025_add_fhir_mapping.sql` — таблица `fhir_mapping` (MedInsight ID ↔ FHIR ID)
+
+## Report Templates (Фаза 15: PDF-отчёты)
+
+Система шаблонов для генерации PDF-отчётов: клинические выписки, лабораторные
+результаты, DICOM-отчёты, прогнозы рисков и полный клинический обзор.
+
+### Архитектура
+
+```
+MedInsight Data → Jinja2 HTML шаблон → xhtml2pdf → PDF (ReportLab post-processing)
+```
+
+### Встроенные шаблоны
+
+| Тип | Файл | Описание |
+|-----|------|----------|
+| `clinical` | `clinical.jinja2` | Клиническая выписка |
+| `laboratory` | `laboratory.jinja2` | Результаты анализов |
+| `dicom` | `dicom.jinja2` | DICOM-отчёт с изображениями |
+| `prediction` | `prediction.jinja2` | Прогноз рисков (GPT) |
+| `full` | `full.jinja2` | Полный клинический обзор |
+
+При первом запросе `GET /api/templates` шаблоны автоматически создаются для тенанта.
+
+### API
+
+**Шаблоны**
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/templates` | Список шаблонов |
+| GET | `/api/templates/{id}` | Получить шаблон |
+| POST | `/api/templates` | Создать (admin) |
+| PUT | `/api/templates/{id}` | Обновить (admin) |
+| DELETE | `/api/templates/{id}` | Удалить (admin) |
+| POST | `/api/templates/{id}/duplicate` | Дублировать |
+
+**Отчёты**
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| POST | `/api/reports/generate` | Сгенерировать PDF (Celery) |
+| POST | `/api/reports/preview` | HTML-предпросмотр |
+| GET | `/api/reports/{id}` | Статус отчёта |
+| GET | `/api/reports/{id}/pdf` | Скачать PDF |
+| GET | `/api/reports` | Список отчётов |
+| DELETE | `/api/reports/{id}` | Удалить |
+
+Пример генерации:
+
+```bash
+curl -X POST /api/reports/generate \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"template_id": 1, "patient_id": 42}'
+```
+
+### Переменные окружения
+
+```env
+REPORTS_STORAGE_PATH=./storage/reports
+REPORTS_MAX_FILE_SIZE_MB=50
+REPORTS_TEMPLATES_DIR=./app/templates/reports
+```
+
+### Тестирование
+
+```bash
+python scripts/test_report_template.py
+```
+
+### Миграции
+
+- `026_add_report_templates.sql` — `report_templates`, `report_template_variables`, `generated_reports`
