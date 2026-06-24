@@ -17,9 +17,11 @@ from app.core.redis import close_redis_connection
 from app.core.shutdown import shutdown_manager
 from app.database import Base, bootstrap_system, close_db_connection, engine, run_migrations
 from app.middleware.audit import AuditMiddleware
+from app.middleware.audit_collector import AuditCollectorMiddleware
+from app.middleware.audit_append_only import register_append_only_listeners
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
-from app.routes import admin, admin_backup, analytics, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, documents, export, export_excel, health, patients, payments, predictions, preferences, telegram, users, webhooks
+from app.routes import admin, admin_backup, analytics, audit_export, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, documents, export, export_excel, health, patients, payments, predictions, preferences, telegram, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
@@ -222,7 +224,11 @@ app = FastAPI(
 )
 
 origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
-app.add_middleware(AuditMiddleware)
+register_append_only_listeners()
+if settings.AUDIT_SIGNING_ENABLED or settings.SIEM_EXPORT_ENABLED:
+    app.add_middleware(AuditCollectorMiddleware)
+else:
+    app.add_middleware(AuditMiddleware)
 app.add_middleware(UsageLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -266,6 +272,7 @@ app.include_router(predictions.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
 app.include_router(export_excel.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(audit_export.router, prefix="/api")
 app.include_router(admin_backup.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(webhooks.router, prefix="/api")

@@ -20,6 +20,8 @@ celery_app = Celery(
         "app.tasks.dicom_task",
         "app.tasks.dicom_zip_task",
         "app.tasks.dicom_volume_task",
+        "app.tasks.audit_export_task",
+        "app.tasks.audit_sync_task",
     ],
 )
 
@@ -71,6 +73,12 @@ if settings.BACKUP_ENABLED:
             "schedule": _crontab_from_cron(settings.BACKUP_SCHEDULE_CLEANUP),
         },
     })
+
+if settings.SIEM_EXPORT_ENABLED:
+    celery_app.conf.beat_schedule["sync-pending-audit-events"] = {
+        "task": "app.tasks.audit_sync_task.sync_pending_audit_events",
+        "schedule": 5 * 60.0,  # every 5 minutes
+    }
 
 
 if settings.OTEL_ENABLED:

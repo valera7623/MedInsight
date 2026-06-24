@@ -1366,3 +1366,98 @@ LOG_INCLUDE_REQUEST_ID=true
 LOG_INCLUDE_USER_ID=true
 LOG_SLOW_QUERY_MS=500
 ```
+
+## SIEM Integration (Фаза 13: Audit Export)
+
+MedInsight экспортирует аудит-события во внешние SIEM-системы с криптографической
+подписью (HMAC-SHA256), append-only хранением и гарантированной доставкой через
+Celery retry.
+
+### Поддерживаемые форматы и цели
+
+| Формат | Протокол | Целевые SIEM |
+|--------|----------|--------------|
+| `syslog` | RFC 5424, TLS 1.2+ | Microsoft Sentinel, Securonix |
+| `cef` | ArcSight CEF | ManageEngine Log360 |
+| `splunk_hec` | Splunk HEC (HTTPS) | Splunk Enterprise/Cloud |
+| `jsonl` | JSON Lines (локальный архив + экспорт) | Универсальный |
+
+### Архитектура
+
+```
+Audit Collector → PostgreSQL (audit_logs) + подпись SHA-256
+       ↓
+Audit Exporter (Celery) → Syslog / CEF / HEC / JSONL
+       ↓
+Splunk | Sentinel | Log360 | Securonix
+```
+
+### Переменные окружения
+
+```env
+SIEM_EXPORT_ENABLED=true
+SIEM_EXPORT_PROTOCOL=syslog
+SIEM_EXPORT_HOST=siem.internal
+SIEM_EXPORT_PORT=6514
+SIEM_EXPORT_TLS=true
+SIEM_EXPORT_RETRY_COUNT=3
+SIEM_EXPORT_BATCH_SIZE=1000
+
+# Splunk HEC
+SPLUNK_HEC_URL=https://splunk.internal:8088/services/collector
+SPLUNK_HEC_TOKEN=your-hec-token
+
+# CEF
+SIEM_EXPORT_CEF_VENDOR=MedInsight
+SIEM_EXPORT_CEF_PRODUCT=ClinicalAnalytics
+
+# TLS client cert (опционально)
+SIEM_EXPORT_TLS_CERT=/path/to/cert.pem
+SIEM_EXPORT_TLS_KEY=/path/to/key.pem
+
+# Подпись событий
+AUDIT_SIGNING_ENABLED=true
+AUDIT_SIGNING_KEY_PATH=./secrets/audit_key.pem
+```
+
+### API (admin)
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/admin/audit/export/status` | Статус экспорта и цели |
+| POST | `/api/admin/audit/export/retry` | Повторная отправка |
+| POST | `/api/admin/audit/export/test` | Тестовое событие |
+| GET | `/api/admin/audit/export/events` | Список событий экспорта |
+| GET | `/api/admin/audit/export/stats` | Статистика |
+
+### Celery Beat
+
+При `SIEM_EXPORT_ENABLED=true` задача `sync_pending_audit_events` запускается
+каждые 5 минут и отправляет события со статусом `pending`.
+
+### Тестирование
+
+```bash
+# Форматирование без отправки
+python scripts/test_siem_export.py --format cef
+
+# Отправка в SIEM (jsonl пишет локальный архив)
+python scripts/test_siem_export.py --format jsonl --send
+
+# Syslog / Splunk HEC (нужен доступный хост)
+python scripts/test_siem_export.py --format syslog --target sentinel --send
+```
+
+### Безопасность
+
+- Все каналы экспорта используют TLS 1.2+ (syslog over TLS, Splunk HEC HTTPS).
+- События подписываются HMAC-SHA256; ключ хранится в `secrets/audit_key.pem`.
+- PII обезличивается при экспорте (IP, email, телефоны в `details`).
+- Таблица `audit_logs` защищена append-only триггером (PostgreSQL) и ORM-слушателями.
+- Каждая попытка экспорта записывается в `audit_export_logs`.
+
+### Миграции
+
+- `021_add_audit_signing.sql` — колонки подписи и статуса экспорта
+- `022_add_audit_export_tables.sql` — `audit_export_logs`, `audit_keys`
+- `023_add_audit_append_only_trigger.sql` — PostgreSQL append-only trigger

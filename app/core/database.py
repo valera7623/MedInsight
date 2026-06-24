@@ -192,6 +192,14 @@ def _run_sqlite_migrations():
                 )
             )
 
+        if "audit_logs" in tables:
+            _add_column_if_missing(conn, "audit_logs", "signature", "VARCHAR(64)")
+            _add_column_if_missing(conn, "audit_logs", "signed_at", "DATETIME")
+            _add_column_if_missing(conn, "audit_logs", "export_status", "VARCHAR(20)", "'pending'")
+            _add_column_if_missing(conn, "audit_logs", "export_attempts", "INTEGER", "0")
+            _add_column_if_missing(conn, "audit_logs", "last_export_attempt_at", "DATETIME")
+            _add_column_if_missing(conn, "audit_logs", "export_error", "TEXT")
+
 
 def run_migrations():
     """Apply dialect-specific schema migrations after ``create_all``."""
@@ -201,14 +209,14 @@ def run_migrations():
         import importlib.util
         from pathlib import Path
 
-        migration_path = (
-            Path(__file__).resolve().parent.parent / "db" / "migrations" / "019_migrate_to_postgresql.py"
-        )
-        spec = importlib.util.spec_from_file_location("migration_019", migration_path)
-        if spec and spec.loader:
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            mod.upgrade(engine)
+        migrations_dir = Path(__file__).resolve().parent.parent / "db" / "migrations"
+        for migration_file in ("019_migrate_to_postgresql.py", "024_migrate_audit_siem.py"):
+            migration_path = migrations_dir / migration_file
+            spec = importlib.util.spec_from_file_location(migration_file.replace(".py", ""), migration_path)
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                mod.upgrade(engine)
     else:
         logger.warning("Unknown database dialect for URL: %s", settings.DATABASE_URL.split("://")[0])
 

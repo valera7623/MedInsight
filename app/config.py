@@ -209,5 +209,25 @@ class Settings(BaseSettings):
     LOG_INCLUDE_USER_ID: bool = True
     LOG_SLOW_QUERY_MS: float = 500.0  # log SQL slower than this (0 disables)
 
+    # Phase 13: SIEM audit export
+    SIEM_EXPORT_ENABLED: bool = False
+    SIEM_EXPORT_PROTOCOL: str = "syslog"  # syslog | splunk_hec | cef | jsonl
+    SIEM_EXPORT_HOST: str = "siem.internal"
+    SIEM_EXPORT_PORT: int = 514
+    SIEM_EXPORT_TLS: bool = True
+    SIEM_EXPORT_RETRY_COUNT: int = 3
+    SIEM_EXPORT_BATCH_SIZE: int = 1000
+    SIEM_EXPORT_QUEUE_SIZE: int = 10000
+    SIEM_EXPORT_CEF_VENDOR: str = "MedInsight"
+    SIEM_EXPORT_CEF_PRODUCT: str = "ClinicalAnalytics"
+    SPLUNK_HEC_URL: str = "https://splunk.internal:8088/services/collector"
+    SPLUNK_HEC_TOKEN: str = ""
+    SIEM_EXPORT_TLS_CERT: str = ""
+    SIEM_EXPORT_TLS_KEY: str = ""
+    AUDIT_SIGNING_ENABLED: bool = True
+    AUDIT_SIGNING_KEY_PATH: str = "./secrets/audit_key.pem"
+    AUDIT_ARCHIVE_DIR: str = "./storage/audit_archives"
+    AUDIT_JSONL_ARCHIVE_DIR: str = "./storage/audit_jsonl"
+
 
 settings = Settings()

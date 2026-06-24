@@ -210,9 +210,12 @@ class Prediction(Base):
 
 
 class AuditLog(Base):
+    """Append-only audit event log (SIEM export + cryptographic signing)."""
+
     __tablename__ = "audit_logs"
     __table_args__ = (
         Index("ix_audit_logs_tenant_created", "tenant_id", "created_at"),
+        Index("ix_audit_logs_export_status", "export_status"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -225,9 +228,56 @@ class AuditLog(Base):
     user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
     details: Mapped[dict | None] = mapped_column(PortableJSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    # SIEM export & signing (Phase 13)
+    signature: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    export_status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", index=True)
+    export_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_export_attempt_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    export_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     user: Mapped["User | None"] = relationship("User", back_populates="audit_logs")
     tenant: Mapped["Tenant | None"] = relationship("Tenant", back_populates="audit_logs")
+    export_logs: Mapped[list["AuditExportLog"]] = relationship(
+        "AuditExportLog", back_populates="event", cascade="all, delete-orphan"
+    )
+
+
+# Alias for SIEM / security documentation
+AuditEvent = AuditLog
+
+
+class AuditExportLog(Base):
+    """Record of each SIEM export attempt for an audit event."""
+
+    __tablename__ = "audit_export_logs"
+    __table_args__ = (
+        Index("ix_audit_export_logs_event_created", "event_id", "created_at"),
+        Index("ix_audit_export_logs_target_status", "target", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    event_id: Mapped[int] = mapped_column(Integer, ForeignKey("audit_logs.id"), nullable=False, index=True)
+    format: Mapped[str] = mapped_column(String(20), nullable=False)  # syslog | cef | splunk_hec | jsonl
+    target: Mapped[str] = mapped_column(String(50), nullable=False)  # splunk | sentinel | log360 | securonix
+    status: Mapped[str] = mapped_column(String(20), nullable=False)  # success | failed
+    response_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    response_body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+    event: Mapped["AuditLog"] = relationship("AuditLog", back_populates="export_logs")
+
+
+class AuditKey(Base):
+    """Encrypted signing key for audit event integrity."""
+
+    __tablename__ = "audit_keys"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    key: Mapped[str] = mapped_column(Text, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 # ---------------------------------------------------------------------------
