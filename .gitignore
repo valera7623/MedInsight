@@ -19,5 +19,5 @@ secrets/*
 *.egg-info/
 dist/
 build/
-site/
+# site/ is committed (built by CI) for production /help/ without MkDocs on VPS
 openapi.json

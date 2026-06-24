@@ -51,14 +51,15 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
 
-# MkDocs + mkdocs-material are heavy PyPI downloads — skip on VPS/production builds.
-# /help/ is optional; app mounts site/ only when present (see app/main.py).
-RUN if [ "$BUILD_DOCS" = "1" ]; then \
+# /help/ — use pre-built site/ from the repo (CI). BUILD_DOCS=1 rebuilds inside the image (dev only).
+RUN if [ -f site/index.html ]; then \
+      echo "Documentation site/ found ($(du -sh site | cut -f1)) — /help/ enabled"; \
+    elif [ "$BUILD_DOCS" = "1" ]; then \
       pip install --no-cache-dir --retries 5 --timeout 600 -r requirements-docs.txt \
       && python scripts/generate_api_docs.py --import-app \
       && mkdocs build; \
     else \
-      echo "Skipping MkDocs build (BUILD_DOCS=0, /help/ disabled)"; \
+      echo "WARNING: site/ missing and BUILD_DOCS=0 — /help/ disabled"; \
     fi
 
 RUN mkdir -p storage data chroma_data secrets

@@ -88,7 +88,7 @@ compose down --remove-orphans 2>/dev/null || true
 remove_stale_medinsight_containers
 
 BUILD_ARGS=(--build-arg INSTALL_SPACY_MODEL=0 --build-arg BUILD_DOCS=0)
-echo "Building app image once (BUILD_DOCS=0, shared by celery/telegram)..."
+echo "Building app image once (pre-built site/ for /help/, shared by celery/telegram)..."
 compose build "${BUILD_ARGS[@]}" app
 compose up -d
 
