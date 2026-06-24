@@ -24,6 +24,8 @@ APPOINTMENT_STATUSES = frozenset(
 )
 ACTIVE_SLOT_STATUSES = frozenset({"scheduled", "confirmed", "in_progress"})
 
+ASSIGNABLE_DOCTOR_ROLES = frozenset({"admin", "doctor", "head_of_department", "nurse"})
+
 DEFAULT_TYPES = [
     {"name": "Первичный приём", "code": "primary", "duration_minutes": 60, "color": "#3B82F6"},
     {"name": "Повторный приём", "code": "follow_up", "duration_minutes": 30, "color": "#10B981"},
@@ -50,7 +52,9 @@ class AppointmentService:
             self.db.add(AppointmentType(tenant_id=tenant_id, **row))
         self.db.commit()
 
-    def _validate_booking_window(self, start_time: datetime) -> None:
+    def _validate_booking_window(self, start_time: datetime, *, enforce: bool = True) -> None:
+        if not enforce:
+            return
         now = datetime.utcnow()
         min_start = now + timedelta(hours=settings.APPOINTMENTS_MIN_BOOKING_HOURS)
         max_start = now + timedelta(days=settings.APPOINTMENTS_MAX_BOOKING_DAYS)
@@ -106,7 +110,21 @@ class AppointmentService:
             name += f" {patient.middle_name}"
         return f"{name}, {appt_type.name}"
 
-    def create_appointment(self, data: dict, *, tenant_id: int, created_by: int) -> Appointment:
+    def list_assignable_doctors(self, tenant_id: int) -> list[User]:
+        return (
+            self.db.query(User)
+            .filter(
+                User.tenant_id == tenant_id,
+                User.role.in_(tuple(ASSIGNABLE_DOCTOR_ROLES)),
+                User.is_blocked.is_(False),
+            )
+            .order_by(User.full_name)
+            .all()
+        )
+
+    def create_appointment(
+        self, data: dict, *, tenant_id: int, created_by: int, enforce_booking_window: bool = False
+    ) -> Appointment:
         if not settings.APPOINTMENTS_ENABLED:
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Appointments disabled")
 
@@ -116,7 +134,7 @@ class AppointmentService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
 
         doctor = self.db.query(User).filter(User.id == data["doctor_id"], User.tenant_id == tenant_id).first()
-        if not doctor:
+        if not doctor or doctor.role not in ASSIGNABLE_DOCTOR_ROLES:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Doctor not found")
 
         appt_type = (
@@ -141,7 +159,7 @@ class AppointmentService:
         elif isinstance(end_time, str):
             end_time = datetime.fromisoformat(end_time.replace("Z", ""))
 
-        self._validate_booking_window(start_time)
+        self._validate_booking_window(start_time, enforce=enforce_booking_window)
         if self._has_conflict(data["doctor_id"], start_time, end_time):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Doctor schedule conflict")
 
@@ -229,7 +247,15 @@ class AppointmentService:
             .all()
         )
 
-    def update_appointment(self, appointment_id: int, data: dict, *, tenant_id: int, user_id: int) -> Appointment:
+    def update_appointment(
+        self,
+        appointment_id: int,
+        data: dict,
+        *,
+        tenant_id: int,
+        user_id: int,
+        enforce_booking_window: bool = False,
+    ) -> Appointment:
         appointment = self.get_appointment(appointment_id, tenant_id)
         if not appointment:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found")
@@ -242,7 +268,7 @@ class AppointmentService:
             if isinstance(start, str):
                 start = datetime.fromisoformat(start.replace("Z", ""))
             appointment.start_time = start
-            self._validate_booking_window(start)
+            self._validate_booking_window(start, enforce=enforce_booking_window)
         if "duration_minutes" in data and data["duration_minutes"]:
             appointment.duration_minutes = int(data["duration_minutes"])
         if "end_time" in data and data["end_time"]:
@@ -369,17 +395,13 @@ class AppointmentService:
             slot_end = cursor + delta
             conflict = any(start < slot_end and end > cursor for start, end in busy_intervals)
             if not conflict:
-                try:
-                    self._validate_booking_window(cursor)
-                    slots.append(
-                        {
-                            "start_time": cursor.isoformat(),
-                            "end_time": slot_end.isoformat(),
-                            "duration_minutes": slot_minutes,
-                        }
-                    )
-                except HTTPException:
-                    pass
+                slots.append(
+                    {
+                        "start_time": cursor.isoformat(),
+                        "end_time": slot_end.isoformat(),
+                        "duration_minutes": slot_minutes,
+                    }
+                )
             cursor += delta
         return slots
 
@@ -446,7 +468,7 @@ class AppointmentService:
     def get_schedule_overview(self, start_date: date, end_date: date, *, tenant_id: int) -> dict:
         start_dt = datetime.combine(start_date, time.min)
         end_dt = datetime.combine(end_date, time.max)
-        doctors = self.db.query(User).filter(User.tenant_id == tenant_id, User.role.in_(("doctor", "head_of_department"))).all()
+        doctors = self.list_assignable_doctors(tenant_id)
         overview = []
         for doc in doctors:
             appts = (

@@ -33,6 +33,28 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
+  function formatApiError(err) {
+    if (!err) return 'Ошибка сохранения';
+    const d = err.detail;
+    if (typeof d === 'string') return d;
+    if (Array.isArray(d)) {
+      return d.map((x) => x.msg || JSON.stringify(x)).join('\n');
+    }
+    return err.message || 'Ошибка сохранения';
+  }
+
+  function defaultStartFromDate(dateHint) {
+    const d = dateHint ? new Date(dateHint) : new Date();
+    d.setHours(10, 0, 0, 0);
+    if (d.getTime() < Date.now()) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(10, 0, 0, 0);
+      return tomorrow;
+    }
+    return d;
+  }
+
   function buildQuery(params) {
     const q = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
@@ -62,18 +84,20 @@
   }
 
   async function loadDoctors() {
-    const today = new Date().toISOString().slice(0, 10);
-    const res = await apiFetch(`/api/appointments/schedule/overview${buildQuery({ start_date: today, end_date: today })}`);
+    const res = await apiFetch('/api/appointments/doctors');
     if (!res.ok) {
       doctors = [];
       return;
     }
-    const data = await res.json();
-    doctors = (data.doctors || []).map((d) => ({ id: d.doctor_id, full_name: d.doctor_name }));
-    const options = doctors.map((d) => `<option value="${d.id}">${d.full_name || d.id}</option>`).join('');
+    doctors = await res.json();
+    const options = doctors.map((d) => `<option value="${d.id}">${d.full_name || d.email}</option>`).join('');
     document.getElementById('appt-doctor').innerHTML = '<option value="">— выберите —</option>' + options;
     document.getElementById('filter-doctor').innerHTML = '<option value="">Все врачи</option>' + options;
-    document.getElementById('schedule-doctor').innerHTML = options;
+    document.getElementById('schedule-doctor').innerHTML = options || '<option value="">— нет врачей —</option>';
+    if (doctors.length === 1) {
+      document.getElementById('appt-doctor').value = String(doctors[0].id);
+      document.getElementById('schedule-doctor').value = String(doctors[0].id);
+    }
   }
 
   async function fetchAppointments(rangeStart, rangeEnd) {
@@ -146,7 +170,7 @@
     document.getElementById('appt-type').value = appt ? appt.appointment_type_id : (types[0]?.id || '');
     document.getElementById('appt-start').value = appt
       ? toLocalInputValue(appt.start_time)
-      : (dateHint ? toLocalInputValue(dateHint) : '');
+      : toLocalInputValue(defaultStartFromDate(dateHint));
     document.getElementById('appt-description').value = appt?.description || '';
     document.getElementById('appt-remind').value = appt?.remind_before_minutes || 30;
     document.getElementById('appt-actions').classList.toggle('hidden', !appt);
@@ -160,12 +184,20 @@
 
   async function saveAppointment(e) {
     e.preventDefault();
+    const patientId = parseInt(document.getElementById('appt-patient').value, 10);
+    const doctorId = parseInt(document.getElementById('appt-doctor').value, 10);
     const startLocal = document.getElementById('appt-start').value;
     const typeId = parseInt(document.getElementById('appt-type').value, 10);
+
+    if (!patientId) { alert('Выберите пациента'); return; }
+    if (!doctorId) { alert('Выберите врача'); return; }
+    if (!startLocal) { alert('Укажите дату и время'); return; }
+    if (!typeId) { alert('Выберите тип приёма'); return; }
+
     const type = types.find((t) => t.id === typeId);
     const payload = {
-      patient_id: parseInt(document.getElementById('appt-patient').value, 10),
-      doctor_id: parseInt(document.getElementById('appt-doctor').value, 10),
+      patient_id: patientId,
+      doctor_id: doctorId,
       appointment_type_id: typeId,
       start_time: new Date(startLocal).toISOString(),
       duration_minutes: type?.duration_minutes || 30,
@@ -179,7 +211,7 @@
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      alert(err.detail || 'Ошибка сохранения');
+      alert(formatApiError(err));
       return;
     }
     closeModal();

@@ -321,6 +321,21 @@ def google_calendar_link(
     return {"url": CalendarService().get_google_calendar_url(appt)}
 
 
+@router.get("/doctors")
+def list_assignable_doctors(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    _require_enabled()
+    tenant_id = _tenant_id(current_user, request)
+    doctors = AppointmentService(db).list_assignable_doctors(tenant_id)
+    return [
+        {"id": d.id, "full_name": d.full_name, "role": d.role, "email": d.email}
+        for d in doctors
+    ]
+
+
 @router.get("/schedule/overview")
 def schedule_overview(
     request: Request,
