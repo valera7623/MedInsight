@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
@@ -31,20 +31,83 @@ class JobStartResponse(BaseModel):
 
 class JobStatusResponse(BaseModel):
     status: str
-    result: dict | None = None
+    result: dict | None = Field(
+        default=None,
+        description="Includes prediction, probabilities, shap, ml when job completes",
+    )
     error: str | None = None
+
+
+class ShapContribution(BaseModel):
+    """Single feature contribution from SHAP (local explanation)."""
+    feature: str = Field(description="Encoded feature name, e.g. age, diagnosis_count")
+    value: float = Field(description="Raw feature value for this patient")
+    shap: float = Field(description="SHAP value — contribution to model output")
+
+
+class ShapLocalExplanation(BaseModel):
+    """Local SHAP explanation for one prediction (force/waterfall plot data)."""
+    target: str = Field(default="readmission", description="Prediction target explained")
+    model_type: str = Field(description="Underlying model: random_forest or xgboost")
+    base_value: float = Field(description="Model expected value (baseline)")
+    output_value: float = Field(description="base_value + sum(SHAP contributions)")
+    contributions: list[ShapContribution] = Field(description="Per-feature SHAP values, sorted by |shap|")
+    top_features: list[ShapContribution] = Field(description="Top-10 features by impact")
+    waterfall: dict = Field(description="Steps for waterfall chart on frontend")
+    cached: bool = Field(default=False, description="Whether result was served from Redis cache")
+
+
+class ShapSummaryBarItem(BaseModel):
+    feature: str
+    mean_abs_shap: float = Field(description="Mean |SHAP| across background sample — summary bar plot")
+
+
+class ShapBeeswarmPoint(BaseModel):
+    feature: str
+    feature_value: float
+    shap_value: float
+
+
+class ShapGlobalSummary(BaseModel):
+    """Global SHAP summary plot data (bar + beeswarm) for model-wide explainability."""
+    target: str
+    tenant_id: int
+    model_type: str
+    sample_size: int
+    feature_names: list[str]
+    summary_bar: list[ShapSummaryBarItem] = Field(description="Mean |SHAP| per feature — horizontal bar chart")
+    beeswarm: list[ShapBeeswarmPoint] = Field(description="Points for beeswarm / dot plot")
+    cached: bool = False
+
+
+class MlPredictionInfo(BaseModel):
+    model_type: str
+    probability_high_readmission: float = Field(description="P(high readmission) from tabular ML model")
+    probability_low_readmission: float
+    predicted_class: str = Field(description="high or low")
+    risk_percent: float = Field(description="High-readmission probability as 0–100%")
 
 
 class PredictionResponse(BaseModel):
     id: int
     patient_id: int
     type: str
-    prediction: dict | None
+    prediction: dict | None = Field(
+        description="Risk scores, factors, and optional shap/ml sub-objects"
+    )
     probabilities: dict | None
     confidence_score: float
     validated: bool
     created_at: datetime
     expires_at: datetime | None
+    shap: dict | None = Field(
+        default=None,
+        description="SHAP local explanation (mirrors prediction.shap when present)",
+    )
+    ml: dict | None = Field(
+        default=None,
+        description="Tabular ML classifier output (mirrors prediction.ml when present)",
+    )
 
     model_config = {"from_attributes": True}
 
@@ -74,6 +137,32 @@ class PredictionsDashboardResponse(BaseModel):
     high_risk_patients: list[HighRiskPatient]
     risk_by_department: dict[str, dict[str, float]]
     monthly_trends: dict[str, list]
+
+
+def _serialize_prediction(p: Prediction) -> dict:
+    data = PredictionResponse.model_validate(p).model_dump(mode="json")
+    pred = p.prediction or {}
+    if pred.get("shap"):
+        data["shap"] = pred["shap"]
+    if pred.get("ml"):
+        data["ml"] = pred["ml"]
+    return data
+
+
+def _get_prediction_or_404(
+    db: Session, prediction_id: int, user: User, request: Request
+) -> Prediction:
+    tid = effective_tenant_id(user, get_request_tenant_id(request))
+    query = db.query(Prediction).filter(Prediction.id == prediction_id)
+    if tid is not None:
+        query = query.filter(Prediction.tenant_id == tid)
+    prediction = query.first()
+    if not prediction:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prediction not found")
+    patient = db.query(Patient).filter(Patient.id == prediction.patient_id).first()
+    if not patient or not can_view_patient(user, patient):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prediction not found")
+    return prediction
 
 
 def _get_patient_or_404(db: Session, patient_id: int, user: User, request: Request) -> Patient:
@@ -146,6 +235,8 @@ def start_prediction(
             "prediction": prediction.prediction,
             "probabilities": prediction.probabilities,
             "confidence_score": prediction.confidence_score,
+            "shap": (prediction.prediction or {}).get("shap"),
+            "ml": (prediction.prediction or {}).get("ml"),
         }
         job.completed_at = datetime.utcnow()
         db.commit()
@@ -260,8 +351,97 @@ def list_predictions_all(
         params,
         model=Prediction,
         allowed_sort=PREDICTION_SORT,
-        serializer=lambda p: PredictionResponse.model_validate(p).model_dump(mode="json"),
+        serializer=lambda p: _serialize_prediction(p),
     )
+
+
+@router.get("/predictions/shap/summary", response_model=ShapGlobalSummary)
+def get_shap_summary(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    target: str = Query("readmission", description="Prediction target for global SHAP summary"),
+    sample_size: int | None = Query(None, ge=50, le=500),
+):
+    """Global SHAP summary plot data (mean |SHAP| bar + beeswarm points)."""
+    if not settings.SHAP_ENABLED:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="SHAP disabled")
+
+    tid = effective_tenant_id(current_user, get_request_tenant_id(request))
+    if tid is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tenant required")
+
+    from app.services.shap_explainer import get_shap_explainer
+
+    data = get_shap_explainer().explain_global(tid, target=target, sample_size=sample_size)
+    return ShapGlobalSummary(**data)
+
+
+@router.get("/predictions/detail/{prediction_id}", response_model=PredictionResponse)
+def get_prediction_detail(
+    prediction_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Get a single prediction including SHAP and ML explanation fields."""
+    prediction = _get_prediction_or_404(db, prediction_id, current_user, request)
+    return _serialize_prediction(prediction)
+
+
+@router.get("/predictions/shap/local/{prediction_id}", response_model=ShapLocalExplanation)
+def get_prediction_shap(
+    prediction_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Local SHAP explanation for a stored prediction (cached in Redis)."""
+    if not settings.SHAP_ENABLED:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="SHAP disabled")
+
+    prediction = _get_prediction_or_404(db, prediction_id, current_user, request)
+    pred = prediction.prediction or {}
+    shap_block = pred.get("shap") or {}
+    if shap_block.get("status") == "ready" and shap_block.get("local"):
+        return ShapLocalExplanation(**shap_block["local"])
+
+    from app.services.shap_explainer import get_shap_explainer
+
+    features = prediction.features or {}
+    local = get_shap_explainer().explain_local(features, prediction_id=prediction_id)
+    return ShapLocalExplanation(**local)
+
+
+@router.post("/predictions/shap/compute/{prediction_id}")
+def compute_shap_async(
+    prediction_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Enqueue async SHAP computation (Celery) for an existing prediction."""
+    if not settings.SHAP_ENABLED:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="SHAP disabled")
+
+    prediction = _get_prediction_or_404(db, prediction_id, current_user, request)
+
+    from app.tasks.celery_app import redis_available
+    from app.tasks.shap_task import compute_shap_values_task
+
+    if not redis_available():
+        from app.services.shap_explainer import attach_shap_to_prediction_dict
+
+        features = prediction.features or {}
+        pred_data = attach_shap_to_prediction_dict(
+            features, dict(prediction.prediction or {}), prediction_id=prediction.id
+        )
+        prediction.prediction = pred_data
+        db.commit()
+        return {"status": "completed", "prediction_id": prediction.id, "mode": "sync"}
+
+    task = compute_shap_values_task.delay(prediction.id)
+    return {"status": "pending", "prediction_id": prediction.id, "task_id": task.id}
 
 
 @router.get("/predictions/{patient_id}", response_model=PredictionsListResponse)
@@ -279,7 +459,9 @@ def list_predictions(
         .order_by(Prediction.created_at.desc())
         .all()
     )
-    return PredictionsListResponse(predictions=predictions)
+    return PredictionsListResponse(
+        predictions=[_serialize_prediction(p) for p in predictions]
+    )
 
 
 @router.post("/insights/{patient_id}", response_model=InsightsResponse)

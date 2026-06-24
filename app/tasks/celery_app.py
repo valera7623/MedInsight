@@ -25,6 +25,7 @@ celery_app = Celery(
         "app.tasks.fhir_export_task",
         "app.tasks.report_task",
         "app.tasks.appointment_tasks",
+        "app.tasks.shap_task",
     ],
 )
 

@@ -257,5 +257,13 @@ class Settings(BaseSettings):
     APPOINTMENTS_WORK_START_HOUR: int = 9
     APPOINTMENTS_WORK_END_HOUR: int = 18
 
+    # Phase 17: SHAP explainability for ML risk models
+    SHAP_ENABLED: bool = True
+    SHAP_MODEL_TYPE: str = "random_forest"  # random_forest | xgboost
+    SHAP_CACHE_TTL_SECONDS: int = 3600
+    SHAP_SYNC_ON_PREDICT: bool = True
+    SHAP_SUMMARY_SAMPLE_SIZE: int = 200
+    ML_MODEL_PATH: str = "./storage/models"
+
 
 settings = Settings()

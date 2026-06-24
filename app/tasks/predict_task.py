@@ -121,6 +121,8 @@ def predict_risk_dicom_task(self, job_id: int) -> dict:
             "probabilities": prediction.probabilities,
             "confidence_score": prediction.confidence_score,
             "dicom_sources": (prediction.prediction or {}).get("dicom_sources", []),
+            "shap": (prediction.prediction or {}).get("shap"),
+            "ml": (prediction.prediction or {}).get("ml"),
         }
         job.completed_at = datetime.utcnow()
         db.commit()
@@ -186,6 +188,8 @@ def predict_risk_task(self, job_id: int) -> dict:
             "prediction": prediction.prediction,
             "probabilities": prediction.probabilities,
             "confidence_score": prediction.confidence_score,
+            "shap": (prediction.prediction or {}).get("shap"),
+            "ml": (prediction.prediction or {}).get("ml"),
         }
         job.completed_at = datetime.utcnow()
         db.commit()

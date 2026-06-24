@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.models import DicomStudy, Document, Patient, Prediction
 from app.prompts.dicom_prompts import (
     SYSTEM_PROMPT_DICOM,
@@ -306,9 +307,42 @@ def predict_risk(
         prediction_data = _rule_based_prediction(features)
         confidence = 0.58 if use_dicom else 0.55
 
-    return _save_prediction(
-        db, features, prediction_data, confidence, patient_id, user_id, analysis_id, tenant_id
-    )
+    if settings.SHAP_ENABLED and settings.SHAP_SYNC_ON_PREDICT:
+        from app.services.shap_explainer import attach_shap_to_prediction_dict
+
+        prediction = _save_prediction(
+            db, features, prediction_data, confidence, patient_id, user_id, analysis_id, tenant_id
+        )
+        prediction_data = attach_shap_to_prediction_dict(
+            features, dict(prediction.prediction or {}), prediction_id=prediction.id
+        )
+        prediction.prediction = prediction_data
+        db.commit()
+        db.refresh(prediction)
+    else:
+        prediction = _save_prediction(
+            db, features, prediction_data, confidence, patient_id, user_id, analysis_id, tenant_id
+        )
+
+    if settings.SHAP_ENABLED and not settings.SHAP_SYNC_ON_PREDICT:
+        try:
+            from app.tasks.celery_app import redis_available
+            from app.tasks.shap_task import compute_shap_values_task
+            from app.services.shap_explainer import attach_shap_to_prediction_dict
+
+            if redis_available():
+                compute_shap_values_task.delay(prediction.id)
+            else:
+                pred_data = attach_shap_to_prediction_dict(
+                    features, dict(prediction.prediction or {}), prediction_id=prediction.id
+                )
+                prediction.prediction = pred_data
+                db.commit()
+                db.refresh(prediction)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Async SHAP dispatch failed: %s", exc)
+
+    return prediction
 
 
 @trace_span("predictor_agent", {"agent": "predictor", "mode": "dicom"})
@@ -350,14 +384,55 @@ def predict_risk_with_dicom(
         prediction_data = _rule_based_prediction(features)
         confidence = 0.60
 
-    return _save_prediction(
-        db,
-        features,
-        prediction_data,
-        confidence,
-        patient_id,
-        user_id,
-        analysis_id,
-        tenant_id,
-        prediction_type="readmission_dicom",
-    )
+    if settings.SHAP_ENABLED and settings.SHAP_SYNC_ON_PREDICT:
+        from app.services.shap_explainer import attach_shap_to_prediction_dict
+
+        prediction = _save_prediction(
+            db,
+            features,
+            prediction_data,
+            confidence,
+            patient_id,
+            user_id,
+            analysis_id,
+            tenant_id,
+            prediction_type="readmission_dicom",
+        )
+        prediction_data = attach_shap_to_prediction_dict(
+            features, dict(prediction.prediction or {}), prediction_id=prediction.id
+        )
+        prediction.prediction = prediction_data
+        db.commit()
+        db.refresh(prediction)
+    else:
+        prediction = _save_prediction(
+            db,
+            features,
+            prediction_data,
+            confidence,
+            patient_id,
+            user_id,
+            analysis_id,
+            tenant_id,
+            prediction_type="readmission_dicom",
+        )
+
+    if settings.SHAP_ENABLED and not settings.SHAP_SYNC_ON_PREDICT:
+        try:
+            from app.tasks.celery_app import redis_available
+            from app.tasks.shap_task import compute_shap_values_task
+            from app.services.shap_explainer import attach_shap_to_prediction_dict
+
+            if redis_available():
+                compute_shap_values_task.delay(prediction.id)
+            else:
+                pred_data = attach_shap_to_prediction_dict(
+                    features, dict(prediction.prediction or {}), prediction_id=prediction.id
+                )
+                prediction.prediction = pred_data
+                db.commit()
+                db.refresh(prediction)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Async SHAP dispatch failed: %s", exc)
+
+    return prediction
