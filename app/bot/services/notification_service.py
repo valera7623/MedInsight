@@ -12,6 +12,7 @@ from aiogram.enums import ParseMode
 
 from app.bot.models import (
     EVENT_ANALYSIS_COMPLETED,
+    EVENT_APPOINTMENT_REMINDER,
     EVENT_LIMIT_EXCEEDED,
     EVENT_PATIENT_CREATED,
     EVENT_PREDICTION_READY,
@@ -189,6 +190,25 @@ class TelegramNotificationService:
 
     def send_patient_created_sync(self, **kwargs) -> bool:
         return self._run_sync(self.send_patient_created(**kwargs))
+
+    async def send_appointment_reminder(
+        self,
+        user_id: int,
+        appointment_id: int,
+        *,
+        message: str,
+        start_time: str,
+    ) -> bool:
+        url = self._frontend_url(f"/appointments")
+        text = (
+            f"📅 <b>Напоминание о приёме</b>\n"
+            f"{message}\n"
+            f"👉 <a href=\"{url}\">Открыть календарь</a>"
+        )
+        return await self._send_to_user(user_id, EVENT_APPOINTMENT_REMINDER, text)
+
+    def send_appointment_reminder_sync(self, **kwargs) -> bool:
+        return self._run_sync(self.send_appointment_reminder(**kwargs))
 
     @staticmethod
     def _run_sync(coro):

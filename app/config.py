@@ -248,5 +248,14 @@ class Settings(BaseSettings):
     REPORTS_MAX_FILE_SIZE_MB: int = 50
     REPORTS_TEMPLATES_DIR: str = "./app/templates/reports"
 
+    # Phase 16: Appointments calendar
+    APPOINTMENTS_ENABLED: bool = True
+    APPOINTMENTS_REMINDER_MINUTES: str = "30,60,120"
+    APPOINTMENTS_SLOT_DURATION_MINUTES: int = 30
+    APPOINTMENTS_MIN_BOOKING_HOURS: int = 24
+    APPOINTMENTS_MAX_BOOKING_DAYS: int = 30
+    APPOINTMENTS_WORK_START_HOUR: int = 9
+    APPOINTMENTS_WORK_END_HOUR: int = 18
+
 
 settings = Settings()

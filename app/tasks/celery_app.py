@@ -24,6 +24,7 @@ celery_app = Celery(
         "app.tasks.audit_sync_task",
         "app.tasks.fhir_export_task",
         "app.tasks.report_task",
+        "app.tasks.appointment_tasks",
     ],
 )
 
@@ -81,6 +82,22 @@ if settings.SIEM_EXPORT_ENABLED:
         "task": "app.tasks.audit_sync_task.sync_pending_audit_events",
         "schedule": 5 * 60.0,  # every 5 minutes
     }
+
+if settings.APPOINTMENTS_ENABLED:
+    celery_app.conf.beat_schedule.update({
+        "appointment-reminders": {
+            "task": "app.tasks.appointment_tasks.process_appointment_reminders",
+            "schedule": 5 * 60.0,
+        },
+        "appointment-recurring": {
+            "task": "app.tasks.appointment_tasks.update_recurring_appointments",
+            "schedule": 24 * 60 * 60.0,
+        },
+        "appointment-no-show": {
+            "task": "app.tasks.appointment_tasks.update_appointment_status",
+            "schedule": 60 * 60.0,
+        },
+    })
 
 
 if settings.OTEL_ENABLED:

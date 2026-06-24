@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — Календарь приёмов</title>
+  <link rel="stylesheet" href="/static/styles/themes.css">
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+  <script src="/static/components/theme-toggle.js"></script>
+  <style>
+    #calendar { min-height: 650px; margin-top: 1rem; }
+    .fc-event { cursor: pointer; }
+    .schedule-panel { display: none; }
+    .schedule-panel.active { display: block; }
+    .calendar-panel.hidden { display: none; }
+    .slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; margin-top: 1rem; }
+    .slot-btn { padding: 0.5rem; border: 1px solid var(--border-color, #ddd); border-radius: 6px; background: var(--card-bg, #fff); cursor: pointer; }
+    .slot-btn:hover { border-color: var(--primary, #3B82F6); }
+    .view-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .view-tabs button.active { background: var(--primary, #3B82F6); color: #fff; }
+    .status-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
+    .status-scheduled { background: #DBEAFE; color: #1D4ED8; }
+    .status-confirmed { background: #D1FAE5; color: #047857; }
+    .status-cancelled { background: #FEE2E2; color: #B91C1C; }
+    .status-completed { background: #E5E7EB; color: #374151; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">MedInsight</div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Меню" aria-expanded="false">☰</button>
+    <div class="nav-links">
+      <a href="/">Дашборд</a>
+      <a href="/patients">Пациенты</a>
+      <a href="/appointments" class="active">Приёмы</a>
+      <a href="/dicom">DICOM</a>
+      <a href="/subscription">Подписка</a>
+      <a href="/help/" target="_blank" rel="noopener">Документация</a>
+      <a href="/docs" target="_blank" rel="noopener">API</a>
+    </div>
+    <div class="nav-actions">
+      <div data-theme-toggle></div>
+      <button class="btn btn-secondary btn-sm" id="logout-btn">Выйти</button>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Календарь приёмов</h1>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+        <button class="btn btn-secondary" id="export-ics-btn">⬇ ICS</button>
+        <button class="btn btn-primary" id="new-appointment-btn">+ Новый приём</button>
+      </div>
+    </header>
+
+    <div class="view-tabs">
+      <button class="btn btn-secondary btn-sm active" id="tab-calendar">Календарь</button>
+      <button class="btn btn-secondary btn-sm" id="tab-schedule">Расписание врача</button>
+    </div>
+
+    <div class="list-toolbar calendar-panel" id="calendar-toolbar">
+      <select id="filter-doctor" class="toolbar-input">
+        <option value="">Все врачи</option>
+      </select>
+      <select id="filter-status" class="toolbar-input">
+        <option value="">Все статусы</option>
+        <option value="scheduled">Запланирован</option>
+        <option value="confirmed">Подтверждён</option>
+        <option value="in_progress">В процессе</option>
+        <option value="completed">Завершён</option>
+        <option value="cancelled">Отменён</option>
+        <option value="no_show">Не явился</option>
+      </select>
+    </div>
+
+    <div class="calendar-panel" id="calendar-panel">
+      <div id="calendar"></div>
+    </div>
+
+    <div class="schedule-panel" id="schedule-panel">
+      <div class="list-toolbar">
+        <select id="schedule-doctor" class="toolbar-input"></select>
+        <input type="date" id="schedule-date" class="toolbar-input">
+        <button class="btn btn-secondary" id="load-slots-btn">Свободные слоты</button>
+      </div>
+      <div id="schedule-list"></div>
+      <h3 style="margin-top:1.5rem">Свободные слоты</h3>
+      <div class="slot-grid" id="slots-grid"></div>
+    </div>
+  </main>
+
+  <div class="modal hidden" id="appointment-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content" style="max-width:560px">
+      <h2 id="modal-title">Новый приём</h2>
+      <form id="appointment-form">
+        <input type="hidden" id="appt-id">
+        <div class="form-group">
+          <label>Пациент</label>
+          <select id="appt-patient" required></select>
+        </div>
+        <div class="form-group">
+          <label>Врач</label>
+          <select id="appt-doctor" required></select>
+        </div>
+        <div class="form-group">
+          <label>Тип приёма</label>
+          <select id="appt-type" required></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Начало</label>
+            <input type="datetime-local" id="appt-start" required>
+          </div>
+          <div class="form-group">
+            <label>Напомнить за (мин)</label>
+            <select id="appt-remind">
+              <option value="15">15</option>
+              <option value="30" selected>30</option>
+              <option value="60">60</option>
+              <option value="120">120</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Описание</label>
+          <textarea id="appt-description" rows="2"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="modal-cancel">Отмена</button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+        <div id="appt-actions" class="form-actions hidden" style="margin-top:0.5rem">
+          <button type="button" class="btn btn-secondary btn-sm" id="appt-confirm">Подтвердить</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="appt-complete">Завершить</button>
+          <button type="button" class="btn btn-danger btn-sm" id="appt-cancel-appt">Отменить приём</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+  <script src="/static/dashboard.js"></script>
+  <script src="/static/websocket.js"></script>
+  <script src="/static/appointments.js"></script>
+</body>
+</html>

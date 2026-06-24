@@ -1621,3 +1621,73 @@ python scripts/test_report_template.py
 ### Миграции
 
 - `026_add_report_templates.sql` — `report_templates`, `report_template_variables`, `generated_reports`
+
+## Appointments Calendar (Phase 16)
+
+Календарь приёмов пациентов с интеграцией в MedInsight: планирование, расписание врачей, повторяющиеся приёмы, напоминания (Telegram, Email, WebSocket), экспорт ICS и ссылки на Google Calendar.
+
+### Возможности
+
+- CRUD приёмов с привязкой к пациенту, врачу, документу, DICOM-исследованию, прогнозу
+- Типы приёмов (первичный, повторный, консультация, процедура) с длительностью и цветом
+- Расписание врача, свободные слоты, обзор по клинике
+- Повторяющиеся приёмы (daily / weekly / monthly / custom)
+- История изменений статуса
+- Напоминания через Celery Beat (Telegram, email, WebSocket)
+- Автоматическая отметка no-show для пропущенных приёмов
+- Экспорт `.ics`, deep-link в Google Calendar / Outlook
+
+### UI
+
+- `/appointments` — календарь (FullCalendar)
+- `/appointments/schedule` — расписание врача и выбор свободных слотов
+
+### API
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/appointments/types` | Типы приёмов |
+| POST | `/api/appointments` | Создать приём |
+| GET | `/api/appointments` | Список (фильтры, пагинация) |
+| GET | `/api/appointments/{id}` | Получить приём |
+| PUT | `/api/appointments/{id}` | Обновить |
+| DELETE | `/api/appointments/{id}` | Отменить (soft) |
+| POST | `/api/appointments/{id}/cancel` | Отменить с причиной |
+| POST | `/api/appointments/{id}/confirm` | Подтвердить |
+| POST | `/api/appointments/{id}/complete` | Завершить |
+| GET | `/api/appointments/schedule/doctor/{id}` | Расписание врача |
+| GET | `/api/appointments/schedule/available-slots` | Свободные слоты |
+| GET | `/api/appointments/schedule/overview` | Обзор по врачам |
+| POST | `/api/appointments/{id}/recurring` | Повторяющиеся приёмы |
+| GET | `/api/appointments/export/ics` | Экспорт ICS |
+| GET | `/api/appointments/history/{id}` | История статусов |
+
+### Переменные окружения
+
+```env
+APPOINTMENTS_ENABLED=true
+APPOINTMENTS_REMINDER_MINUTES=30,60,120
+APPOINTMENTS_SLOT_DURATION_MINUTES=30
+APPOINTMENTS_MIN_BOOKING_HOURS=24
+APPOINTMENTS_MAX_BOOKING_DAYS=30
+APPOINTMENTS_WORK_START_HOUR=9
+APPOINTMENTS_WORK_END_HOUR=18
+```
+
+### Celery Beat
+
+| Задача | Интервал | Описание |
+|--------|----------|----------|
+| `process_appointment_reminders` | 5 мин | Отправка напоминаний |
+| `update_recurring_appointments` | 24 ч | Создание повторяющихся приёмов |
+| `update_appointment_status` | 1 ч | Авто no-show |
+
+### Тестирование
+
+```bash
+python scripts/test_appointments.py
+```
+
+### Миграции
+
+- `027_add_appointments_tables.sql` — `appointment_types`, `appointments`, `appointment_recurring`, `appointment_history`

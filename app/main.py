@@ -21,7 +21,7 @@ from app.middleware.audit_collector import AuditCollectorMiddleware
 from app.middleware.audit_append_only import register_append_only_listeners
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
-from app.routes import admin, admin_backup, analytics, audit_export, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, documents, export, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, reports, telegram, templates, users, webhooks
+from app.routes import admin, admin_backup, analytics, appointments, audit_export, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, documents, export, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, reports, telegram, templates, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
@@ -281,6 +281,8 @@ app.include_router(telegram.router, prefix="/api")
 app.include_router(preferences.router, prefix="/api")
 app.include_router(templates.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
+if settings.APPOINTMENTS_ENABLED:
+    app.include_router(appointments.router, prefix="/api")
 if settings.FHIR_ENABLED:
     from app.routes.fhir import router as fhir_router
 
@@ -382,3 +384,13 @@ def dicom_annotate_edit_page(study_uid: str, series_uid: str, frame_instance_uid
 @app.get("/subscription")
 def subscription_page():
     return FileResponse(static_dir / "subscription.html")
+
+
+@app.get("/appointments")
+def appointments_page():
+    return FileResponse(static_dir / "pages" / "appointments.html")
+
+
+@app.get("/appointments/schedule")
+def appointments_schedule_page():
+    return FileResponse(static_dir / "pages" / "appointments.html")
