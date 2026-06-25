@@ -59,6 +59,64 @@ ANAMNESIS_VITAE_PATTERNS = [
     re.compile(r"гистологическое\s+описание[^:]*:\s*([^.\n]+)", re.IGNORECASE),
 ]
 
+OPERATIONS_SECTION = re.compile(
+    r"перенес[её]нные\s+операци[ий][:\s]*\n(.*?)"
+    r"(?=\n\s*(?:Данные\s+обследования|Инфекци|Клинический\s+анализ|"
+    r"Общий\s+анализ|Биохимическ|Коагулограмм|Гормональн|ПЦР|УЗИ|ЭКГ|Диагноз\s*:|$))",
+    re.IGNORECASE | re.DOTALL,
+)
+
+LAB_SECTION_START = re.compile(
+    r"^(?:"
+    r"клинический\s+анализ\s+крови|"
+    r"общий\s+анализ\s+мочи|"
+    r"биохимическ\w+\s+анализ\s+крови|"
+    r"коагулограмм\w*|"
+    r"гормональн\w+\s+обследован\w*|"
+    r"пцр\s+анализ|"
+    r"исследование\s+сыворотки\s+крови|"
+    r"мазок\s+на\s+флору|"
+    r"мазок\s+на\s+онкоцитолог\w*|"
+    r"инфекци[яи]"
+    r")",
+    re.IGNORECASE,
+)
+
+LAB_SECTION_STOP = re.compile(
+    r"^(?:УЗИ|ЭКГ|ФЛГ|Консультация|Диагноз\s*:|Перенесенные|"
+    r"мазок\s+на\s+(?!флору)|клинический\s+анализ|общий\s+анализ|"
+    r"биохимическ|коагулограмм|гормональн|пцр\s+анализ|исследование\s+сыворотки)",
+    re.IGNORECASE,
+)
+
+LAB_HEADER_ROW = re.compile(
+    r"^(?:показатель|гормоны|инфекци[яи]|инфекции|результат|"
+    r"и\s*ф\s*а|рпга|реакция\s+микрометод)\b",
+    re.IGNORECASE,
+)
+
+ULTRASOUND_CONCLUSION = re.compile(
+    r"УЗИ.{0,800}?Заключение:\s*([^\n]+)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+NUMERIC_RANGE = re.compile(
+    r"(\d+(?:[,.]\d+)?)\s*[-–]\s*(\d+(?:[,.]\d+)?)",
+)
+
+LAB_SECTION_LABELS = {
+    "клинический анализ крови": "ОАК",
+    "общий анализ мочи": "ОАМ",
+    "биохимический анализ крови": "биохимия",
+    "коагулограмма": "коагулограмма",
+    "гормональное обследование": "гормоны",
+    "пцр анализ": "ПЦР",
+    "исследование сыворотки крови": "ИФА",
+    "мазок на флору": "мазок",
+    "мазок на онкоцитологию": "онкоцитология",
+    "инфекция": "инфекции",
+}
+
 DIAGNOSIS_LINE_PATTERN = re.compile(
     r"диагноз[:\s]+([^.\n]{3,200})",
     re.IGNORECASE,
@@ -399,6 +457,192 @@ def consolidate_diagnosis_labels(labels: list[str]) -> list[str]:
     return unique
 
 
+def _normalize_lab_key(name: str) -> str:
+    return re.sub(r"\s+", " ", name.strip().casefold())
+
+
+def _parse_numeric(value: str) -> float | None:
+    cleaned = value.replace(",", ".").strip()
+    match = re.search(r"(\d+(?:\.\d+)?)", cleaned)
+    if not match:
+        return None
+    try:
+        return float(match.group(1))
+    except ValueError:
+        return None
+
+
+def _is_abnormal_lab_value(name: str, value: str, reference: str) -> bool:
+    value_lower = value.casefold()
+    if "не обнаруж" in value_lower:
+        return False
+    if re.search(r"\bотр\.?\b", value_lower):
+        return False
+    if "эхопатологии не выявлено" in value_lower:
+        return False
+    if "без особенност" in value_lower:
+        return False
+
+    if "полож" in value_lower or "обнаруж" in value_lower:
+        if "авидность" in value_lower:
+            return False
+        return True
+
+    numeric = _parse_numeric(value)
+    if numeric is None or not reference:
+        return False
+
+    range_match = NUMERIC_RANGE.search(reference.replace(",", "."))
+    if not range_match:
+        upper = re.search(r"[<≤]\s*(\d+(?:\.\d+)?)", reference.replace(",", "."))
+        if upper and numeric > float(upper.group(1)):
+            return True
+        return False
+
+    low = float(range_match.group(1))
+    high = float(range_match.group(2))
+    return numeric < low or numeric > high
+
+
+def _parse_lab_row(line: str) -> tuple[str, str, str] | None:
+    line = line.strip()
+    if not line or LAB_HEADER_ROW.match(line):
+        return None
+
+    line = re.sub(r"^[•\u2022\s]+", "", line)
+    if "\t" in line:
+        parts = [part.strip() for part in line.split("\t") if part.strip()]
+    else:
+        parts = [part.strip() for part in re.split(r"\s{2,}", line) if part.strip()]
+
+    if len(parts) < 2:
+        return None
+
+    name, value = parts[0], parts[1]
+    reference = parts[2] if len(parts) > 2 else ""
+    if len(name) < 2 or len(value) < 1:
+        return None
+    if name.casefold() in {"v", "c", "ig m", "igg"}:
+        return None
+    return name, value, reference
+
+
+def _lab_section_label(header_line: str) -> str:
+    lowered = header_line.casefold()
+    for prefix, label in LAB_SECTION_LABELS.items():
+        if prefix in lowered:
+            return label
+    return "лаборатория"
+
+
+def _extract_lab_results(text: str) -> dict[str, dict[str, Any]]:
+    labs: dict[str, dict[str, Any]] = {}
+    current_section = ""
+    in_lab_block = False
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        if LAB_SECTION_START.match(line):
+            current_section = _lab_section_label(line)
+            in_lab_block = True
+            if "общий анализ мочи" in line.casefold():
+                continue
+            continue
+
+        if in_lab_block and LAB_SECTION_STOP.match(line):
+            in_lab_block = False
+            current_section = ""
+
+        if not in_lab_block:
+            continue
+
+        if current_section == "ОАМ" and not LAB_HEADER_ROW.match(line) and "\t" not in line:
+            key = _normalize_lab_key("общий анализ мочи")
+            labs[key] = {
+                "value": line,
+                "reference": "",
+                "section": current_section,
+                "abnormal": _is_abnormal_lab_value("общий анализ мочи", line, ""),
+            }
+            in_lab_block = False
+            current_section = ""
+            continue
+
+        parsed = _parse_lab_row(line)
+        if not parsed:
+            continue
+
+        name, value, reference = parsed
+        key = _normalize_lab_key(name)
+        labs[key] = {
+            "value": value,
+            "reference": reference,
+            "section": current_section,
+            "abnormal": _is_abnormal_lab_value(name, value, reference),
+        }
+
+    return labs
+
+
+def _extract_operations(text: str) -> list[str]:
+    match = OPERATIONS_SECTION.search(text)
+    if not match:
+        return []
+
+    operations: list[str] = []
+    seen: set[str] = set()
+    for line in match.group(1).splitlines():
+        cleaned = re.sub(r"\s+", " ", line.strip(" \t-–—"))
+        if len(cleaned) < 5:
+            continue
+        key = cleaned.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        operations.append(cleaned)
+    return operations
+
+
+def _extract_imaging_conclusions(text: str) -> list[str]:
+    conclusions: list[str] = []
+    seen: set[str] = set()
+
+    for match in ULTRASOUND_CONCLUSION.finditer(text):
+        conclusion = re.sub(r"\s+", " ", match.group(1).strip(" ."))
+        if len(conclusion) < 4:
+            continue
+        key = conclusion.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        conclusions.append(conclusion)
+
+    cytology = re.search(
+        r"мазок\s+на\s+онкоцитолог\w*[^.\n]*[–-]\s*([^.\n]+)",
+        text,
+        re.IGNORECASE,
+    )
+    if cytology:
+        note = re.sub(r"\s+", " ", cytology.group(1).strip())
+        if note and note.casefold() not in seen:
+            conclusions.append(f"Онкоцитология: {note}")
+    return conclusions
+
+
+def labs_dict_to_list(labs: dict[str, Any] | list[Any] | None) -> list[dict[str, Any]]:
+    if not labs:
+        return []
+    if isinstance(labs, list):
+        return [item for item in labs if isinstance(item, dict)]
+    return [
+        {"name": name, **(value if isinstance(value, dict) else {"value": value})}
+        for name, value in labs.items()
+    ]
+
+
 @trace_span("extractor_agent", {"agent": "extractor"})
 def extract_entities(text: str) -> dict:
     nlp = get_nlp()
@@ -409,14 +653,23 @@ def extract_entities(text: str) -> dict:
     result = {
         "diagnoses": _extract_diagnoses(text),
         "anamnesis": _extract_anamnesis_vitae(text),
+        "operations": _extract_operations(text),
+        "lab_results": _extract_lab_results(text),
+        "imaging_conclusions": _extract_imaging_conclusions(text),
         "medications": _extract_medications(text),
         "dates": unique_dates,
         "full_text": text,
     }
+    abnormal_labs = sum(1 for item in result["lab_results"].values() if item.get("abnormal"))
     logger.info(
-        "Extracted %d diagnoses, %d anamnesis, %d medications, %d dates",
+        "Extracted %d diagnoses, %d anamnesis, %d operations, %d labs (%d abnormal), "
+        "%d imaging conclusions, %d medications, %d dates",
         len(result["diagnoses"]),
         len(result["anamnesis"]),
+        len(result["operations"]),
+        len(result["lab_results"]),
+        abnormal_labs,
+        len(result["imaging_conclusions"]),
         len(result["medications"]),
         len(result["dates"]),
     )

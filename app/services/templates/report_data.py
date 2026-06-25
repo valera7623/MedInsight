@@ -10,6 +10,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.models import DicomStudy, Document, Patient, Prediction
+from app.services.extractor import labs_dict_to_list
 
 
 _GENDER_LABELS = {"M": "Мужской", "F": "Женский", "O": "Другой"}
@@ -64,15 +65,14 @@ def build_clinical_context(db: Session, patient_id: int, extra: dict | None = No
         data = doc.parsed_data
         diagnoses.extend(data.get("diagnoses") or [])
         medications.extend(data.get("medications") or [])
-        for lab in data.get("lab_results") or data.get("labs") or []:
-            if isinstance(lab, dict):
-                lab_results.append(
-                    {
-                        "name": lab.get("name", ""),
-                        "value": lab.get("value", ""),
-                        "reference": lab.get("reference", lab.get("unit", "")),
-                    }
-                )
+        for lab in labs_dict_to_list(data):
+            lab_results.append(
+                {
+                    "name": lab.get("name", ""),
+                    "value": lab.get("value", ""),
+                    "reference": lab.get("reference", lab.get("unit", "")),
+                }
+            )
 
     predictions = (
         db.query(Prediction).filter(Prediction.patient_id == patient_id).order_by(Prediction.created_at.desc()).all()

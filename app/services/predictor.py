@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import DicomStudy, Document, Patient, Prediction
+from app.prompts.clinical_prompts import build_gpt_clinical_prompt
 from app.prompts.dicom_prompts import (
     SYSTEM_PROMPT_DICOM,
     build_gpt_user_prompt,
@@ -130,12 +131,16 @@ def _collect_patient_features(db: Session, patient_id: int, user_id: int, tenant
 
     diagnoses: set[str] = set()
     anamnesis: set[str] = set()
+    operations: set[str] = set()
+    imaging_conclusions: set[str] = set()
     medications: set[str] = set()
     for doc in documents:
         if not doc.parsed_data:
             continue
         diagnoses.update(consolidate_diagnosis_labels(doc.parsed_data.get("diagnoses", [])))
         anamnesis.update(doc.parsed_data.get("anamnesis", []))
+        operations.update(doc.parsed_data.get("operations", []))
+        imaging_conclusions.update(doc.parsed_data.get("imaging_conclusions", []))
         medications.update(doc.parsed_data.get("medications", []))
 
     age = _calculate_age(patient.birth_date)
@@ -149,6 +154,8 @@ def _collect_patient_features(db: Session, patient_id: int, user_id: int, tenant
         "gender": GENDER_LABELS.get(patient.gender, patient.gender),
         "diagnoses": sorted(diagnoses),
         "anamnesis": sorted(anamnesis),
+        "operations": sorted(operations),
+        "imaging_conclusions": sorted(imaging_conclusions),
         "medications": sorted(medications),
         "document_count": len(documents),
         "lab_results": _lab_results_from_documents(documents),
@@ -156,18 +163,51 @@ def _collect_patient_features(db: Session, patient_id: int, user_id: int, tenant
     }
 
 
+def _abnormal_lab_count(lab_results: dict) -> int:
+    return sum(1 for item in lab_results.values() if isinstance(item, dict) and item.get("abnormal"))
+
+
+def _clinical_imaging_risk_keywords(imaging_conclusions: list[str]) -> bool:
+    text = " ".join(imaging_conclusions).casefold()
+    return any(
+        kw in text
+        for kw in (
+            "снижен овариальный резерв",
+            "овариальн",
+            "патолог",
+            "образован",
+            "кист",
+            "миом",
+            "воспал",
+            "эндометрит",
+            "гиперплаз",
+            "полип",
+        )
+    )
+
+
 def _rule_based_prediction(features: dict) -> dict:
     """Fallback when GPT/ProxyAPI is unavailable."""
     age = features.get("age", 50)
     diagnoses = features.get("diagnoses", [])
     anamnesis = features.get("anamnesis", [])
+    operations = features.get("operations", [])
+    imaging_conclusions = features.get("imaging_conclusions", [])
     medications = features.get("medications", [])
+    lab_results = features.get("lab_results", {})
     dicom = features.get("dicom", {})
     findings = dicom.get("findings", [])
     condition_count = len(diagnoses) + len(anamnesis)
+    abnormal_labs = _abnormal_lab_count(lab_results)
 
     readmission = min(95, 15 + condition_count * 8 + max(0, age - 60) // 2)
     complication = min(95, 10 + condition_count * 10 + len(medications) * 3)
+    complication = min(95, complication + abnormal_labs * 2)
+    if operations:
+        complication = min(95, complication + 5)
+    if _clinical_imaging_risk_keywords(imaging_conclusions):
+        complication = min(95, complication + 8)
+        readmission = min(95, readmission + 5)
 
     abnormal = any(
         w in " ".join(findings).lower()
@@ -188,6 +228,12 @@ def _rule_based_prediction(features: dict) -> dict:
         factors.append(f"Множественные диагнозы ({condition_count})")
     if len(medications) >= 5:
         factors.append(f"Полипрагмазия ({len(medications)} препаратов)")
+    if abnormal_labs:
+        factors.append(f"Отклонения в лабораторных анализах ({abnormal_labs})")
+    if operations:
+        factors.append(f"Перенесённые операции ({len(operations)})")
+    if imaging_conclusions:
+        factors.append(f"Заключения визуализации: {', '.join(imaging_conclusions[:2])}")
     if findings:
         factors.append(f"Патологические находки на визуализации ({len(findings)})")
     if dicom.get("study_count", 0) > 0:
@@ -222,17 +268,10 @@ async def _gpt_prediction(features: dict, *, use_dicom: bool = True) -> dict:
         prompt = build_gpt_user_prompt(features, dicom)
         system = SYSTEM_PROMPT_DICOM
     else:
-        prompt = f"""Проанализируй данные пациента и оцени риск:
-- Диагнозы: {features.get('diagnoses', [])}
-- Лекарства: {features.get('medications', [])}
-- Возраст: {features.get('age')}
-- Пол: {features.get('gender')}
-
-Оцени риск реадмиссии (0-100%), риск осложнений (0-100%).
-Верни JSON: {{"readmission_risk": 42, "complication_risk": 35, "factors": ["..."], "recommendations": ["..."]}}"""
+        prompt = build_gpt_clinical_prompt(features)
         system = (
-            "Ты клинический аналитик. Отвечай только валидным JSON на русском языке. "
-            "Риски — целые числа от 0 до 100."
+            "Ты клинический аналитик. Учитывай лабораторные данные, операции и заключения УЗИ. "
+            "Отвечай только валидным JSON на русском языке. Риски — целые числа от 0 до 100."
         )
 
     result = await chat_completion_json(

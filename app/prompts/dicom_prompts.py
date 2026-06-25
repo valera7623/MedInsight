@@ -83,8 +83,11 @@ USER_PROMPT_DICOM = """Проанализируй данные пациента 
 
 Пациент: {name}, {age} лет, {gender}
 Диагнозы (документы): {diagnoses}
+Анамнез: {anamnesis}
+Перенесённые операции: {operations}
 Лекарства: {medications}
 Лабораторные данные: {lab_results}
+Заключения УЗИ (документы): {imaging_conclusions}
 
 DICOM-исследования:
 {dicom_studies_block}
@@ -206,8 +209,11 @@ def build_gpt_user_prompt(features: dict[str, Any], dicom_bundle: dict[str, Any]
         age=features.get("age", ""),
         gender=features.get("gender", ""),
         diagnoses=features.get("diagnoses", []),
+        anamnesis=features.get("anamnesis", []),
+        operations=features.get("operations", []),
         medications=features.get("medications", []),
         lab_results=features.get("lab_results", {}),
+        imaging_conclusions=features.get("imaging_conclusions", []),
         dicom_studies_block=dicom_block,
         measurements_block=measurements_block,
         findings_block=findings_block,
