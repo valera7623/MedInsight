@@ -19,6 +19,7 @@ from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
 from app.models import Document, Patient, User
 from app.services.access import can_export, effective_tenant_id
+from app.services.export_report import collect_patient_export_clinical_data, MAX_DISCHARGE_CHARS
 
 router = APIRouter(prefix="/export", tags=["export"])
 
@@ -65,17 +66,7 @@ def export_patient_pdf(
         .all()
     )
 
-    all_diagnoses: set[str] = set()
-    all_medications: set[str] = set()
-    full_texts: list[str] = []
-
-    for doc in documents:
-        if doc.parsed_data:
-            all_diagnoses.update(doc.parsed_data.get("diagnoses", []))
-            all_medications.update(doc.parsed_data.get("medications", []))
-            text = doc.parsed_data.get("full_text", "")
-            if text:
-                full_texts.append(f"[{doc.filename}]\n{text}")
+    all_diagnoses, all_medications, discharge_blocks = collect_patient_export_clinical_data(documents)
 
     font_name, font_bold = _register_fonts()
     buffer = io.BytesIO()
@@ -131,19 +122,40 @@ def export_patient_pdf(
         elements.append(Paragraph("Лекарства не найдены", body_style))
     elements.append(Spacer(1, 0.3 * cm))
 
+    doc_heading_style = ParagraphStyle(
+        "DocHeading",
+        parent=heading_style,
+        fontSize=11,
+        spaceBefore=8,
+        spaceAfter=4,
+    )
+
     elements.append(Paragraph("Текст выписки", heading_style))
-    if full_texts:
-        combined = "\n\n".join(full_texts)
-        if len(combined) > 8000:
-            combined = combined[:8000] + "..."
-        for line in combined.split("\n"):
-            stripped = line.strip()
-            if not stripped:
-                continue
-            safe = stripped.replace("&", "&amp;").replace("<", "&lt;")
-            chunks = textwrap.wrap(safe, width=110) if len(safe) > 110 else [safe]
-            for chunk in chunks:
-                elements.append(Paragraph(chunk, body_style))
+    if discharge_blocks:
+        total_chars = 0
+        truncated = False
+        for filename, text in discharge_blocks:
+            if total_chars >= MAX_DISCHARGE_CHARS:
+                truncated = True
+                break
+            elements.append(Paragraph(f"Документ: {filename}", doc_heading_style))
+            remaining = MAX_DISCHARGE_CHARS - total_chars
+            chunk = text[:remaining]
+            total_chars += len(chunk)
+            if len(text) > remaining:
+                truncated = True
+            for line in chunk.split("\n"):
+                stripped = line.strip()
+                if not stripped:
+                    elements.append(Spacer(1, 0.15 * cm))
+                    continue
+                safe = stripped.replace("&", "&amp;").replace("<", "&lt;")
+                wrapped = textwrap.wrap(safe, width=100) if len(safe) > 100 else [safe]
+                for part in wrapped:
+                    elements.append(Paragraph(part, body_style))
+            elements.append(Spacer(1, 0.25 * cm))
+        if truncated:
+            elements.append(Paragraph("…текст обрезан по лимиту отчёта", body_style))
     else:
         elements.append(Paragraph("Текст документов отсутствует", body_style))
 

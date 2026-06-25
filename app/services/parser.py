@@ -87,6 +87,31 @@ def _structure_discharge_text(text: str) -> str:
     return structured
 
 
+def _clean_pipe_tables(text: str) -> str:
+    """Convert antiword pipe-separated table rows to tab-separated lines."""
+    lines_out: list[str] = []
+    for raw_line in text.replace("\r\n", "\n").split("\n"):
+        line = raw_line.strip()
+        if "|" in line:
+            cells = [re.sub(r"\s+", " ", cell).strip() for cell in line.split("|")]
+            cells = [cell for cell in cells if cell]
+            if len(cells) >= 2:
+                lines_out.append("\t".join(cells))
+                continue
+        if line:
+            lines_out.append(line)
+    return "\n".join(lines_out)
+
+
+def format_discharge_text_for_display(text: str) -> str:
+    """Normalize legacy and freshly parsed discharge text for UI/PDF display."""
+    if not text:
+        return ""
+    cleaned = _clean_pipe_tables(text)
+    cleaned = _normalize_extracted_text(cleaned)
+    return _structure_discharge_text(cleaned)
+
+
 def _iter_docx_blocks(document: DocxDocument):
     body = document.element.body
     for child in body.iterchildren():
@@ -196,6 +221,7 @@ def parse_document(file_path: str) -> str:
         raise ValueError(f"Unsupported file format: {suffix}")
 
     text = _normalize_extracted_text(text)
+    text = _clean_pipe_tables(text)
     text = _structure_discharge_text(text)
     logger.info("Parsed %s: %d characters", path.name, len(text))
     return text

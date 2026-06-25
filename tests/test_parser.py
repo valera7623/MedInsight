@@ -77,6 +77,16 @@ def test_parse_document_routes_doc_suffix(tmp_path: Path):
     assert text == "Текст\nвыписки"
 
 
+def test_format_discharge_text_cleans_pipe_tables():
+    from app.services.parser import format_discharge_text_for_display
+
+    raw = "Данные обследования |Инфекция |23.10.2018 | |ВИЧ |отр. |"
+    formatted = format_discharge_text_for_display(raw)
+    assert "|" not in formatted
+    assert "Инфекция" in formatted
+    assert "\t" in formatted or "\n" in formatted
+
+
 def test_normalize_extracted_text_preserves_line_breaks():
     from app.services.parser import _normalize_extracted_text, _structure_discharge_text
 
