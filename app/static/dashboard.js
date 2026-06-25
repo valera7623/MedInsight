@@ -205,13 +205,41 @@ async function deletePatient(patientId, onSuccess) {
 function setupModals() {
   document.querySelectorAll('.modal-close, .modal-backdrop').forEach(el => {
     el.addEventListener('click', () => {
-      el.closest('.modal').classList.add('hidden');
+      const modal = el.closest('.modal');
+      modal.classList.add('hidden');
+      if (modal?.id === 'patient-modal') {
+        resetPatientForm();
+      }
     });
   });
 }
 
 function openModal(id) {
   document.getElementById(id).classList.remove('hidden');
+}
+
+function resetPatientForm() {
+  const form = document.getElementById('patient-form');
+  if (!form) return;
+  form.reset();
+
+  const gender = document.getElementById('p-gender');
+  if (gender) gender.value = 'M';
+
+  const department = document.getElementById('p-department');
+  if (department) department.value = '';
+
+  const errEl = document.getElementById('patient-error');
+  if (errEl) {
+    errEl.textContent = '';
+    errEl.classList.add('hidden');
+  }
+}
+
+async function openNewPatientModal() {
+  resetPatientForm();
+  await loadDepartments('p-department');
+  openModal('patient-modal');
 }
 
 async function loadDepartments(selectId, { includeAll = false } = {}) {
@@ -234,7 +262,8 @@ async function loadDepartments(selectId, { includeAll = false } = {}) {
 
 function setupPatientForm(onSuccess) {
   const form = document.getElementById('patient-form');
-  if (!form) return;
+  if (!form || form.dataset.bound === '1') return;
+  form.dataset.bound = '1';
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -270,7 +299,7 @@ function setupPatientForm(onSuccess) {
       if (!res.ok) throw new Error(data.detail || 'Ошибка создания пациента');
 
       document.getElementById('patient-modal').classList.add('hidden');
-      form.reset();
+      resetPatientForm();
       if (onSuccess) onSuccess(data);
     } catch (err) {
       errEl.textContent = err.message;
@@ -703,9 +732,8 @@ function initDashboard() {
   setupUploadForm(() => loadDashboard());
   setupWebhookForm();
 
-  document.getElementById('new-patient-btn').addEventListener('click', async () => {
-    await loadDepartments('p-department');
-    openModal('patient-modal');
+  document.getElementById('new-patient-btn').addEventListener('click', () => {
+    openNewPatientModal();
   });
   document.getElementById('upload-doc-btn').addEventListener('click', async () => {
     await loadPatientsForSelect('upload-patient');
@@ -1042,9 +1070,8 @@ function initPatientsPage() {
   setupModals();
   setupPatientForm(() => loadPatientsList(patientsPage));
 
-  document.getElementById('new-patient-btn').addEventListener('click', async () => {
-    await loadDepartments('p-department');
-    openModal('patient-modal');
+  document.getElementById('new-patient-btn').addEventListener('click', () => {
+    openNewPatientModal();
   });
   document.getElementById('prev-page').addEventListener('click', () => loadPatientsList(patientsPage - 1));
   document.getElementById('next-page').addEventListener('click', () => loadPatientsList(patientsPage + 1));
