@@ -39,6 +39,20 @@
       <ul id="documents-list" class="documents-list"></ul>
     </div>
 
+    <div class="section-card" id="dicom-section">
+      <div class="section-header-row">
+        <h2>DICOM-исследования</h2>
+        <div class="section-actions">
+          <button type="button" class="btn btn-primary btn-sm" id="patient-upload-dicom-btn">+ DICOM</button>
+          <a class="btn btn-secondary btn-sm" id="patient-dicom-all-link" href="/dicom">Все исследования</a>
+        </div>
+      </div>
+      <div id="dicom-processing-panel" class="dicom-zip-progress hidden" role="status" aria-live="polite">
+        <p id="dicom-processing-label" class="dicom-zip-progress-label">Обработка DICOM…</p>
+      </div>
+      <ul id="dicom-studies-list" class="documents-list"></ul>
+    </div>
+
     <div class="section-card">
       <h2>Прогнозы</h2>
       <div class="section-actions">
@@ -51,7 +65,29 @@
     </div>
   </main>
 
+  <div class="modal hidden" id="dicom-upload-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <h2>Загрузка DICOM</h2>
+      <form id="dicom-upload-form">
+        <input type="hidden" id="dicom-patient" value="">
+        <div class="dicom-dropzone" id="dicom-dropzone">
+          <p>Перетащите .dcm файл сюда или нажмите для выбора</p>
+          <input type="file" id="dicom-file" accept=".dcm,.dicom,application/dicom" hidden>
+          <span id="dicom-file-name" class="text-muted"></span>
+        </div>
+        <div id="dicom-upload-error" class="error-message hidden"></div>
+        <div id="dicom-upload-progress" class="hidden">Загрузка файла…</div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-close">Отмена</button>
+          <button type="submit" class="btn btn-primary">Загрузить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="/static/dashboard.js"></script>
+  <script src="/static/dicom.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       initPatientPage();

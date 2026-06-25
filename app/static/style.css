@@ -417,7 +417,24 @@ select.btn {
 
 .section-card h2 { font-size: 1rem; margin-bottom: 1rem; color: var(--text-secondary); }
 
-.section-actions { display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.section-actions { display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.section-header-row h2 {
+  margin: 0;
+}
+
+.section-header-row .section-actions {
+  margin-bottom: 0;
+}
 
 .documents-list {
   list-style: none;

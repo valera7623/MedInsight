@@ -495,6 +495,106 @@ async function reparsePatientDocument(documentId) {
   }
 }
 
+const DICOM_STATUS_LABELS = {
+  ready: 'готово',
+  processing: 'обработка',
+  failed: 'ошибка',
+  uploaded: 'загружено',
+};
+
+function formatDicomStudyDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('ru-RU');
+}
+
+function renderPatientDicomItem(study) {
+  const title = escapeHtml(study.study_description || study.modality || 'DICOM');
+  const modality = escapeHtml(study.modality || '—');
+  const status = DICOM_STATUS_LABELS[study.status] || study.status;
+  const canView = study.status === 'ready';
+  const viewBtn = canView
+    ? `<a href="/dicom/viewer/${encodeURIComponent(study.study_uid)}" class="btn btn-primary btn-sm">Просмотр</a>`
+    : '';
+  const deleteBtn = study.can_delete
+    ? `<button type="button" class="btn btn-danger btn-sm patient-dicom-delete-btn" data-uid="${escapeHtml(study.study_uid)}" data-label="${title.replace(/"/g, '&quot;')}">Удалить</button>`
+    : '';
+  return `
+    <li class="document-item">
+      <div class="document-item-main">
+        <strong>${title}</strong>
+        <span class="document-meta">${status} · ${modality} · ${formatDicomStudyDate(study.study_date)} · кадров: ${study.num_instances}</span>
+      </div>
+      <div class="document-item-actions">
+        ${viewBtn}
+        ${deleteBtn}
+      </div>
+    </li>
+  `;
+}
+
+async function loadPatientDicomStudies(patientId) {
+  const listEl = document.getElementById('dicom-studies-list');
+  const section = document.getElementById('dicom-section');
+  if (!listEl || !section) return;
+
+  const res = await apiFetch(`/api/dicom/studies?patient_id=${patientId}&limit=20`);
+  if (res.status === 503) {
+    section.classList.add('hidden');
+    return;
+  }
+  section.classList.remove('hidden');
+
+  const data = await parseApiResponse(res);
+  if (!res.ok) {
+    listEl.innerHTML = '<li style="color:#64748b">Не удалось загрузить DICOM-исследования</li>';
+    return;
+  }
+
+  const items = data.items || [];
+  listEl.dataset.patientId = String(patientId);
+  listEl.innerHTML = items.length
+    ? items.map(renderPatientDicomItem).join('')
+    : '<li style="color:#64748b">DICOM-исследования не загружены</li>';
+}
+
+function setupPatientDicomSection(patientId) {
+  const section = document.getElementById('dicom-section');
+  if (!section) return;
+
+  const patientField = document.getElementById('dicom-patient');
+  if (patientField) patientField.value = String(patientId);
+
+  const allLink = document.getElementById('patient-dicom-all-link');
+  if (allLink) allLink.href = `/dicom?patient_id=${patientId}`;
+
+  if (typeof setDicomRefreshCallback === 'function') {
+    setDicomRefreshCallback(() => loadPatientDicomStudies(patientId));
+  }
+
+  if (section.dataset.bound !== '1') {
+    section.dataset.bound = '1';
+    setupModals();
+    if (typeof setupDicomDropzone === 'function') setupDicomDropzone();
+    if (typeof setupDicomUploadForm === 'function') setupDicomUploadForm();
+
+    document.getElementById('patient-upload-dicom-btn')?.addEventListener('click', () => {
+      openModal('dicom-upload-modal');
+    });
+
+    document.getElementById('dicom-studies-list')?.addEventListener('click', async (event) => {
+      const deleteBtn = event.target.closest('.patient-dicom-delete-btn');
+      if (!deleteBtn || typeof deleteDicomStudy !== 'function') return;
+      event.preventDefault();
+      await deleteDicomStudy(deleteBtn.dataset.uid, deleteBtn.dataset.label);
+    });
+  }
+
+  if (typeof resumeDicomProcessingPolls === 'function') {
+    resumeDicomProcessingPolls();
+  }
+}
+
 function formatFullName(p) {
   const parts = [p.last_name, p.first_name];
   if (p.middle_name) parts.push(p.middle_name);
@@ -1229,6 +1329,7 @@ async function loadPatientDetail(patientId) {
   }
 
   await loadPatientPredictions(patientId);
+  await loadPatientDicomStudies(patientId);
 }
 
 function initPatientPage() {
@@ -1245,6 +1346,7 @@ function initPatientPage() {
 
   document.getElementById('generate-prediction-btn')?.addEventListener('click', () => startPrediction(patientId));
   document.getElementById('generate-insights-btn')?.addEventListener('click', () => loadPatientInsights(patientId));
+  setupPatientDicomSection(patientId);
 
   fetchCurrentUser()
     .then(() => loadPatientDetail(patientId))

@@ -1,6 +1,19 @@
 let dicomPage = 1;
 let dicomPollTimer = null;
+let dicomRefreshCallback = null;
 const DICOM_POLL_KEY = 'dicomProcessingStudyId';
+
+function setDicomRefreshCallback(fn) {
+  dicomRefreshCallback = fn || null;
+}
+
+function refreshDicomList() {
+  if (dicomRefreshCallback) {
+    dicomRefreshCallback();
+    return;
+  }
+  loadDicomStudies(dicomPage);
+}
 
 function stopDicomStatusPoll() {
   if (dicomPollTimer) {
@@ -24,7 +37,7 @@ function startDicomStatusPoll(studyId) {
       if (res.status === 404) {
         stopDicomStatusPoll();
         sessionStorage.removeItem(DICOM_POLL_KEY);
-        loadDicomStudies(dicomPage);
+        refreshDicomList();
         return;
       }
       if (!res.ok) return;
@@ -39,7 +52,7 @@ function startDicomStatusPoll(studyId) {
         if (data.status === 'failed') {
           alert(data.error_message || 'Ошибка обработки DICOM');
         }
-        loadDicomStudies(dicomPage);
+        refreshDicomList();
       }
     } catch (err) {
       console.error('DICOM status poll failed', err);
@@ -82,7 +95,7 @@ async function deleteDicomStudy(studyUid, label) {
       const data = await res.json().catch(() => ({}));
       throw new Error(formatApiError(data.detail) || `Ошибка удаления (${res.status})`);
     }
-    loadDicomStudies(dicomPage);
+    refreshDicomList();
   } catch (err) {
     alert(err.message || 'Ошибка удаления');
   }
@@ -344,7 +357,7 @@ function setupDicomUploadForm(onSuccess) {
       form.reset();
       document.getElementById('dicom-file-name').textContent = '';
       progressEl.classList.add('hidden');
-      loadDicomStudies(dicomPage);
+      refreshDicomList();
       if (data.study_id && data.status === 'processing') {
         startDicomStatusPoll(data.study_id);
       }
