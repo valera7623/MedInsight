@@ -326,9 +326,23 @@ function documentStatusLabel(status) {
   return DOCUMENT_STATUS_LABELS[status] || status;
 }
 
+function formatParseError(parsedData) {
+  const err = parsedData?.error;
+  if (!err) return '';
+  const text = String(err);
+  return text.length > 120 ? `${text.slice(0, 117)}…` : text;
+}
+
 function renderDocumentItem(doc) {
   const safeName = escapeHtml(doc.filename);
   const safeAttrName = safeName.replace(/"/g, '&quot;');
+  const parseError = doc.status === 'failed' ? formatParseError(doc.parsed_data) : '';
+  const errorNote = parseError
+    ? `<span class="document-error" title="${escapeHtml(doc.parsed_data?.error || '')}">${escapeHtml(parseError)}</span>`
+    : '';
+  const reparseBtn = doc.status === 'failed'
+    ? `<button type="button" class="btn btn-secondary btn-sm doc-reparse-btn" data-id="${doc.id}">Повторить</button>`
+    : '';
   const deleteBtn = canDeleteDocument()
     ? `<button type="button" class="btn btn-danger btn-sm doc-delete-btn" data-id="${doc.id}" data-filename="${safeAttrName}">Удалить</button>`
     : '';
@@ -337,10 +351,12 @@ function renderDocumentItem(doc) {
       <div class="document-item-main">
         <strong>${safeName}</strong>
         <span class="document-meta">${documentStatusLabel(doc.status)} · ${escapeHtml(doc.document_type || 'документ')} · ${new Date(doc.created_at).toLocaleDateString('ru-RU')}</span>
+        ${errorNote}
       </div>
       <div class="document-item-actions">
         <button type="button" class="btn btn-secondary btn-sm doc-open-btn" data-id="${doc.id}" data-filename="${safeAttrName}">Открыть</button>
         <button type="button" class="btn btn-secondary btn-sm doc-download-btn" data-id="${doc.id}" data-filename="${safeAttrName}">Скачать</button>
+        ${reparseBtn}
         ${deleteBtn}
       </div>
     </li>
@@ -438,8 +454,9 @@ function setupDocumentActions() {
   docsEl.addEventListener('click', async (event) => {
     const openBtn = event.target.closest('.doc-open-btn');
     const downloadBtn = event.target.closest('.doc-download-btn');
+    const reparseBtn = event.target.closest('.doc-reparse-btn');
     const deleteBtn = event.target.closest('.doc-delete-btn');
-    const button = openBtn || downloadBtn || deleteBtn;
+    const button = openBtn || downloadBtn || reparseBtn || deleteBtn;
     if (!button) return;
 
     event.preventDefault();
@@ -452,6 +469,8 @@ function setupDocumentActions() {
     try {
       if (deleteBtn) {
         await deletePatientDocument(documentId, filename);
+      } else if (reparseBtn) {
+        await reparsePatientDocument(documentId);
       } else if (openBtn) {
         await openPatientDocument(documentId, filename);
       } else {
@@ -463,6 +482,17 @@ function setupDocumentActions() {
       button.disabled = false;
     }
   });
+}
+
+async function reparsePatientDocument(documentId) {
+  const res = await apiFetch(`/api/documents/${documentId}/reparse`, { method: 'POST' });
+  const data = await parseApiResponse(res);
+  if (!res.ok) throw new Error(formatApiError(data.detail) || 'Не удалось повторить обработку');
+
+  const patientId = document.getElementById('documents-list')?.dataset.patientId;
+  if (patientId) {
+    await loadPatientDetail(parseInt(patientId, 10));
+  }
 }
 
 function formatFullName(p) {

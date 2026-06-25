@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import Any
 
 from app.config import settings
+from app.services.parser import _normalize_extracted_text, _structure_discharge_text
 from app.utils.tracing import trace_span
 
 logger = logging.getLogger(__name__)

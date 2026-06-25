@@ -310,6 +310,29 @@ def download_document(
     )
 
 
+@router.post("/{document_id}/reparse", response_model=DocumentResponse)
+def reparse_document(
+    document_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    doc = _get_document_or_404(db, document_id, current_user, request)
+    if not can_upload_document(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot reparse document")
+
+    if not Path(doc.file_path).exists():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Document file not found on server")
+
+    doc.parsed_data = None
+    doc.parsed_at = None
+    db.commit()
+
+    _enqueue_parse(doc, db, current_user.id)
+    db.refresh(doc)
+    return doc
+
+
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(
     document_id: int,

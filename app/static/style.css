@@ -455,6 +455,14 @@ select.btn {
   color: var(--text-secondary);
 }
 
+.document-error {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--danger, #dc2626);
+  word-break: break-word;
+}
+
 .document-item-actions {
   display: flex;
   gap: 0.5rem;
