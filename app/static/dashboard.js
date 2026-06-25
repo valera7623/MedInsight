@@ -310,6 +310,95 @@ function setupPatientForm(onSuccess) {
 
 const GENDER_LABELS = { M: 'М', F: 'Ж', O: '—' };
 
+const DOCUMENT_STATUS_LABELS = {
+  uploaded: 'загружен',
+  processing: 'обработка',
+  parsed: 'обработан',
+  failed: 'ошибка',
+};
+
+function documentStatusLabel(status) {
+  return DOCUMENT_STATUS_LABELS[status] || status;
+}
+
+function renderDocumentItem(doc) {
+  const safeName = escapeHtml(doc.filename);
+  const safeAttrName = safeName.replace(/"/g, '&quot;');
+  return `
+    <li class="document-item">
+      <div class="document-item-main">
+        <strong>${safeName}</strong>
+        <span class="document-meta">${documentStatusLabel(doc.status)} · ${escapeHtml(doc.document_type || 'документ')} · ${new Date(doc.created_at).toLocaleDateString('ru-RU')}</span>
+      </div>
+      <div class="document-item-actions">
+        <button type="button" class="btn btn-secondary btn-sm doc-open-btn" data-id="${doc.id}" data-filename="${safeAttrName}">Открыть</button>
+        <button type="button" class="btn btn-secondary btn-sm doc-download-btn" data-id="${doc.id}" data-filename="${safeAttrName}">Скачать</button>
+      </div>
+    </li>
+  `;
+}
+
+async function fetchDocumentBlob(documentId, inline = false) {
+  const query = inline ? '?inline=1' : '';
+  const res = await apiFetch(`/api/documents/${documentId}/download${query}`);
+  if (!res.ok) {
+    const data = await parseApiResponse(res);
+    throw new Error(formatApiError(data.detail) || 'Не удалось получить файл');
+  }
+  return res.blob();
+}
+
+async function downloadPatientDocument(documentId, filename) {
+  const blob = await fetchDocumentBlob(documentId, false);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename || `document_${documentId}`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function openPatientDocument(documentId, filename) {
+  const blob = await fetchDocumentBlob(documentId, true);
+  const url = URL.createObjectURL(blob);
+  const popup = window.open(url, '_blank', 'noopener');
+  if (!popup) {
+    URL.revokeObjectURL(url);
+    await downloadPatientDocument(documentId, filename);
+    return;
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+function setupDocumentActions() {
+  const docsEl = document.getElementById('documents-list');
+  if (!docsEl || docsEl.dataset.bound === '1') return;
+  docsEl.dataset.bound = '1';
+
+  docsEl.addEventListener('click', async (event) => {
+    const openBtn = event.target.closest('.doc-open-btn');
+    const downloadBtn = event.target.closest('.doc-download-btn');
+    const button = openBtn || downloadBtn;
+    if (!button) return;
+
+    const documentId = button.dataset.id;
+    const filename = button.dataset.filename;
+    button.disabled = true;
+
+    try {
+      if (openBtn) {
+        await openPatientDocument(documentId, filename);
+      } else {
+        await downloadPatientDocument(documentId, filename);
+      }
+    } catch (err) {
+      alert(err.message || 'Ошибка работы с документом');
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
 function formatFullName(p) {
   const parts = [p.last_name, p.first_name];
   if (p.middle_name) parts.push(p.middle_name);
@@ -1038,7 +1127,7 @@ async function loadPatientDetail(patientId) {
   const docsEl = document.getElementById('documents-list');
   if (docsEl) {
     docsEl.innerHTML = docs.length
-      ? docs.map(d => `<li>${d.filename} — <em>${d.status}</em> (${new Date(d.created_at).toLocaleDateString('ru-RU')})</li>`).join('')
+      ? docs.map(renderDocumentItem).join('')
       : '<li style="color:#64748b">Документы не загружены</li>';
   }
 
@@ -1048,6 +1137,7 @@ async function loadPatientDetail(patientId) {
 function initPatientPage() {
   if (!requireAuth()) return;
   setupLogout();
+  setupDocumentActions();
 
   const match = window.location.pathname.match(/\/patient\/(\d+)/);
   const patientId = match ? parseInt(match[1], 10) : null;

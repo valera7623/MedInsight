@@ -281,6 +281,7 @@ def download_document(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
+    inline: bool = Query(False, description="Open in browser when supported (PDF)"),
 ):
     doc = _get_document_or_404(db, document_id, current_user, request)
 
@@ -300,8 +301,9 @@ def download_document(
         user_agent=request.headers.get("user-agent"),
     )
 
+    disposition = "inline" if inline else "attachment"
     return Response(
         content=content,
         media_type=doc.mime_type,
-        headers={"Content-Disposition": f'attachment; filename="{doc.filename}"'},
+        headers={"Content-Disposition": f'{disposition}; filename="{doc.filename}"'},
     )
