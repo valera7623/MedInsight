@@ -1,4 +1,5 @@
 import io
+import textwrap
 from datetime import datetime
 from typing import Annotated
 
@@ -136,8 +137,13 @@ def export_patient_pdf(
         if len(combined) > 8000:
             combined = combined[:8000] + "..."
         for line in combined.split("\n"):
-            if line.strip():
-                elements.append(Paragraph(line.replace("&", "&amp;").replace("<", "&lt;"), body_style))
+            stripped = line.strip()
+            if not stripped:
+                continue
+            safe = stripped.replace("&", "&amp;").replace("<", "&lt;")
+            chunks = textwrap.wrap(safe, width=110) if len(safe) > 110 else [safe]
+            for chunk in chunks:
+                elements.append(Paragraph(chunk, body_style))
     else:
         elements.append(Paragraph("Текст документов отсутствует", body_style))
 

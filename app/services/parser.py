@@ -6,6 +6,9 @@ import tempfile
 from pathlib import Path
 
 from docx import Document as DocxDocument
+from docx.oxml.ns import qn
+from docx.table import Table
+from docx.text.paragraph import Paragraph
 from PyPDF2 import PdfReader
 
 from app.utils.tracing import trace_span
@@ -20,11 +23,95 @@ SUPPORTED_MIMES = {
     "application/vnd.ms-word",
 }
 
+# Common discharge section headers — insert line breaks when Word stores text as one block.
+DISCHARGE_SECTION_MARKERS = [
+    "Перенесенные гинекологические заболевания",
+    "Перенесенные заболевания",
+    "Перенесенные операции",
+    "Гистологическое описание микропрепаратов",
+    "Гистероскопия",
+    "Данные обследования",
+    "Клинический анализ крови",
+    "Общий анализ мочи",
+    "Биохимический анализ крови",
+    "Коагулограмма",
+    "Гормональное обследование",
+    "ПЦР анализ",
+    "Исследование сыворотки крови",
+    "Мазок на онкоцитологию",
+    "Мазок на флору",
+    "УЗИ органов малого таза",
+    "УЗИ молочных желез",
+    "УЗИ щитовидной железы",
+    "Консультация терапевта",
+    "Диагноз:",
+    "Рекомендован",
+    "ЭКГ:",
+    "ФЛГ",
+]
+
+
+def _normalize_extracted_text(text: str) -> str:
+    """Keep line breaks for readability; collapse only horizontal whitespace."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    lines: list[str] = []
+    for raw_line in text.split("\n"):
+        line = re.sub(r"[ \t]+", " ", raw_line).strip()
+        lines.append(line)
+
+    result: list[str] = []
+    prev_empty = False
+    for line in lines:
+        if not line:
+            if not prev_empty:
+                result.append("")
+            prev_empty = True
+            continue
+        result.append(line)
+        prev_empty = False
+    return "\n".join(result).strip()
+
+
+def _structure_discharge_text(text: str) -> str:
+    """Insert line breaks before known section headers in single-block discharge forms."""
+    if text.count("\n") >= 8:
+        return text
+    structured = text
+    for marker in DISCHARGE_SECTION_MARKERS:
+        structured = re.sub(
+            rf"(?<!\n)(?<=\S)\s+({re.escape(marker)})",
+            r"\n\1",
+            structured,
+            flags=re.IGNORECASE,
+        )
+    return structured
+
+
+def _iter_docx_blocks(document: DocxDocument):
+    body = document.element.body
+    for child in body.iterchildren():
+        if child.tag == qn("w:p"):
+            yield Paragraph(child, document)
+        elif child.tag == qn("w:tbl"):
+            yield Table(child, document)
+
 
 def extract_text_from_docx(file_path: Path) -> str:
     doc = DocxDocument(str(file_path))
-    paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
-    return "\n".join(paragraphs)
+    blocks: list[str] = []
+    for block in _iter_docx_blocks(doc):
+        if isinstance(block, Paragraph):
+            text = block.text.strip()
+            if text:
+                blocks.append(text)
+            continue
+
+        for row in block.rows:
+            cells = [re.sub(r"\s+", " ", cell.text).strip() for cell in row.cells]
+            cells = [cell for cell in cells if cell]
+            if cells:
+                blocks.append("\t".join(cells))
+    return "\n".join(blocks)
 
 
 def extract_text_from_pdf(file_path: Path) -> str:
@@ -34,7 +121,7 @@ def extract_text_from_pdf(file_path: Path) -> str:
         text = page.extract_text()
         if text:
             pages.append(text.strip())
-    return "\n".join(pages)
+    return "\n\n".join(pages)
 
 
 def _run_text_extractor(command: list[str], *, tool_name: str) -> str | None:
@@ -108,6 +195,7 @@ def parse_document(file_path: str) -> str:
     else:
         raise ValueError(f"Unsupported file format: {suffix}")
 
-    text = re.sub(r"\s+", " ", text).strip()
+    text = _normalize_extracted_text(text)
+    text = _structure_discharge_text(text)
     logger.info("Parsed %s: %d characters", path.name, len(text))
     return text

@@ -74,4 +74,20 @@ def test_parse_document_routes_doc_suffix(tmp_path: Path):
         text = parse_document(str(doc_path))
 
     extract_doc.assert_called_once()
-    assert text == "Текст выписки"
+    assert text == "Текст\nвыписки"
+
+
+def test_normalize_extracted_text_preserves_line_breaks():
+    from app.services.parser import _normalize_extracted_text, _structure_discharge_text
+
+    assert _normalize_extracted_text("  Текст  \n\n  выписки  ") == "Текст\n\nвыписки"
+    assert _normalize_extracted_text("одна   строка") == "одна строка"
+
+    blob = (
+        "Ф.И.О. Диагноз: N46 Перенесенные заболевания: ОРВИ "
+        "Клинический анализ крови – 20.10.2018 УЗИ органов малого таза: тест"
+    )
+    structured = _structure_discharge_text(blob)
+    assert "Перенесенные заболевания" in structured
+    assert structured.index("Перенесенные") > 0
+    assert "\n" in structured
