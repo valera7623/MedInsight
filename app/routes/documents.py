@@ -13,8 +13,9 @@ from app.config import settings
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
 from app.models import AnalysisJob, Document, Patient, User
-from app.services.access import can_upload_document, can_view_patient, effective_tenant_id, is_super_admin
+from app.services.access import can_delete_document, can_upload_document, can_view_patient, effective_tenant_id, is_super_admin
 from app.services.audit import log_audit
+from app.services.document_deletion import delete_document_with_dependencies
 from app.services.list_queries import DOCUMENT_SEARCH_FIELDS, DOCUMENT_SORT, documents_scope
 from app.utils.pagination import PaginationParams, paginate
 from app.services.encryption import EncryptionError, decrypt_file, encrypt_bytes, ensure_encryption_key
@@ -306,4 +307,34 @@ def download_document(
         content=content,
         media_type=doc.mime_type,
         headers={"Content-Disposition": f'{disposition}; filename="{doc.filename}"'},
+    )
+
+
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_document(
+    document_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    doc = _get_document_or_404(db, document_id, current_user, request)
+    if not can_delete_document(current_user, doc):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete document")
+
+    filename = doc.filename
+    patient_id = doc.patient_id
+    tenant_id = doc.tenant_id
+
+    delete_document_with_dependencies(db, doc)
+
+    log_audit(
+        db,
+        user_id=current_user.id,
+        tenant_id=tenant_id,
+        action="delete",
+        resource_type="document",
+        resource_id=document_id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        details={"filename": filename, "patient_id": patient_id},
     )

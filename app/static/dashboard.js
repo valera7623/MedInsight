@@ -152,6 +152,11 @@ function isAdmin() {
   return currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 }
 
+function canDeleteDocument() {
+  const role = currentUser?.role;
+  return role === 'super_admin' || role === 'admin' || role === 'head_of_department';
+}
+
 function isViewer() {
   return currentUser?.role === 'viewer' || currentUser?.role === 'researcher';
 }
@@ -324,6 +329,9 @@ function documentStatusLabel(status) {
 function renderDocumentItem(doc) {
   const safeName = escapeHtml(doc.filename);
   const safeAttrName = safeName.replace(/"/g, '&quot;');
+  const deleteBtn = canDeleteDocument()
+    ? `<button type="button" class="btn btn-danger btn-sm doc-delete-btn" data-id="${doc.id}" data-filename="${safeAttrName}">Удалить</button>`
+    : '';
   return `
     <li class="document-item">
       <div class="document-item-main">
@@ -333,6 +341,7 @@ function renderDocumentItem(doc) {
       <div class="document-item-actions">
         <button type="button" class="btn btn-secondary btn-sm doc-open-btn" data-id="${doc.id}" data-filename="${safeAttrName}">Открыть</button>
         <button type="button" class="btn btn-secondary btn-sm doc-download-btn" data-id="${doc.id}" data-filename="${safeAttrName}">Скачать</button>
+        ${deleteBtn}
       </div>
     </li>
   `;
@@ -370,6 +379,25 @@ async function openPatientDocument(documentId, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+async function deletePatientDocument(documentId, filename) {
+  const message = filename
+    ? `Удалить документ «${filename}»?`
+    : 'Удалить документ?';
+  if (!confirm(message)) return;
+
+  const res = await apiFetch(`/api/documents/${documentId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const data = await parseApiResponse(res).catch(() => ({}));
+    throw new Error(formatApiError(data.detail) || 'Ошибка удаления');
+  }
+
+  const docsEl = document.getElementById('documents-list');
+  const patientId = docsEl?.dataset.patientId;
+  if (patientId) {
+    await loadPatientDetail(parseInt(patientId, 10));
+  }
+}
+
 function setupDocumentActions() {
   const docsEl = document.getElementById('documents-list');
   if (!docsEl || docsEl.dataset.bound === '1') return;
@@ -378,7 +406,8 @@ function setupDocumentActions() {
   docsEl.addEventListener('click', async (event) => {
     const openBtn = event.target.closest('.doc-open-btn');
     const downloadBtn = event.target.closest('.doc-download-btn');
-    const button = openBtn || downloadBtn;
+    const deleteBtn = event.target.closest('.doc-delete-btn');
+    const button = openBtn || downloadBtn || deleteBtn;
     if (!button) return;
 
     const documentId = button.dataset.id;
@@ -386,7 +415,9 @@ function setupDocumentActions() {
     button.disabled = true;
 
     try {
-      if (openBtn) {
+      if (deleteBtn) {
+        await deletePatientDocument(documentId, filename);
+      } else if (openBtn) {
         await openPatientDocument(documentId, filename);
       } else {
         await downloadPatientDocument(documentId, filename);
@@ -1126,6 +1157,7 @@ async function loadPatientDetail(patientId) {
   const docs = await docsRes.json();
   const docsEl = document.getElementById('documents-list');
   if (docsEl) {
+    docsEl.dataset.patientId = String(patientId);
     docsEl.innerHTML = docs.length
       ? docs.map(renderDocumentItem).join('')
       : '<li style="color:#64748b">Документы не загружены</li>';
