@@ -31,9 +31,15 @@ DATE_PATTERNS = [
 ]
 
 MEDICATION_SUFFIX_PATTERN = re.compile(
-    r"\b([А-ЯA-Z][а-яa-z]{3,}(?:ин|ол|ам|ид|ил|ан|он|ат|азол|празол|статин|циллин))\b",
+    r"\b([А-ЯA-Z][а-яa-z]{3,}(?:ин|ол|ам|ид|ил|ан|ат|азол|празол|статин|циллин))\b",
     re.UNICODE,
 )
+
+# Words that match medication-like suffixes but are not drugs.
+MEDICATION_STOPWORDS = frozenset({
+    "рекомендован", "телефон", "гормон", "орган", "регион", "протокол",
+    "горизонт", "положен", "направлен", "описан", "заключен",
+})
 
 KNOWN_MEDICATIONS = {
     "амоксициллин", "парацетамол", "ибупрофен", "аспирин", "метформин",
@@ -45,6 +51,26 @@ RU_MONTHS = {
     "мая": "05", "июня": "06", "июля": "07", "августа": "08",
     "сентября": "09", "октября": "10", "ноября": "11", "декабря": "12",
 }
+
+# Clinical sections whose comma-separated values are treated as diagnoses.
+ANAMNESIS_SECTION_PATTERNS = [
+    re.compile(r"перенес[её]нные\s+заболевания[:\s]+([^.\n]+)", re.IGNORECASE),
+    re.compile(r"перенес[её]нные\s+гинекологические\s+заболевания[:\s]+([^.\n]+)", re.IGNORECASE),
+    re.compile(r"гистологическое\s+описание[^:]*:\s*([^.\n]+)", re.IGNORECASE),
+]
+
+DIAGNOSIS_LINE_PATTERN = re.compile(
+    r"диагноз[:\s]+([^.\n]{3,200})",
+    re.IGNORECASE,
+)
+
+DIAGNOSIS_NOISE = re.compile(
+    r"^(?:нет|не\s+выявлен|без\s+особенност|эхопатолог|противопоказан|"
+    r"заключение\s*:|основной\s*:|мкб|мкб\s*[-–]\s*10|"
+    r"аллергологический|гемотрансфуз|наследственный|"
+    r"умеренной\s+степени|слабой\s+степени|неактивный)\b",
+    re.IGNORECASE,
+)
 
 
 @lru_cache(maxsize=1)
@@ -106,15 +132,62 @@ def _extract_dates_spacy(text: str, nlp) -> list[str]:
     return dates
 
 
+def _normalize_diagnosis_phrase(phrase: str) -> str | None:
+    phrase = re.sub(r"\s+", " ", phrase.strip(" \t-–—:;"))
+    if len(phrase) < 3 or len(phrase) > 120:
+        return None
+    if re.fullmatch(r"[A-ZА-Я]\.?", phrase, re.IGNORECASE):
+        return None
+    if re.search(r"\bосновной\b", phrase, re.IGNORECASE):
+        return None
+    if DIAGNOSIS_NOISE.search(phrase):
+        return None
+    if ICD10_PATTERN.fullmatch(phrase):
+        return None
+    if phrase.lower() in {"основной", "заключение", "описание"}:
+        return None
+    return phrase
+
+
+def _split_diagnosis_clauses(section: str) -> list[str]:
+    clauses: list[str] = []
+    for part in re.split(r"[,;]", section):
+        normalized = _normalize_diagnosis_phrase(part)
+        if normalized:
+            clauses.append(normalized)
+    return clauses
+
+
+def _extract_textual_diagnoses(text: str) -> list[str]:
+    found: list[str] = []
+
+    for pattern in ANAMNESIS_SECTION_PATTERNS:
+        for match in pattern.finditer(text):
+            found.extend(_split_diagnosis_clauses(match.group(1)))
+
+    for match in DIAGNOSIS_LINE_PATTERN.finditer(text):
+        line = match.group(1)
+        for code in ICD10_PATTERN.findall(line):
+            found.append(code.upper())
+        # Text after ICD code, e.g. "N46, Бесплодие 2, мужской фактор"
+        text_part = ICD10_PATTERN.sub("", line)
+        found.extend(_split_diagnosis_clauses(text_part))
+
+    return found
+
+
 def _extract_diagnoses(text: str) -> list[str]:
     codes = {m.group(1).upper() for m in ICD10_PATTERN.finditer(text)}
+    textual = _extract_textual_diagnoses(text)
 
     nlp = get_nlp()
     if nlp is not None:
         doc = nlp(text[:100000])
         for ent in doc.ents:
             if ent.label_ == "DISEASE" or "диагн" in ent.text.lower():
-                codes.add(ent.text.strip())
+                normalized = _normalize_diagnosis_phrase(ent.text.strip())
+                if normalized:
+                    textual.append(normalized)
 
     diagnosis_section = re.search(
         r"диагн(?:оз|ост(?:ик|ирован))?[:\s]+([^\n.]{3,80})",
@@ -125,11 +198,25 @@ def _extract_diagnoses(text: str) -> list[str]:
         for code in ICD10_PATTERN.findall(diagnosis_section.group(1)):
             codes.add(code.upper())
 
-    return sorted(codes)
+    combined: list[str] = []
+    seen: set[str] = set()
+    for item in list(codes) + textual:
+        key = item.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        display = item.upper() if ICD10_PATTERN.fullmatch(item) else item
+        combined.append(display)
+
+    return sorted(combined, key=str.casefold)
 
 
 def _title_medication(name: str) -> str:
     return name[0].upper() + name[1:]
+
+
+def _is_valid_medication(name: str) -> bool:
+    return name.lower() not in MEDICATION_STOPWORDS
 
 
 def _extract_medications(text: str) -> list[str]:
@@ -142,7 +229,7 @@ def _extract_medications(text: str) -> list[str]:
 
     for match in MEDICATION_SUFFIX_PATTERN.finditer(text):
         word = match.group(1)
-        if len(word) >= 5:
+        if len(word) >= 5 and _is_valid_medication(word):
             found.add(_title_medication(word.lower()))
 
     med_section = re.search(
@@ -153,7 +240,8 @@ def _extract_medications(text: str) -> list[str]:
     if med_section:
         for match in MEDICATION_SUFFIX_PATTERN.finditer(med_section.group(1)):
             word = match.group(1)
-            found.add(_title_medication(word.lower()))
+            if _is_valid_medication(word):
+                found.add(_title_medication(word.lower()))
 
     nlp = get_nlp()
     if nlp is not None:
@@ -162,7 +250,8 @@ def _extract_medications(text: str) -> list[str]:
             if ent.label_ in ("PRODUCT", "ORG") and any(
                 suffix in ent.text.lower() for suffix in ("ин", "ол", "ам", "статин", "циллин")
             ):
-                found.add(ent.text.strip())
+                if _is_valid_medication(ent.text):
+                    found.add(ent.text.strip())
 
     return sorted(found, key=str.lower)
 
