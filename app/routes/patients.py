@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from pathlib import Path
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -10,7 +10,7 @@ from app.config import settings
 from app.auth import get_current_user
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
-from app.models import Department, Document, Patient, User
+from app.models import Department, Patient, User
 from app.services.access import (
     anonymize_patient,
     can_create_patient,
@@ -20,10 +20,12 @@ from app.services.access import (
     effective_tenant_id,
     patients_query,
 )
+from app.services.patient_deletion import delete_patient_with_dependencies
 from app.services.list_queries import PATIENT_SEARCH_FIELDS, PATIENT_SORT, patients_scope
 from app.utils.pagination import PaginationParams, paginate
 
 router = APIRouter(prefix="/patients", tags=["patients"])
+logger = logging.getLogger(__name__)
 
 
 class PatientCreate(BaseModel):
@@ -243,13 +245,19 @@ def delete_patient(
 
     patient = _get_patient_or_404(db, patient_id, current_user, request)
 
-    documents = db.query(Document).filter(Document.patient_id == patient_id).all()
-    for doc in documents:
-        try:
-            Path(doc.file_path).unlink(missing_ok=True)
-        except OSError:
-            pass
-        db.delete(doc)
+    try:
+        delete_patient_with_dependencies(db, patient)
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Failed to delete patient %s: %s", patient_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Не удалось удалить пациента: есть связанные записи. Повторите попытку или обратитесь к администратору.",
+        ) from exc
 
-    db.delete(patient)
-    db.commit()
+    try:
+        from app.tasks.webhook_task import fire_event
+
+        fire_event("patient.deleted", patient.tenant_id, patient_id=patient_id)
+    except Exception:
+        pass

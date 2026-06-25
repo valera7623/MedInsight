@@ -192,11 +192,8 @@ async function deletePatient(patientId, onSuccess) {
   try {
     const res = await apiFetch(`/api/patients/${patientId}`, { method: 'DELETE' });
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      const detail = Array.isArray(data.detail)
-        ? data.detail.map((d) => d.msg || d).join(', ')
-        : data.detail;
-      alert(detail || 'Ошибка удаления');
+      const data = await parseApiResponse(res).catch(() => ({}));
+      alert(formatApiError(data.detail) || 'Ошибка удаления');
       return;
     }
     if (onSuccess) onSuccess();
