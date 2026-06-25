@@ -104,6 +104,26 @@ def test_extract_operations():
     assert "лапароскопия" in ops
     assert "гиперотомия" in ops
     assert "биопсия эндометрия" in ops
+    assert len(result["operations"]) == 3
+
+
+def test_extract_operations_filters_histology_and_protocol_numbers():
+    text = """
+    Перенесенные операции:
+    Лапароскопия в 2012г. №42317-19
+    Эндометриоидная гиперотомия. Маточные трубы проходимы.
+    Биопсия эндометрия: аспират из полости матки 13.11.2014 год.
+    ( №101314-15/14 )
+    Гистологическое описание микропрепаратов: Хронический эндометрит, умеренной степени выраженности, неактивный.
+    Гистероскопия: 01.06.2015г. на 10 д.ц. № 18645-54/15
+    Гистологическое описание микропрепаратов: Хронический неактивный эндометрит, слабой степени выраженности.
+    Данные обследования
+    """
+    result = extract_entities(text)
+    assert len(result["operations"]) == 4
+    ops = " ".join(result["operations"]).casefold()
+    assert "гистологическое описание" not in ops
+    assert "гистероскопия" in ops
 
 
 def test_extract_lab_results_with_abnormal_flags():

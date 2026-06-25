@@ -62,10 +62,16 @@ ANAMNESIS_VITAE_PATTERNS = [
 ]
 
 OPERATIONS_SECTION = re.compile(
-    r"перенес[её]нные\s+операци[ий][:\s]*\n(.*?)"
+    r"перенес[её]нные\s+операци[ий][:\s]*\n?(.*?)"
     r"(?=\n\s*(?:Данные\s+обследования|Инфекци|Клинический\s+анализ|"
     r"Общий\s+анализ|Биохимическ|Коагулограмм|Гормональн|ПЦР|УЗИ|ЭКГ|Диагноз\s*:|$))",
     re.IGNORECASE | re.DOTALL,
+)
+
+OPERATION_PROCEDURE_PATTERN = re.compile(
+    r"лапароскоп|гистероскоп|биопс|гиперотом|эктом|пункци|кесарев|"
+    r"лапаротом|кольпоскоп|ампутац|удалени|вскрыти",
+    re.IGNORECASE,
 )
 
 LAB_SECTION_START = re.compile(
@@ -624,22 +630,49 @@ def _extract_lab_results(text: str) -> dict[str, dict[str, Any]]:
     return labs
 
 
+def _normalize_operation_line(line: str) -> str | None:
+    line = re.sub(r"\s+", " ", line.strip(" \t-–—"))
+    if len(line) < 5:
+        return None
+    if re.fullmatch(r"[\(\)№\s\d./-]+", line):
+        return None
+    if re.search(r"гистологическое\s+описание", line, re.IGNORECASE):
+        return None
+    if re.search(r"^(?:аспират\s+из\s+полости|маточные\s+трубы\s+проходимы)\b", line, re.IGNORECASE):
+        return None
+    if not OPERATION_PROCEDURE_PATTERN.search(line):
+        return None
+
+    first_sentence = re.split(r"\.\s+(?=[А-ЯA-Z])", line, maxsplit=1)[0].strip()
+    if len(first_sentence) >= 5:
+        return first_sentence if first_sentence.endswith(".") else first_sentence
+    return line
+
+
 def _extract_operations(text: str) -> list[str]:
-    match = OPERATIONS_SECTION.search(text)
+    prepared = _structure_discharge_text(_normalize_extracted_text(text))
+    prepared = re.sub(
+        r"(перенес[её]нные\s+операци[ий]:)\s+",
+        r"\1\n",
+        prepared,
+        count=1,
+        flags=re.IGNORECASE,
+    )
+    match = OPERATIONS_SECTION.search(prepared)
     if not match:
         return []
 
     operations: list[str] = []
     seen: set[str] = set()
     for line in match.group(1).splitlines():
-        cleaned = re.sub(r"\s+", " ", line.strip(" \t-–—"))
-        if len(cleaned) < 5:
+        normalized = _normalize_operation_line(line)
+        if not normalized:
             continue
-        key = cleaned.casefold()
+        key = normalized.casefold()
         if key in seen:
             continue
         seen.add(key)
-        operations.append(cleaned)
+        operations.append(normalized)
     return operations
 
 
