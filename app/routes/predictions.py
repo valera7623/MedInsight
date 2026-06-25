@@ -472,7 +472,7 @@ def patient_insights(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     patient = _get_patient_or_404(db, patient_id, current_user, request)
-    result = generate_insights(db, patient_id, current_user.id)
+    result = generate_insights(db, patient_id, current_user.id, patient.tenant_id)
     return InsightsResponse(
         insights=result.get("summary", ""),
         recommendations=result.get("recommendations", []),

@@ -4,6 +4,8 @@
 # Docker pull and git use the host resolver (/etc/resolv.conf). The stub at
 # 127.0.0.53 often returns "server misbehaving" even when dig @8.8.8.8 works.
 # daemon.json "dns" only affects containers — not the daemon's own registry pulls.
+# Direct Docker Hub (registry-1.docker.io) is often blocked/slow from RU VPS;
+# registry-mirrors points pulls at Timeweb's hub mirror.
 #
 # Run on the VPS with sudo:
 #   sudo bash scripts/fix-vps-dns.sh
@@ -56,6 +58,8 @@ if path.exists():
     except json.JSONDecodeError:
         pass
 data["dns"] = ["8.8.8.8", "1.1.1.1", "85.193.93.194"]
+# Docker Hub is often unreachable from RU VPS (TLS/connect timeout); Timeweb mirror works.
+data["registry-mirrors"] = ["https://dockerhub.timeweb.cloud"]
 path.write_text(json.dumps(data, indent=2) + "\n")
 print("Updated", path)
 PY

@@ -52,6 +52,16 @@ async function apiFetch(path, options = {}) {
   return res;
 }
 
+async function parseApiResponse(res) {
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(text.slice(0, 120) || `HTTP ${res.status}`);
+  }
+}
+
 function setupLogout() {
   const btn = document.getElementById('logout-btn');
   if (btn) {
@@ -849,8 +859,8 @@ async function pollJobStatus(jobId, onComplete, onError) {
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise(r => setTimeout(r, 2000));
     const res = await apiFetch(`/api/analytics/predict/status/${jobId}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Ошибка статуса задачи');
+    const data = await parseApiResponse(res);
+    if (!res.ok) throw new Error(formatApiError(data.detail) || 'Ошибка статуса задачи');
 
     if (data.status === 'completed') {
       onComplete(data.result);
@@ -892,8 +902,8 @@ async function startPrediction(patientId) {
 
   try {
     const res = await apiFetch(`/api/analytics/predict/${patientId}`, { method: 'POST' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Ошибка запуска прогноза');
+    const data = await parseApiResponse(res);
+    if (!res.ok) throw new Error(formatApiError(data.detail) || 'Ошибка запуска прогноза');
 
     await pollJobStatus(
       data.job_id,
@@ -916,8 +926,8 @@ async function loadPatientInsights(patientId) {
 
   try {
     const res = await apiFetch(`/api/analytics/insights/${patientId}`, { method: 'POST' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Ошибка генерации инсайтов');
+    const data = await parseApiResponse(res);
+    if (!res.ok) throw new Error(formatApiError(data.detail) || 'Ошибка генерации инсайтов');
 
     if (el) {
       el.innerHTML = `
@@ -939,8 +949,8 @@ async function loadPatientPredictions(patientId) {
   if (!resultEl) return;
 
   const res = await apiFetch(`/api/analytics/predictions/${patientId}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || 'Ошибка загрузки прогнозов');
+  const data = await parseApiResponse(res);
+  if (!res.ok) throw new Error(formatApiError(data.detail) || 'Ошибка загрузки прогнозов');
 
   if (!data.predictions.length) {
     resultEl.innerHTML = '<p style="color:#64748b">Прогнозы ещё не сгенерированы. Нажмите «Сгенерировать прогноз».</p>';

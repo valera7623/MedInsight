@@ -146,7 +146,9 @@ cd ~/medinsight
 sudo bash scripts/fix-vps-dns.sh
 ```
 
-Скрипт отключает stub `127.0.0.53`, настраивает `8.8.8.8` / `1.1.1.1` + DNS провайдера, перезапускает `systemd-resolved` и Docker.
+Скрипт отключает stub `127.0.0.53`, настраивает `8.8.8.8` / `1.1.1.1` + DNS провайдера, добавляет зеркало Docker Hub (`dockerhub.timeweb.cloud`) и перезапускает `systemd-resolved` и Docker.
+
+Если `getent registry-1.docker.io` проходит, а `docker pull` падает с `TLS handshake timeout` — это блокировка/маршрутизация до Docker Hub, не DNS. Зеркало в `daemon.json` решает проблему.
 
 Проверка:
 

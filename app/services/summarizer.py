@@ -60,18 +60,17 @@ async def _gpt_insights(features: dict, predictions: list[dict]) -> dict:
 
 
 @trace_span("summarizer_agent", {"agent": "summarizer"})
-def generate_insights(db: Session, patient_id: int, user_id: int) -> dict:
+def generate_insights(
+    db: Session, patient_id: int, user_id: int, tenant_id: int | None = None
+) -> dict:
     import asyncio
 
-    features = _collect_patient_features(db, patient_id, user_id)
+    features = _collect_patient_features(db, patient_id, user_id, tenant_id)
 
-    predictions = (
-        db.query(Prediction)
-        .filter(Prediction.patient_id == patient_id, Prediction.user_id == user_id)
-        .order_by(Prediction.created_at.desc())
-        .limit(5)
-        .all()
-    )
+    pred_query = db.query(Prediction).filter(Prediction.patient_id == patient_id)
+    if tenant_id is not None:
+        pred_query = pred_query.filter(Prediction.tenant_id == tenant_id)
+    predictions = pred_query.order_by(Prediction.created_at.desc()).limit(5).all()
     pred_dicts = [
         {
             "prediction": p.prediction,

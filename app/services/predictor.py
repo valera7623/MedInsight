@@ -114,18 +114,18 @@ def _collect_dicom_bundle(db: Session, patient_id: int, tenant_id: int | None = 
 
 
 def _collect_patient_features(db: Session, patient_id: int, user_id: int, tenant_id: int | None = None) -> dict:
-    query = db.query(Patient).filter(Patient.id == patient_id, Patient.user_id == user_id)
+    """Collect clinical features for ML/GPT. user_id is the analyst, not the patient creator."""
+    query = db.query(Patient).filter(Patient.id == patient_id)
     if tenant_id is not None:
         query = query.filter(Patient.tenant_id == tenant_id)
     patient = query.first()
     if not patient:
         raise ValueError("Patient not found")
 
-    documents = (
-        db.query(Document)
-        .filter(Document.patient_id == patient_id, Document.user_id == user_id)
-        .all()
-    )
+    doc_query = db.query(Document).filter(Document.patient_id == patient_id)
+    if tenant_id is not None:
+        doc_query = doc_query.filter(Document.tenant_id == tenant_id)
+    documents = doc_query.all()
 
     diagnoses: set[str] = set()
     medications: set[str] = set()
