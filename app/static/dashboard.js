@@ -347,6 +347,32 @@ function renderDocumentItem(doc) {
   `;
 }
 
+const MIME_BY_EXT = {
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+};
+
+function documentExtension(filename) {
+  const parts = (filename || '').split('.');
+  return parts.length > 1 ? parts.pop().toLowerCase() : '';
+}
+
+function canPreviewDocumentInline(filename, mimeType) {
+  const ext = documentExtension(filename);
+  if (ext === 'pdf') return true;
+  return mimeType === 'application/pdf';
+}
+
+function blobWithFilenameType(blob, filename) {
+  const ext = documentExtension(filename);
+  const mime = MIME_BY_EXT[ext];
+  if (!mime || (blob.type && blob.type !== 'application/octet-stream')) {
+    return blob;
+  }
+  return new Blob([blob], { type: mime });
+}
+
 async function fetchDocumentBlob(documentId, inline = false) {
   const query = inline ? '?inline=1' : '';
   const res = await apiFetch(`/api/documents/${documentId}/download${query}`);
@@ -369,13 +395,19 @@ async function downloadPatientDocument(documentId, filename) {
 
 async function openPatientDocument(documentId, filename) {
   const blob = await fetchDocumentBlob(documentId, true);
-  const url = URL.createObjectURL(blob);
-  const popup = window.open(url, '_blank', 'noopener');
-  if (!popup) {
-    URL.revokeObjectURL(url);
-    await downloadPatientDocument(documentId, filename);
-    return;
+  const typedBlob = blobWithFilenameType(blob, filename);
+  const url = URL.createObjectURL(typedBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.rel = 'noopener noreferrer';
+  if (canPreviewDocumentInline(filename, typedBlob.type)) {
+    a.target = '_blank';
+  } else {
+    a.download = filename || `document_${documentId}`;
   }
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
@@ -409,6 +441,9 @@ function setupDocumentActions() {
     const deleteBtn = event.target.closest('.doc-delete-btn');
     const button = openBtn || downloadBtn || deleteBtn;
     if (!button) return;
+
+    event.preventDefault();
+    event.stopPropagation();
 
     const documentId = button.dataset.id;
     const filename = button.dataset.filename;
