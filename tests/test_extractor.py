@@ -34,27 +34,24 @@ def test_patient_docx_rejects_therapist_conclusion():
 def test_icd_merged_with_descriptors():
     result = extract_entities(PATIENT_DOCX_SNIPPET)
     diagnoses = result["diagnoses"]
-    assert "N46 (Бесплодие 2, мужской фактор)" in diagnoses
-    assert "N46" not in diagnoses
-    assert "Бесплодие 2" not in diagnoses
-    assert "мужской фактор" not in diagnoses
+    assert diagnoses == ["N46 (Бесплодие 2, мужской фактор)"]
+    assert "ОРВИ" not in diagnoses
 
 
-def test_consolidate_legacy_split_icd_labels():
-    legacy = ["N46", "Бесплодие 2", "мужской фактор", "ОРВИ"]
-    merged = consolidate_diagnosis_labels(legacy)
-    assert "N46 (Бесплодие 2, мужской фактор)" in merged
-    assert "ОРВИ" in merged
-    assert "N46" not in merged
-    assert "Бесплодие 2" not in merged
-
-
-def test_patient_docx_textual_diagnoses_from_anamnesis():
+def test_anamnesis_vitae_separate_from_diagnoses():
     result = extract_entities(PATIENT_DOCX_SNIPPET)
+    anamnesis = {a.casefold() for a in result["anamnesis"]}
     diagnoses = {d.casefold() for d in result["diagnoses"]}
-    assert "n46 (бесплодие 2, мужской фактор)" in diagnoses
-    assert "орви" in diagnoses
-    assert "хр. пиелонефрит" in diagnoses
-    assert "эрозия шейки матки" in diagnoses
-    assert "хр. эндометрит" in diagnoses
-    assert "хронический эндометрит" in diagnoses
+    assert "орви" in anamnesis
+    assert "хр. пиелонефрит" in anamnesis
+    assert "эрозия шейки матки" in anamnesis
+    assert "хр. эндометрит" in anamnesis
+    assert "хронический эндометрит" in anamnesis
+    assert "орви" not in diagnoses
+    assert "хр. пиелонефрит" not in diagnoses
+
+
+def test_consolidate_legacy_drops_anamnesis_from_diagnoses():
+    legacy = ["N46", "Бесплодие 2", "мужской фактор", "ОРВИ", "Хр. пиелонефрит"]
+    merged = consolidate_diagnosis_labels(legacy)
+    assert merged == ["N46 (Бесплодие 2, мужской фактор)"]

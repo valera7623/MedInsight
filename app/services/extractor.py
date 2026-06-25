@@ -52,8 +52,8 @@ RU_MONTHS = {
     "сентября": "09", "октября": "10", "ноября": "11", "декабря": "12",
 }
 
-# Clinical sections whose comma-separated values are treated as diagnoses.
-ANAMNESIS_SECTION_PATTERNS = [
+# Anamnesis vitae sections — stored separately, not as primary diagnoses.
+ANAMNESIS_VITAE_PATTERNS = [
     re.compile(r"перенес[её]нные\s+заболевания[:\s]+([^.\n]+)", re.IGNORECASE),
     re.compile(r"перенес[её]нные\s+гинекологические\s+заболевания[:\s]+([^.\n]+)", re.IGNORECASE),
     re.compile(r"гистологическое\s+описание[^:]*:\s*([^.\n]+)", re.IGNORECASE),
@@ -230,31 +230,33 @@ def _extract_coded_diagnosis_line(line: str) -> list[str]:
     return [_format_icd_diagnosis(codes[0], descriptors)]
 
 
-def _extract_textual_diagnoses(text: str) -> list[str]:
+def _extract_anamnesis_vitae(text: str) -> list[str]:
+    """Past medical history (anamnesis vitae) — not the primary coded diagnosis."""
     found: list[str] = []
-
-    for pattern in ANAMNESIS_SECTION_PATTERNS:
+    for pattern in ANAMNESIS_VITAE_PATTERNS:
         for match in pattern.finditer(text):
             found.extend(_split_diagnosis_clauses(match.group(1)))
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in found:
+        key = item.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+    return sorted(unique, key=str.casefold)
 
+
+def _extract_textual_diagnoses(text: str) -> list[str]:
+    """Primary diagnosis from coded 'Диагноз:' lines only."""
+    found: list[str] = []
     for match in DIAGNOSIS_LINE_PATTERN.finditer(text):
         found.extend(_extract_coded_diagnosis_line(match.group(1)))
-
     return found
 
 
 def _extract_diagnoses(text: str) -> list[str]:
     raw: list[str] = list(_extract_textual_diagnoses(text))
-
-    nlp = get_nlp()
-    if nlp is not None:
-        doc = nlp(text[:100000])
-        for ent in doc.ents:
-            if ent.label_ == "DISEASE" or "диагн" in ent.text.lower():
-                normalized = _normalize_diagnosis_phrase(ent.text.strip())
-                if normalized:
-                    raw.append(normalized)
-
     covered_codes: set[str] = set()
     for item in raw:
         parsed = _parse_merged_icd_label(item)
@@ -332,7 +334,7 @@ def is_valid_diagnosis_label(label: str) -> bool:
         return True
     if _is_icd_descriptor(label):
         return True
-    return _normalize_diagnosis_phrase(label) is not None
+    return False
 
 
 def filter_diagnosis_labels(labels: list[str]) -> list[str]:
@@ -361,7 +363,6 @@ def consolidate_diagnosis_labels(labels: list[str]) -> list[str]:
     bare_icd: list[str] = []
     merged: list[str] = []
     descriptors: list[str] = []
-    standalone: list[str] = []
 
     for label in validated:
         parsed = _parse_merged_icd_label(label)
@@ -372,10 +373,8 @@ def consolidate_diagnosis_labels(labels: list[str]) -> list[str]:
             bare_icd.append(label.upper())
         elif _is_icd_descriptor(label):
             descriptors.append(label)
-        else:
-            standalone.append(label)
 
-    result: list[str] = list(standalone)
+    result: list[str] = []
     merged_codes = {parsed[0] for parsed in (_parse_merged_icd_label(item) for item in merged) if parsed}
 
     if len(bare_icd) == 1:
@@ -409,13 +408,15 @@ def extract_entities(text: str) -> dict:
 
     result = {
         "diagnoses": _extract_diagnoses(text),
+        "anamnesis": _extract_anamnesis_vitae(text),
         "medications": _extract_medications(text),
         "dates": unique_dates,
         "full_text": text,
     }
     logger.info(
-        "Extracted %d diagnoses, %d medications, %d dates",
+        "Extracted %d diagnoses, %d anamnesis, %d medications, %d dates",
         len(result["diagnoses"]),
+        len(result["anamnesis"]),
         len(result["medications"]),
         len(result["dates"]),
     )

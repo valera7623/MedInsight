@@ -129,11 +129,13 @@ def _collect_patient_features(db: Session, patient_id: int, user_id: int, tenant
     documents = doc_query.all()
 
     diagnoses: set[str] = set()
+    anamnesis: set[str] = set()
     medications: set[str] = set()
     for doc in documents:
         if not doc.parsed_data:
             continue
         diagnoses.update(consolidate_diagnosis_labels(doc.parsed_data.get("diagnoses", [])))
+        anamnesis.update(doc.parsed_data.get("anamnesis", []))
         medications.update(doc.parsed_data.get("medications", []))
 
     age = _calculate_age(patient.birth_date)
@@ -146,6 +148,7 @@ def _collect_patient_features(db: Session, patient_id: int, user_id: int, tenant
         "age": age,
         "gender": GENDER_LABELS.get(patient.gender, patient.gender),
         "diagnoses": sorted(diagnoses),
+        "anamnesis": sorted(anamnesis),
         "medications": sorted(medications),
         "document_count": len(documents),
         "lab_results": _lab_results_from_documents(documents),
@@ -157,12 +160,14 @@ def _rule_based_prediction(features: dict) -> dict:
     """Fallback when GPT/ProxyAPI is unavailable."""
     age = features.get("age", 50)
     diagnoses = features.get("diagnoses", [])
+    anamnesis = features.get("anamnesis", [])
     medications = features.get("medications", [])
     dicom = features.get("dicom", {})
     findings = dicom.get("findings", [])
+    condition_count = len(diagnoses) + len(anamnesis)
 
-    readmission = min(95, 15 + len(diagnoses) * 8 + max(0, age - 60) // 2)
-    complication = min(95, 10 + len(diagnoses) * 10 + len(medications) * 3)
+    readmission = min(95, 15 + condition_count * 8 + max(0, age - 60) // 2)
+    complication = min(95, 10 + condition_count * 10 + len(medications) * 3)
 
     abnormal = any(
         w in " ".join(findings).lower()
@@ -179,8 +184,8 @@ def _rule_based_prediction(features: dict) -> dict:
     factors = []
     if age >= 65:
         factors.append("Возраст старше 65 лет")
-    if len(diagnoses) >= 3:
-        factors.append(f"Множественные диагнозы ({len(diagnoses)})")
+    if condition_count >= 3:
+        factors.append(f"Множественные диагнозы ({condition_count})")
     if len(medications) >= 5:
         factors.append(f"Полипрагмазия ({len(medications)} препаратов)")
     if findings:
