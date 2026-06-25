@@ -19,16 +19,14 @@ from app.services.list_queries import DOCUMENT_SEARCH_FIELDS, DOCUMENT_SORT, doc
 from app.utils.pagination import PaginationParams, paginate
 from app.services.encryption import EncryptionError, decrypt_file, encrypt_bytes, ensure_encryption_key
 from app.services.extractor import extract_entities
-from app.services.parser import SUPPORTED_EXTENSIONS, parse_document, parse_document_from_bytes
+from app.services.parser import SUPPORTED_EXTENSIONS, SUPPORTED_MIMES, parse_document, parse_document_from_bytes
 from app.tasks.celery_app import redis_available
 from app.tasks.parse_task import parse_document_task
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 logger = logging.getLogger(__name__)
 
-ALLOWED_MIMES = {
-    "application/pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+ALLOWED_MIMES = SUPPORTED_MIMES | {
     "application/octet-stream",
 }
 
@@ -158,7 +156,11 @@ async def upload_document(
 
     suffix = Path(file.filename).suffix.lower()
     if suffix not in SUPPORTED_EXTENSIONS:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only DOCX and PDF files are supported")
+        supported = ", ".join(sorted(ext.lstrip(".") for ext in SUPPORTED_EXTENSIONS))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Поддерживаются файлы: {supported}",
+        )
 
     if file.content_type and file.content_type not in ALLOWED_MIMES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported MIME type: {file.content_type}")

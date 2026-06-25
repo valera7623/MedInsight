@@ -41,6 +41,7 @@ RUN apt-get update \
         ca-certificates \
         curl \
         libpq5 \
+        antiword \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=pgclient /usr/lib/postgresql/15/bin/pg_dump /usr/local/bin/pg_dump
