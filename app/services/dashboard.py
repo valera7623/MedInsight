@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Document, Patient, User, DicomStudy
 from app.services.access import patients_query
-from app.services.extractor import consolidate_diagnosis_labels
+from app.services.extractor import diagnoses_from_parsed_data, medications_from_parsed_data
 
 
 def get_dashboard_data(
@@ -42,9 +42,9 @@ def get_dashboard_data(
     for doc in documents:
         if not doc.parsed_data:
             continue
-        for diagnosis in consolidate_diagnosis_labels(doc.parsed_data.get("diagnoses", [])):
+        for diagnosis in diagnoses_from_parsed_data(doc.parsed_data):
             diagnoses_counter[diagnosis] += 1
-        for medication in doc.parsed_data.get("medications", []):
+        for medication in medications_from_parsed_data(doc.parsed_data):
             medications_counter[medication] += 1
 
     recent_patients = sorted(patients, key=lambda p: p.created_at, reverse=True)[:5]

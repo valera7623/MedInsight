@@ -39,6 +39,8 @@ MEDICATION_SUFFIX_PATTERN = re.compile(
 MEDICATION_STOPWORDS = frozenset({
     "рекомендован", "телефон", "гормон", "орган", "регион", "протокол",
     "горизонт", "положен", "направлен", "описан", "заключен",
+    "гемоглобин", "пролактин", "альбумин", "глобулин", "фибриноген",
+    "тромбин", "креатинин", "холестерин", "билирубин",
 })
 
 KNOWN_MEDICATIONS = {
@@ -118,7 +120,7 @@ LAB_SECTION_LABELS = {
 }
 
 DIAGNOSIS_LINE_PATTERN = re.compile(
-    r"диагноз[:\s]+([^.\n]{3,200})",
+    r"(?:основной\s+)?диагноз(?:\s+по\s+мкб[-\s–]*10)?[:\s]+([^.\n]{3,200})",
     re.IGNORECASE,
 )
 
@@ -277,15 +279,21 @@ def _is_icd_descriptor(text: str) -> bool:
 
 
 def _extract_coded_diagnosis_line(line: str) -> list[str]:
-    """Merge ICD-10 code with descriptors from the same diagnosis line."""
-    if not ICD10_PATTERN.search(line):
-        return []
-    codes = [code.upper() for code in ICD10_PATTERN.findall(line)]
-    if not codes:
-        return []
-    text_part = ICD10_PATTERN.sub("", line)
-    descriptors = _split_diagnosis_clauses(text_part)
-    return [_format_icd_diagnosis(codes[0], descriptors)]
+    """Merge ICD-10 code with descriptors, or capture free-text diagnosis lines."""
+    line = line.strip()
+    if ICD10_PATTERN.search(line):
+        codes = [code.upper() for code in ICD10_PATTERN.findall(line)]
+        text_part = ICD10_PATTERN.sub("", line)
+        descriptors = _split_diagnosis_clauses(text_part)
+        return [_format_icd_diagnosis(codes[0], descriptors)]
+
+    for part in re.split(r"[,;]", line):
+        if _is_icd_descriptor(part):
+            continue
+        normalized = _normalize_diagnosis_phrase(part)
+        if normalized:
+            return [normalized]
+    return []
 
 
 def _extract_anamnesis_vitae(text: str) -> list[str]:
@@ -348,11 +356,6 @@ def _extract_medications(text: str) -> list[str]:
         if med in lower_text:
             found.add(_title_medication(med))
 
-    for match in MEDICATION_SUFFIX_PATTERN.finditer(text):
-        word = match.group(1)
-        if len(word) >= 5 and _is_valid_medication(word):
-            found.add(_title_medication(word.lower()))
-
     med_section = re.search(
         r"(?:назнач(?:ен|ено|ения)|лекарств(?:а|о)|препарат(?:ы)?)[:\s]+([^\n]{5,200})",
         text,
@@ -365,8 +368,8 @@ def _extract_medications(text: str) -> list[str]:
                 found.add(_title_medication(word.lower()))
 
     nlp = get_nlp()
-    if nlp is not None:
-        doc = nlp(text[:100000])
+    if nlp is not None and med_section:
+        doc = nlp(med_section.group(1)[:100000])
         for ent in doc.ents:
             if ent.label_ in ("PRODUCT", "ORG") and any(
                 suffix in ent.text.lower() for suffix in ("ин", "ол", "ам", "статин", "циллин")
@@ -455,6 +458,40 @@ def consolidate_diagnosis_labels(labels: list[str]) -> list[str]:
         seen.add(key)
         unique.append(item)
     return unique
+
+
+def diagnoses_from_parsed_data(parsed_data: dict | None) -> list[str]:
+    """Diagnoses for analytics: stored labels, or re-extract from full_text when empty."""
+    if not parsed_data:
+        return []
+    stored = consolidate_diagnosis_labels(parsed_data.get("diagnoses") or [])
+    if stored:
+        return stored
+    full_text = parsed_data.get("full_text") or ""
+    if full_text:
+        return _extract_diagnoses(full_text)
+    return []
+
+
+def medications_from_parsed_data(parsed_data: dict | None) -> list[str]:
+    """Medications for analytics, excluding lab analyte false positives."""
+    if not parsed_data:
+        return []
+    lab_keys = {str(key).casefold() for key in (parsed_data.get("lab_results") or {})}
+    meds: list[str] = []
+    seen: set[str] = set()
+    for med in parsed_data.get("medications") or []:
+        key = str(med).casefold()
+        if key in lab_keys or key in MEDICATION_STOPWORDS or key in seen:
+            continue
+        seen.add(key)
+        meds.append(med)
+    if meds:
+        return meds
+    full_text = parsed_data.get("full_text") or ""
+    if full_text:
+        return _extract_medications(full_text)
+    return []
 
 
 def _normalize_lab_key(name: str) -> str:

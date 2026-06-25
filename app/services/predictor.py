@@ -13,7 +13,7 @@ from app.prompts.dicom_prompts import (
     compare_with_guidelines,
 )
 from app.services.openai_client import OpenAIClientError, chat_completion_json
-from app.services.extractor import consolidate_diagnosis_labels
+from app.services.extractor import consolidate_diagnosis_labels, diagnoses_from_parsed_data
 from app.utils.tracing import trace_span
 
 logger = logging.getLogger(__name__)
@@ -137,7 +137,7 @@ def _collect_patient_features(db: Session, patient_id: int, user_id: int, tenant
     for doc in documents:
         if not doc.parsed_data:
             continue
-        diagnoses.update(consolidate_diagnosis_labels(doc.parsed_data.get("diagnoses", [])))
+        diagnoses.update(diagnoses_from_parsed_data(doc.parsed_data))
         anamnesis.update(doc.parsed_data.get("anamnesis", []))
         operations.update(doc.parsed_data.get("operations", []))
         imaging_conclusions.update(doc.parsed_data.get("imaging_conclusions", []))

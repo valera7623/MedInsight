@@ -1,7 +1,12 @@
 """Unit tests for clinical entity extraction from discharge documents."""
 
-from app.prompts.clinical_prompts import build_gpt_clinical_prompt
-from app.services.extractor import consolidate_diagnosis_labels, extract_entities, labs_dict_to_list
+from app.services.extractor import (
+    consolidate_diagnosis_labels,
+    diagnoses_from_parsed_data,
+    extract_entities,
+    labs_dict_to_list,
+    medications_from_parsed_data,
+)
 
 PATIENT_DOCX_SNIPPET = """
 Перенесенные заболевания: ОРВИ, Хр. пиелонефрит
@@ -144,3 +149,26 @@ def test_clinical_prompt_includes_labs_and_operations():
     assert "ОТКЛОНЕНИЕ" in prompt
     assert "Лапароскопия" in prompt
     assert "овариальный резерв" in prompt
+
+
+def test_diagnoses_from_parsed_data_reextracts_when_legacy_junk():
+    parsed = {
+        "diagnoses": ["ОРВИ", "Хр. пиелонефрит", "эрозия шейки матки"],
+        "full_text": PATIENT_DOCX_SNIPPET,
+    }
+    result = diagnoses_from_parsed_data(parsed)
+    assert result == ["N46 (Бесплодие 2, мужской фактор)"]
+
+
+def test_medications_from_parsed_data_filters_lab_false_positive():
+    parsed = {
+        "medications": ["Гемоглобин", "Амоксициллин"],
+        "lab_results": {"гемоглобин": {"value": "101 g/L"}},
+    }
+    assert medications_from_parsed_data(parsed) == ["Амоксициллин"]
+
+
+def test_clinical_snippet_does_not_extract_hemoglobin_as_medication():
+    result = extract_entities(CLINICAL_EXAM_SNIPPET)
+    meds = {m.casefold() for m in result["medications"]}
+    assert "гемоглобин" not in meds
