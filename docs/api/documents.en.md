@@ -2,11 +2,11 @@
 
 # Documents
 
-Auto-generated reference for **Documents** endpoints (5 operations).
+Auto-generated reference for **Documents** endpoints (7 operations).
 
 **OpenAPI tags:** documents
 
-**Endpoints:** 5
+**Endpoints:** 7
 
 ---
 
@@ -106,6 +106,34 @@ curl -X POST https://fileguardian.com.ru/api/documents/upload \
   -F "file=file.pdf"
 ```
 
+## DELETE /api/documents/{document_id}
+
+Delete Document
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| document_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 204 | Successful Response | `{}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X DELETE https://fileguardian.com.ru/api/documents/{document_id} \
+  -H "Authorization: Bearer $JWT"
+```
+
 ## GET /api/documents/{document_id}
 
 Get Document
@@ -147,6 +175,7 @@ Download Document
 | Parameter | In | Type | Required | Description |
 |-----------|----|------|----------|-------------|
 | document_id | path | integer | ✅ | — |
+| inline | query | boolean | ❌ | Open in browser when supported (PDF) |
 
 **Responses:**
 
@@ -159,6 +188,34 @@ Download Document
 
 ```bash
 curl -X GET https://fileguardian.com.ru/api/documents/{document_id}/download \
+  -H "Authorization: Bearer $JWT"
+```
+
+## POST /api/documents/{document_id}/reparse
+
+Reparse Document
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| document_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"id": 0, "tenant_id": 0, "patient_id": 0, "user_id": 0, "filename": "string", "file_size": 0, "mime_type": "string",...` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/documents/{document_id}/reparse \
   -H "Authorization: Bearer $JWT"
 ```
 
