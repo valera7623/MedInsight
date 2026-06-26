@@ -111,6 +111,56 @@ otel_spans_dropped_total = Counter(
     "Spans dropped (export failure / sampling buffer overflow)",
 )
 
+# --- Phase 19: Redis cache metrics ---
+cache_hits_total = Counter(
+    "cache_hits_total",
+    "Redis cache hits",
+    ["layer"],  # sync | async
+)
+
+cache_misses_total = Counter(
+    "cache_misses_total",
+    "Redis cache misses",
+    ["layer"],
+)
+
+cache_size_bytes = Gauge(
+    "cache_size_bytes",
+    "Size of the last cached value written (approximate)",
+)
+
+cache_hit_rate = Gauge(
+    "cache_hit_rate",
+    "Rolling cache hit rate (0-1); alert if < 0.5",
+)
+
+
+def record_cache_hit(layer: str = "sync") -> None:
+    cache_hits_total.labels(layer=layer).inc()
+    _update_hit_rate()
+
+
+def record_cache_miss(layer: str = "sync") -> None:
+    cache_misses_total.labels(layer=layer).inc()
+    _update_hit_rate()
+
+
+def record_cache_set(size_bytes: int) -> None:
+    cache_size_bytes.set(size_bytes)
+
+
+def _update_hit_rate() -> None:
+    if not PROMETHEUS_AVAILABLE:
+        return
+    try:
+        hits = sum(s.value for s in cache_hits_total.collect()[0].samples)  # type: ignore[index]
+        misses = sum(s.value for s in cache_misses_total.collect()[0].samples)  # type: ignore[index]
+        total = hits + misses
+        if total > 0:
+            cache_hit_rate.set(hits / total)
+    except Exception:  # noqa: BLE001
+        pass
+
 
 def render_metrics() -> bytes:
     return generate_latest()

@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://redis:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://redis:6379/1"
 
+    # Phase 19: Redis response cache
+    REDIS_CACHE_ENABLED: bool = True
+    REDIS_CACHE_DEFAULT_TTL: int = 3600
+    REDIS_CACHE_DOCX_TTL: int = 604800  # 7 days
+    REDIS_CACHE_API_TTL: int = 300  # 5 minutes
+    REDIS_CACHE_DICOM_TTL: int = 86400  # 24 hours
+    REDIS_CACHE_STATIC_TTL: int = 3600  # 1 hour for semi-static API data
+
     OPENAI_API_KEY: str = ""
     OPENAI_BASE_URL: str = "https://api.proxyapi.ru/openai/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"

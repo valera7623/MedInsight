@@ -11,6 +11,8 @@ from app.auth import get_current_user
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
 from app.models import Department, Patient, User
+from app.core.cache import cache_enabled, cache_service
+from app.services.cache_invalidation import invalidate_patient_cache, invalidate_tenant_cache
 from app.services.access import (
     anonymize_patient,
     can_create_patient,
@@ -141,6 +143,8 @@ def create_patient(
     db.commit()
     db.refresh(patient)
 
+    invalidate_tenant_cache(db, tenant_id)
+
     if settings.TELEGRAM_BOT_ENABLED:
         try:
             from app.bot.services.notification_service import get_notification_service
@@ -172,10 +176,21 @@ def list_patients(
     sort_order: str = Query("desc"),
 ):
     tid = effective_tenant_id(current_user, get_request_tenant_id(request))
+    limit_val = page_size or limit
+    cache_key = (
+        f"patients:tenant:{tid or 0}:user:{current_user.id}:role:{current_user.role}:"
+        f"page:{page}:limit:{limit_val}:search:{search or ''}:dept:{department_id or ''}:"
+        f"doc:{attending_doctor_id or ''}:sort:{sort_by}:{sort_order}"
+    )
+    if cache_enabled():
+        cached = cache_service.get_json_sync(cache_key)
+        if cached is not None:
+            return cached
+
     query = patients_scope(db, current_user, tid)
     params = PaginationParams(
         page=page,
-        limit=page_size or limit,
+        limit=limit_val,
         search=search,
         sort_by=sort_by,
         sort_order=sort_order,
@@ -191,6 +206,8 @@ def list_patients(
     )
     # Back-compat alias for older clients that read page_size.
     result["page_size"] = result["limit"]
+    if cache_enabled():
+        cache_service.set_json_sync(cache_key, result, settings.REDIS_CACHE_API_TTL)
     return result
 
 
@@ -223,6 +240,8 @@ def update_patient(
     db.commit()
     db.refresh(patient)
 
+    invalidate_patient_cache(db, patient.id, patient.tenant_id)
+
     try:
         from app.tasks.webhook_task import fire_event
 
@@ -245,6 +264,7 @@ def delete_patient(
 
     patient = _get_patient_or_404(db, patient_id, current_user, request)
 
+    tenant_id = patient.tenant_id
     try:
         delete_patient_with_dependencies(db, patient)
     except Exception as exc:
@@ -255,9 +275,11 @@ def delete_patient(
             detail="Не удалось удалить пациента: есть связанные записи. Повторите попытку или обратитесь к администратору.",
         ) from exc
 
+    invalidate_patient_cache(db, patient_id, tenant_id)
+
     try:
         from app.tasks.webhook_task import fire_event
 
-        fire_event("patient.deleted", patient.tenant_id, patient_id=patient_id)
+        fire_event("patient.deleted", tenant_id, patient_id=patient_id)
     except Exception:
         pass

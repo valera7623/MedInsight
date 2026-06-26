@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.config import settings
+from app.core.cache import cache_enabled, cache_service
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
 from app.models import DicomStudy, Patient, User
@@ -23,6 +24,7 @@ from app.services.audit import log_audit
 from app.services.dicom_storage import DicomStorage
 from app.services.dicom_persistence import delete_study_data, handle_cross_patient_conflict, read_study_uid_from_file
 from app.services.dicom_viewer import DicomViewer
+from app.services.cache_invalidation import invalidate_dicom_patient_cache
 from app.services.list_queries import DICOM_SEARCH_FIELDS, DICOM_SORT, dicom_studies_scope
 from app.tasks.celery_app import redis_available
 from app.tasks.dicom_task import process_dicom_study
@@ -275,6 +277,7 @@ async def upload_dicom(
 
     job_id = _enqueue_dicom(study.id, str(temp_path))
     db.refresh(study)
+    invalidate_dicom_patient_cache(db, patient_id)
 
     return DicomUploadResponse(
         study_uid=study.study_uid,
@@ -328,6 +331,22 @@ def list_dicom_studies(
 ):
     _ensure_dicom_enabled()
     tid = effective_tenant_id(current_user, get_request_tenant_id(request))
+    cache_key = (
+        f"dicom:studies:tenant:{tid or 0}:user:{current_user.id}:patient:{patient_id or ''}:"
+        f"page:{page}:limit:{limit}:mod:{modality or ''}:status:{study_status or ''}:"
+        f"search:{search or ''}:sort:{sort_by}:{sort_order}"
+    )
+    if cache_enabled() and patient_id is not None:
+        patient_key = f"dicom:studies:patient:{patient_id}:page:{page}:limit:{limit}"
+        cached = cache_service.get_json_sync(patient_key)
+        if cached is not None:
+            return cached
+
+    if cache_enabled() and patient_id is None:
+        cached = cache_service.get_json_sync(cache_key)
+        if cached is not None:
+            return cached
+
     query = dicom_studies_scope(db, current_user, tid)
 
     if date_from is not None:
@@ -344,7 +363,7 @@ def list_dicom_studies(
         sort_order=sort_order,
         filters={"patient_id": patient_id, "modality": modality, "status": study_status},
     )
-    return paginate(
+    result = paginate(
         query,
         params,
         model=DicomStudy,
@@ -352,6 +371,12 @@ def list_dicom_studies(
         allowed_sort=DICOM_SORT,
         serializer=lambda s: _serialize_study(s, viewer, current_user),
     )
+    if cache_enabled():
+        cache_service.set_json_sync(cache_key, result, settings.REDIS_CACHE_API_TTL)
+        if patient_id is not None:
+            patient_key = f"dicom:studies:patient:{patient_id}:page:{page}:limit:{limit}"
+            cache_service.set_json_sync(patient_key, result, settings.REDIS_CACHE_API_TTL)
+    return result
 
 
 @router.get("/studies/{study_uid}")
@@ -447,6 +472,24 @@ def get_dicom_frame(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image file not found")
         path = Path(alt)
 
+    frame_cache_key = f"dicom:frame:{dicom_frame.id}:patient:{study.patient_id}"
+    if cache_enabled():
+        cached_png = cache_service.get_bytes_sync(frame_cache_key)
+        if cached_png is not None:
+            return Response(
+                content=cached_png,
+                media_type="image/png",
+                headers={
+                    "Accept-Ranges": "bytes",
+                    "Cache-Control": "private, max-age=3600",
+                    "X-Cache": "HIT",
+                },
+            )
+
+    png_bytes = path.read_bytes()
+    if cache_enabled():
+        cache_service.set_bytes_sync(frame_cache_key, png_bytes, settings.REDIS_CACHE_DICOM_TTL)
+
     log_audit(
         db,
         user_id=current_user.id,
@@ -459,10 +502,14 @@ def get_dicom_frame(
         details={"instance_uid": instance_uid, "study_uid": study.study_uid},
     )
 
-    return FileResponse(
-        path,
+    return Response(
+        content=png_bytes,
         media_type="image/png",
-        headers={"Accept-Ranges": "bytes", "Cache-Control": "private, max-age=3600"},
+        headers={
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "private, max-age=3600",
+            "X-Cache": "MISS",
+        },
     )
 
 
@@ -483,6 +530,7 @@ def delete_dicom_study(
     tenant_id = study.tenant_id
     delete_study_data(db, study, storage)
     db.commit()
+    invalidate_dicom_patient_cache(db, study.patient_id)
 
     log_audit(
         db,

@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse
 from app.config import settings
 from app.core.metrics import CONTENT_TYPE_LATEST, render_metrics
 from app.core.redis import close_redis_connection
+from app.core.cache import close_async_cache, close_sync_binary_cache
 from app.core.shutdown import shutdown_manager
 from app.database import Base, bootstrap_system, close_db_connection, engine, run_migrations
 from app.middleware.audit import AuditMiddleware
@@ -21,6 +22,7 @@ from app.middleware.audit_collector import AuditCollectorMiddleware
 from app.middleware.audit_append_only import register_append_only_listeners
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
+from app.middleware.cache_middleware import CacheMiddleware
 from app.routes import admin, admin_backup, analytics, appointments, audit_export, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, docx_export, documents, export, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, reports, telegram, templates, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
@@ -100,6 +102,8 @@ def _register_shutdown_handlers(executor: ThreadPoolExecutor) -> None:
     shutdown_manager.register_handler("revoke_celery_tasks", _revoke_celery_tasks, timeout=5)
     shutdown_manager.register_handler("close_database", close_db_connection, timeout=5)
     shutdown_manager.register_handler("close_redis", close_redis_connection, timeout=5)
+    shutdown_manager.register_handler("close_cache_redis", close_sync_binary_cache, timeout=5)
+    shutdown_manager.register_handler("close_async_cache", close_async_cache, timeout=5)
     shutdown_manager.register_handler("close_chromadb", _close_chroma, timeout=5)
     shutdown_manager.register_handler(
         "close_executor", lambda: executor.shutdown(wait=True, cancel_futures=False), timeout=10
@@ -229,6 +233,8 @@ if settings.AUDIT_SIGNING_ENABLED or settings.SIEM_EXPORT_ENABLED:
     app.add_middleware(AuditCollectorMiddleware)
 else:
     app.add_middleware(AuditMiddleware)
+if settings.REDIS_CACHE_ENABLED:
+    app.add_middleware(CacheMiddleware)
 app.add_middleware(UsageLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,

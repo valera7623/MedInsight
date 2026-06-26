@@ -266,6 +266,10 @@ curl -X POST http://localhost:8000/api/analytics/insights/1 \
 | `STORAGE_PATH` | Путь к файлам | `./storage` |
 | `REDIS_URL` | Redis брокер Celery | `redis://redis:6379/0` |
 | `CELERY_RESULT_BACKEND` | Redis для результатов | `redis://redis:6379/1` |
+| `REDIS_CACHE_ENABLED` | HTTP/DOCX/DICOM кэш в Redis | `true` |
+| `REDIS_CACHE_DOCX_TTL` | TTL DOCX (сек) | `604800` (7 дней) |
+| `REDIS_CACHE_API_TTL` | TTL API JSON (сек) | `300` |
+| `REDIS_CACHE_DICOM_TTL` | TTL DICOM PNG (сек) | `86400` |
 | `OPENAI_API_KEY` | Ключ ProxyAPI/OpenAI | — |
 | `OPENAI_BASE_URL` | Base URL ProxyAPI | `https://api.proxyapi.ru/openai/v1` |
 | `OPENAI_MODEL` | Модель GPT | `gpt-4o-mini` |
@@ -1557,6 +1561,58 @@ python scripts/test_fhir.py
 
 - `025_add_fhir_mapping.sql` — таблица `fhir_mapping` (MedInsight ID ↔ FHIR ID)
 
+## Caching (Redis) — Фаза 19
+
+Слой кэширования снижает нагрузку на CPU при повторных запросах DOCX, дашборда и списков.
+
+### Архитектура
+
+```
+Запрос → CacheMiddleware / @cache / route-level cache
+              ↓ HIT → ответ из Redis
+              ↓ MISS → БД / генератор → SET с TTL
+Изменение данных → CacheInvalidationService → bump version + DELETE pattern
+```
+
+### Ключи и TTL
+
+| Данные | Ключ Redis | TTL |
+|--------|------------|-----|
+| DOCX карточка | `docx:{patient_id}:{options_hash}:v{version}` | 7 дней |
+| Список пациентов | `patients:tenant:{tid}:…` | 5 мин |
+| Дашборд | `dashboard:tenant:{tid}:user:{uid}:…` | 5 мин |
+| DICOM studies | `dicom:studies:patient:{id}:…` | 5 мин |
+| DICOM PNG кадр | `dicom:frame:{frame_id}:patient:{id}` | 24 ч |
+
+Версии инвалидации хранятся в таблице `cache_versions` (модель `CacheVersion`).
+
+### Модули
+
+| Файл | Назначение |
+|------|------------|
+| `app/core/cache.py` | `CacheService` (async + sync), декоратор `@cache` |
+| `app/middleware/cache_middleware.py` | Авто-кэш GET `/api/patients`, `/api/analytics/dashboard`, `/api/dicom/studies` |
+| `app/services/cache_invalidation.py` | Инвалидация при CRUD пациента / DICOM |
+| `app/tasks/docx_task.py` | Redis → filesystem fallback для Celery DOCX |
+
+### Метрики Prometheus
+
+- `cache_hits_total{layer="sync|async"}`
+- `cache_misses_total{layer="sync|async"}`
+- `cache_size_bytes` — размер последней записи
+- `cache_hit_rate` — доля попаданий; **рекомендуемый алерт: `< 0.5`**
+
+### Тестирование
+
+```bash
+python scripts/test_cache.py
+pytest tests/test_cache.py -q
+```
+
+### Переменные окружения
+
+См. `.env.example`: `REDIS_CACHE_ENABLED`, `REDIS_CACHE_*_TTL`.
+
 ## DOCX Export (Фаза 18: карточка пациента)
 
 Генерация профессиональных карточек пациентов в формате **Microsoft Word (.docx)** на базе
@@ -1582,7 +1638,7 @@ python scripts/test_fhir.py
 | `app/services/docx_templates.py` | Структуры шаблонов (`TEMPLATE_PATIENT_CARD`, …) |
 | `app/templates/docx/patient_card_styles.py` | Шрифты, цвета, поля страницы |
 | `app/routes/docx_export.py` | REST API экспорта |
-| `app/tasks/docx_task.py` | Celery: `generate_patient_card_async` |
+| `app/tasks/docx_task.py` | Celery: `generate_patient_card_async` (+ Redis cache) |
 
 ### API
 
