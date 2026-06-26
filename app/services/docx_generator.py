@@ -9,14 +9,14 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-from docx import Document
+from docx import Document as DocxDocument
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Cm, Pt
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import Department, DicomStudy, Document, Patient, Prediction, Tenant
+from app.models import Department, DicomStudy, Document as PatientDocument, Patient, Prediction, Tenant
 from app.services.docx_templates import (
     DEFAULT_PATIENT_CARD_SECTIONS,
     GENDER_LABELS,
@@ -56,7 +56,7 @@ class DocxGenerator:
     # ------------------------------------------------------------------ helpers
 
     @staticmethod
-    def _apply_page_margins(doc: Document) -> None:
+    def _apply_page_margins(doc: DocxDocument) -> None:
         for section in doc.sections:
             section.left_margin = PAGE_MARGINS["left"]
             section.right_margin = PAGE_MARGINS["right"]
@@ -74,7 +74,7 @@ class DocxGenerator:
     @classmethod
     def add_paragraph_with_style(
         cls,
-        doc: Document,
+        doc: DocxDocument,
         text: str,
         style: str = "Normal",
         *,
@@ -90,7 +90,7 @@ class DocxGenerator:
         return paragraph
 
     @classmethod
-    def add_heading(cls, doc: Document, text: str, level: int = 1):
+    def add_heading(cls, doc: DocxDocument, text: str, level: int = 1):
         heading = doc.add_heading(text, level=level)
         heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
         size = FONT_HEADING_SIZE if level == 1 else FONT_SUBHEADING_SIZE
@@ -99,7 +99,7 @@ class DocxGenerator:
         return heading
 
     @classmethod
-    def add_table(cls, doc: Document, data: list[list[Any]], headers: list[str], title: str | None = None):
+    def add_table(cls, doc: DocxDocument, data: list[list[Any]], headers: list[str], title: str | None = None):
         if title:
             cls.add_paragraph_with_style(doc, title, bold=True)
 
@@ -132,7 +132,7 @@ class DocxGenerator:
         return table
 
     @classmethod
-    def add_header_footer(cls, doc: Document, header_text: str, footer_text: str) -> None:
+    def add_header_footer(cls, doc: DocxDocument, header_text: str, footer_text: str) -> None:
         for section in doc.sections:
             header = section.header
             header_para = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
@@ -149,7 +149,7 @@ class DocxGenerator:
                 cls._style_run(footer_para.runs[0], size=Pt(9), color=COLOR_MUTED)
 
     @classmethod
-    def add_watermark(cls, doc: Document, text: str) -> None:
+    def add_watermark(cls, doc: DocxDocument, text: str) -> None:
         """Light watermark in the document header."""
         for section in doc.sections:
             header = section.header
@@ -161,7 +161,7 @@ class DocxGenerator:
             run.font.color.rgb = COLOR_WATERMARK
 
     @classmethod
-    def add_lab_results_table(cls, doc: Document, lab_results: list[dict[str, Any]]):
+    def add_lab_results_table(cls, doc: DocxDocument, lab_results: list[dict[str, Any]]):
         headers = TEMPLATE_LAB_REPORT["table_headers"]
         rows: list[list[str]] = []
         for result in lab_results:
@@ -177,7 +177,7 @@ class DocxGenerator:
         return cls.add_table(doc, rows, headers)
 
     @classmethod
-    def add_dicom_info(cls, doc: Document, dicom_study: dict[str, Any]) -> None:
+    def add_dicom_info(cls, doc: DocxDocument, dicom_study: dict[str, Any]) -> None:
         cls.add_paragraph_with_style(doc, "DICOM-исследование", bold=True)
         for label, key in (
             ("Модальность", "modality"),
@@ -215,7 +215,7 @@ class DocxGenerator:
         watermark: str | None = None,
     ) -> BytesIO:
         enabled = set(sections or DEFAULT_PATIENT_CARD_SECTIONS)
-        doc = Document()
+        doc = DocxDocument()
         cls._apply_page_margins(doc)
 
         if header_text or footer_text:
@@ -387,7 +387,7 @@ class DocxGenerator:
         patient = self.db.query(Patient).filter(Patient.id == study.patient_id).first()
         patient_data = _patient_to_dict(patient, self.db) if patient else {}
 
-        doc = Document()
+        doc = DocxDocument()
         self._apply_page_margins(doc)
         self.add_header_footer(doc, TEMPLATE_DICOM_REPORT["title"], settings.DOCX_WATERMARK)
         self.add_watermark(doc, settings.DOCX_WATERMARK)
@@ -498,7 +498,7 @@ def _dicom_study_to_dict(study: DicomStudy) -> dict[str, Any]:
     }
 
 
-def _merge_clinical_from_documents(documents: list[Document]) -> dict[str, Any]:
+def _merge_clinical_from_documents(documents: list[PatientDocument]) -> dict[str, Any]:
     diagnoses: set[str] = set()
     medications: set[str] = set()
     anamnesis: set[str] = set()
@@ -566,9 +566,9 @@ def collect_patient_docx_context(db: Session, patient_id: int, options: dict[str
     clinic_name = tenant.name if tenant else "MedInsight"
 
     documents = (
-        db.query(Document)
-        .filter(Document.patient_id == patient_id, Document.tenant_id == patient.tenant_id)
-        .order_by(Document.created_at.desc())
+        db.query(PatientDocument)
+        .filter(PatientDocument.patient_id == patient_id, PatientDocument.tenant_id == patient.tenant_id)
+        .order_by(PatientDocument.created_at.desc())
         .all()
     )
     clinical = _merge_clinical_from_documents(documents)
