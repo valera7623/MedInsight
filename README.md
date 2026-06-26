@@ -8,6 +8,7 @@
 - **Auth:** JWT (7 дней)
 - **NLP:** spaCy `ru_core_news_lg`
 - **Parsing:** python-docx, PyPDF2
+- **Export:** PDF (ReportLab), DOCX (python-docx), Excel (openpyxl)
 - **Async:** Celery + Redis
 - **AI:** OpenAI GPT через [ProxyAPI](https://proxyapi.ru)
 - **Frontend:** Vanilla JS + Chart.js
@@ -215,6 +216,8 @@ OPENAI_MODEL=gpt-4o-mini
 | Метод | Путь | Описание |
 |-------|------|----------|
 | POST | `/api/export/patient/{patient_id}` | PDF-отчёт по пациенту |
+| POST | `/api/export/patient-card` | DOCX-карточка пациента (синхронно или Celery) |
+| GET | `/api/export/patient-card/download/{job_id}` | Скачать DOCX после async-генерации |
 
 ## Тестовый скрипт (Фаза 2)
 
@@ -1547,6 +1550,77 @@ python scripts/test_fhir.py
 ### Миграции
 
 - `025_add_fhir_mapping.sql` — таблица `fhir_mapping` (MedInsight ID ↔ FHIR ID)
+
+## DOCX Export (Фаза 18: карточка пациента)
+
+Генерация профессиональных карточек пациентов в формате **Microsoft Word (.docx)** на базе
+`python-docx`. Данные собираются из карточки пациента, распарсенных документов, прогнозов
+и DICOM-метаданных.
+
+### Состав карточки
+
+1. Информация о пациенте (ФИО, дата рождения, пол, контакты, отделение)
+2. Анамнез (из распарсенных выписок)
+3. Диагнозы (МКБ-10 + описание)
+4. Лабораторные анализы (таблица: показатель, значение, референс, статус)
+5. Лекарства
+6. Прогнозы (риски, факторы, рекомендации)
+7. DICOM-исследования (модальность, область, дата, кадры)
+8. Заключение и подпись врача
+
+### Модули
+
+| Файл | Назначение |
+|------|------------|
+| `app/services/docx_generator.py` | Класс `DocxGenerator` — сбор данных и сборка DOCX |
+| `app/services/docx_templates.py` | Структуры шаблонов (`TEMPLATE_PATIENT_CARD`, …) |
+| `app/templates/docx/patient_card_styles.py` | Шрифты, цвета, поля страницы |
+| `app/routes/docx_export.py` | REST API экспорта |
+| `app/tasks/docx_task.py` | Celery: `generate_patient_card_async` |
+
+### API
+
+```bash
+curl -X POST http://localhost:8000/api/export/patient-card \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "patient_id": 1,
+    "format": "docx",
+    "sections": ["patient", "anamnesis", "diagnoses", "lab", "medications", "predictions", "dicom", "conclusion"]
+  }' \
+  --output patient_card.docx
+```
+
+Асинхронная генерация (Celery + Redis):
+
+```json
+{
+  "patient_id": 1,
+  "format": "docx",
+  "async_export": true
+}
+```
+
+Ответ: `job_id` и `download_url` → `GET /api/export/patient-card/download/{job_id}`.
+
+Файлы async-задач сохраняются в `storage/reports/{patient_id}/`.
+
+### Переменные окружения
+
+| Переменная | По умолчанию | Описание |
+|------------|--------------|----------|
+| `DOCX_TEMPLATES_DIR` | `./app/templates/docx` | Каталог стилей DOCX |
+| `DOCX_REPORTS_DIR` | `./storage/reports` | Каталог сохранения отчётов |
+| `DOCX_WATERMARK` | `MedInsight` | Водяной знак в колонтитуле |
+
+### Локальный тест
+
+```bash
+pip install python-docx
+python scripts/test_docx.py
+# → patient_card_sample.docx в текущей директории
+```
 
 ## Report Templates (Фаза 15: PDF-отчёты)
 

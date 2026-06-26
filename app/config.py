@@ -248,6 +248,11 @@ class Settings(BaseSettings):
     REPORTS_MAX_FILE_SIZE_MB: int = 50
     REPORTS_TEMPLATES_DIR: str = "./app/templates/reports"
 
+    # Phase 18: DOCX patient card export
+    DOCX_TEMPLATES_DIR: str = "./app/templates/docx"
+    DOCX_REPORTS_DIR: str = "./storage/reports"
+    DOCX_WATERMARK: str = "MedInsight"
+
     # Phase 16: Appointments calendar
     APPOINTMENTS_ENABLED: bool = True
     APPOINTMENTS_REMINDER_MINUTES: str = "30,60,120"

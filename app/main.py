@@ -21,7 +21,7 @@ from app.middleware.audit_collector import AuditCollectorMiddleware
 from app.middleware.audit_append_only import register_append_only_listeners
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
-from app.routes import admin, admin_backup, analytics, appointments, audit_export, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, documents, export, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, reports, telegram, templates, users, webhooks
+from app.routes import admin, admin_backup, analytics, appointments, audit_export, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, docx_export, documents, export, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, reports, telegram, templates, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
@@ -270,6 +270,7 @@ app.include_router(dicom_context.analytics_router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(predictions.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
+app.include_router(docx_export.router, prefix="/api")
 app.include_router(export_excel.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(audit_export.router, prefix="/api")
