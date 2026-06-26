@@ -1009,6 +1009,93 @@ async function exportPatientPdf(patientId) {
   URL.revokeObjectURL(url);
 }
 
+const PATIENT_CARD_DOCX_SECTIONS = [
+  'patient',
+  'anamnesis',
+  'diagnoses',
+  'lab',
+  'medications',
+  'predictions',
+  'dicom',
+  'conclusion',
+];
+
+function filenameFromContentDisposition(header, fallback) {
+  if (!header) return fallback;
+  const match = header.match(/filename\*?=(?:UTF-8''|")?([^";\n]+)"?/i);
+  return match ? decodeURIComponent(match[1].trim()) : fallback;
+}
+
+async function pollDocxExportDownload(downloadUrl, patientId) {
+  const maxAttempts = 30;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const res = await apiFetch(downloadUrl);
+    if (res.status === 202) continue;
+    if (!res.ok) {
+      const data = await parseApiResponse(res);
+      throw new Error(formatApiError(data.detail) || 'Ошибка загрузки DOCX');
+    }
+    const blob = await res.blob();
+    const filename = filenameFromContentDisposition(
+      res.headers.get('content-disposition'),
+      `patient_${patientId}_card.docx`,
+    );
+    downloadBlob(blob, filename);
+    return;
+  }
+  throw new Error('Генерация DOCX заняла слишком много времени');
+}
+
+async function exportPatientDocx(patientId, btn = null) {
+  const originalLabel = btn?.textContent;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Формирование…';
+  }
+
+  try {
+    const res = await apiFetch('/api/export/patient-card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        patient_id: patientId,
+        format: 'docx',
+        sections: PATIENT_CARD_DOCX_SECTIONS,
+      }),
+    });
+
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok) {
+      const data = await parseApiResponse(res);
+      throw new Error(formatApiError(data.detail) || 'Ошибка экспорта DOCX');
+    }
+
+    if (contentType.includes('application/json')) {
+      const data = await res.json();
+      if (data.status === 'processing' && data.download_url) {
+        await pollDocxExportDownload(data.download_url, patientId);
+        return;
+      }
+      throw new Error(data.message || 'Неожиданный ответ сервера');
+    }
+
+    const blob = await res.blob();
+    const filename = filenameFromContentDisposition(
+      res.headers.get('content-disposition'),
+      `patient_${patientId}_card.docx`,
+    );
+    downloadBlob(blob, filename);
+  } catch (err) {
+    alert(err.message || 'Ошибка экспорта DOCX');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalLabel || '⬇ Экспорт DOCX';
+    }
+  }
+}
+
 function initDashboard() {
   if (!requireAuth()) return;
   setupLogout();
@@ -1346,6 +1433,9 @@ function initPatientPage() {
 
   document.getElementById('generate-prediction-btn')?.addEventListener('click', () => startPrediction(patientId));
   document.getElementById('generate-insights-btn')?.addEventListener('click', () => loadPatientInsights(patientId));
+  document.getElementById('export-patient-docx-btn')?.addEventListener('click', (event) => {
+    exportPatientDocx(patientId, event.currentTarget);
+  });
   setupPatientDicomSection(patientId);
 
   fetchCurrentUser()
