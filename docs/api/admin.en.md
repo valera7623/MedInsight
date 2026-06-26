@@ -2,11 +2,11 @@
 
 # Admin
 
-Auto-generated reference for **Admin** endpoints (34 operations).
+Auto-generated reference for **Admin** endpoints (38 operations).
 
 **OpenAPI tags:** admin, admin-backup, users, telegram
 
-**Endpoints:** 34
+**Endpoints:** 38
 
 ---
 
@@ -217,6 +217,117 @@ Delete Backup
 ```bash
 curl -X DELETE https://fileguardian.com.ru/api/admin/backup/{backup_id} \
   -H "Authorization: Bearer $JWT"
+```
+
+## POST /api/admin/cache/cleanup
+
+Cache Cleanup
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/admin/cache/cleanup \
+  -H "Authorization: Bearer $JWT"
+```
+
+## POST /api/admin/cache/invalidate
+
+Cache Invalidate
+
+**Authentication:** `Bearer JWT` (required)
+
+**Request Body:**
+
+```json
+{
+  "patient_id": 0,
+  "all": false
+}
+```
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/admin/cache/invalidate \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"patient_id":0,"all":false}'
+```
+
+## GET /api/admin/cache/stats
+
+Cache Stats
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/admin/cache/stats \
+  -H "Authorization: Bearer $JWT"
+```
+
+## POST /api/admin/cache/warmup
+
+Cache Warmup
+
+**Authentication:** `Bearer JWT` (required)
+
+**Request Body:**
+
+```json
+{
+  "patient_ids": [
+    0
+  ]
+}
+```
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/admin/cache/warmup \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"patient_ids":[0]}'
 ```
 
 ## GET /api/admin/departments

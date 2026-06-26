@@ -2,11 +2,11 @@
 
 # Export
 
-Auto-generated reference for **Export** endpoints (9 operations).
+Auto-generated reference for **Export** endpoints (10 operations).
 
 **OpenAPI tags:** export
 
-**Endpoints:** 9
+**Endpoints:** 10
 
 ---
 
@@ -270,6 +270,34 @@ curl -X POST https://fileguardian.com.ru/api/export/predictions \
   -H "Authorization: Bearer $JWT" \
   -H "Content-Type: application/json" \
   -d '{"filters":{},"columns":["string"]}'
+```
+
+## GET /api/export/status/{job_id}
+
+Export Status
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| job_id | path | string | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"job_id": "string", "state": "string", "ready": true, "status": "string", "cache_hit": false, "cache_source": "strin...` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/export/status/{job_id} \
+  -H "Authorization: Bearer $JWT"
 ```
 
 ## POST /api/export/users

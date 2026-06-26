@@ -1445,6 +1445,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#get-apiexportstatusjob_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/export/status/{job_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#post-apiexportusers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2044,6 +2055,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#get-apiexportstatusjob_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/export/status/{job_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#post-apiexportusers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2077,9 +2099,9 @@
 <!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
 <h1 id="export">Export<a class="headerlink" href="#export" title="Permanent link">&para;</a></h1>
-<p>Auto-generated reference for <strong>Export</strong> endpoints (9 operations).</p>
+<p>Auto-generated reference for <strong>Export</strong> endpoints (10 operations).</p>
 <p><strong>OpenAPI tags:</strong> export</p>
-<p><strong>Endpoints:</strong> 9</p>
+<p><strong>Endpoints:</strong> 10</p>
 <hr />
 <h2 id="post-apiexportaudit">POST /api/export/audit<a class="headerlink" href="#post-apiexportaudit" title="Permanent link">&para;</a></h2>
 <p>Export Audit</p>
@@ -2428,6 +2450,56 @@
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;filters&quot;:{},&quot;columns&quot;:[&quot;string&quot;]}&#39;</span>
+</code></pre></div>
+<h2 id="get-apiexportstatusjob_id">GET /api/export/status/{job_id}<a class="headerlink" href="#get-apiexportstatusjob_id" title="Permanent link">&para;</a></h2>
+<p>Export Status</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>job_id</td>
+<td>path</td>
+<td>string</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"job_id": "string", "state": "string", "ready": true, "status": "string", "cache_hit": false, "cache_source": "strin...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/export/status/<span class="o">{</span>job_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
 </code></pre></div>
 <h2 id="post-apiexportusers">POST /api/export/users<a class="headerlink" href="#post-apiexportusers" title="Permanent link">&para;</a></h2>
 <p>Export Users</p>

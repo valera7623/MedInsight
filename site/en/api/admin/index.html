@@ -1518,6 +1518,50 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#post-apiadmincachecleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/admin/cache/cleanup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiadmincacheinvalidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/admin/cache/invalidate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apiadmincachestats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/admin/cache/stats
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiadmincachewarmup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/admin/cache/warmup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#get-apiadmindepartments" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2308,6 +2352,50 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#post-apiadmincachecleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/admin/cache/cleanup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiadmincacheinvalidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/admin/cache/invalidate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apiadmincachestats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/admin/cache/stats
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiadmincachewarmup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/admin/cache/warmup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#get-apiadmindepartments" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2627,9 +2715,9 @@
 <!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
 <h1 id="admin">Admin<a class="headerlink" href="#admin" title="Permanent link">&para;</a></h1>
-<p>Auto-generated reference for <strong>Admin</strong> endpoints (34 operations).</p>
+<p>Auto-generated reference for <strong>Admin</strong> endpoints (38 operations).</p>
 <p><strong>OpenAPI tags:</strong> admin, admin-backup, users, telegram</p>
-<p><strong>Endpoints:</strong> 34</p>
+<p><strong>Endpoints:</strong> 38</p>
 <hr />
 <h2 id="get-apiadminaudit">GET /api/admin/audit<a class="headerlink" href="#get-apiadminaudit" title="Permanent link">&para;</a></h2>
 <p>List Audit</p>
@@ -2991,6 +3079,129 @@
 <p><strong>Example:</strong></p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>DELETE<span class="w"> </span>https://fileguardian.com.ru/api/admin/backup/<span class="o">{</span>backup_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="post-apiadmincachecleanup">POST /api/admin/cache/cleanup<a class="headerlink" href="#post-apiadmincachecleanup" title="Permanent link">&para;</a></h2>
+<p>Cache Cleanup</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/admin/cache/cleanup<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="post-apiadmincacheinvalidate">POST /api/admin/cache/invalidate<a class="headerlink" href="#post-apiadmincacheinvalidate" title="Permanent link">&para;</a></h2>
+<p>Cache Invalidate</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Request Body:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;patient_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;all&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/admin/cache/invalidate<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;patient_id&quot;:0,&quot;all&quot;:false}&#39;</span>
+</code></pre></div>
+<h2 id="get-apiadmincachestats">GET /api/admin/cache/stats<a class="headerlink" href="#get-apiadmincachestats" title="Permanent link">&para;</a></h2>
+<p>Cache Stats</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/admin/cache/stats<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="post-apiadmincachewarmup">POST /api/admin/cache/warmup<a class="headerlink" href="#post-apiadmincachewarmup" title="Permanent link">&para;</a></h2>
+<p>Cache Warmup</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Request Body:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;patient_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="mi">0</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/admin/cache/warmup<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;patient_ids&quot;:[0]}&#39;</span>
 </code></pre></div>
 <h2 id="get-apiadmindepartments">GET /api/admin/departments<a class="headerlink" href="#get-apiadmindepartments" title="Permanent link">&para;</a></h2>
 <p>List Departments</p>

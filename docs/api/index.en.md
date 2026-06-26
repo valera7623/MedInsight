@@ -38,10 +38,10 @@ Obtain a token via `POST /api/auth/login`.
 | [DICOM](dicom.md) | 11 endpoint(s) |
 | [Analytics](analytics.md) | 1 endpoint(s) |
 | [Predictions](predictions.md) | 12 endpoint(s) |
-| [Export](exports.md) | 9 endpoint(s) |
+| [Export](exports.md) | 10 endpoint(s) |
 | [Webhooks](webhooks.md) | 7 endpoint(s) |
 | [Payments](payments.md) | 6 endpoint(s) |
-| [Admin](admin.md) | 34 endpoint(s) |
+| [Admin](admin.md) | 38 endpoint(s) |
 
 ## Error format
 
@@ -65,4 +65,4 @@ Obtain a token via `POST /api/auth/login`.
 
 ---
 
-*Generated from OpenAPI 3.1.0 — 2026-06-26 23:09 UTC*
+*Generated from OpenAPI 3.1.0 — 2026-06-26 23:29 UTC*
