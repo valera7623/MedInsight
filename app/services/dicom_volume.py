@@ -125,16 +125,23 @@ class DicomVolumeService:
 
         return max(candidates, key=score)
 
-    def _volume_warning(self, series: DicomSeries | None) -> str | None:
+    def _volume_warning(self, series: DicomSeries | None, *, num_slices: int = 0) -> str | None:
+        warnings: list[str] = []
+        if num_slices and num_slices < 64:
+            warnings.append(
+                f"Мало срезов ({num_slices}): левая панель — 2D-проекция сквозь объём, "
+                "не интерактивная 3D-модель. Для CT обычно ≥100 срезов. "
+                "Выберите MIP или VR и вращайте мышью."
+            )
         if not series:
-            return None
+            return warnings[0] if warnings else None
         modality = (series.modality or "").upper()
         if modality in _NON_VOLUMETRIC_MODALITIES:
-            return (
+            warnings.append(
                 f"Серия {modality} — это не CT/MR. Пресеты Lung/Bone неприменимы; "
                 "используйте Default + MIP или откройте CT-серию в 2D-вьюере."
             )
-        return None
+        return " ".join(warnings) if warnings else None
 
     def _sorted_frames(self, series: DicomSeries) -> list[DicomFrame]:
         return sorted(series.frames, key=lambda f: (f.frame_number, f.instance_uid))
@@ -270,7 +277,7 @@ class DicomVolumeService:
                 **info,
                 "cached": True,
                 "status": "ready",
-                "warning": self._volume_warning(series),
+                "warning": self._volume_warning(series, num_slices=len(frames)),
             }
 
         study = self._get_study(study_uid)
@@ -311,7 +318,7 @@ class DicomVolumeService:
             "status": "not_built",
             "presets": list(WINDOW_PRESETS.keys()),
             "available_series": available,
-            "warning": self._volume_warning(series),
+            "warning": self._volume_warning(series, num_slices=len(frames)),
         }
 
     def get_volume_data(self, study_uid: str) -> dict[str, Any]:
@@ -364,7 +371,7 @@ class DicomVolumeService:
             "orientation": [1, 0, 0, 0, 1, 0],
             "dtype": "float32",
             "presets": list(WINDOW_PRESETS.keys()),
-            "warning": self._volume_warning(series),
+            "warning": self._volume_warning(series, num_slices=z),
         }
 
         self._mem_cache_put(study_uid, volume, info)
@@ -429,6 +436,29 @@ class DicomVolumeService:
 
         wc, ww = self._resolve_window(params, volume)
         return self._apply_window(data, wc, ww)
+
+    def _shaded_vr_projection(self, rotated: np.ndarray) -> np.ndarray:
+        """MIP with depth shading — reads more like a 3D volume than flat MIP."""
+        depth = rotated.shape[0]
+        if depth < 2:
+            return rotated[0]
+        mip = np.max(rotated, axis=0)
+        z_peak = np.argmax(rotated, axis=0).astype(np.float32)
+        gy, gx = np.gradient(z_peak)
+        norm = np.hypot(gx, gy) + 1e-6
+        shade = 0.5 + 0.5 * (gx / norm)
+        shade = np.clip(shade, 0.35, 1.0)
+        return mip * shade
+
+    def _project_volume(self, rotated: np.ndarray, mode: str) -> np.ndarray:
+        mode = (mode or "mip").lower()
+        if mode == "minip":
+            return np.min(rotated, axis=0)
+        if mode == "avg":
+            return np.mean(rotated, axis=0)
+        if mode == "vr":
+            return self._shaded_vr_projection(rotated)
+        return np.max(rotated, axis=0)
 
     def _slice_volume(
         self, volume: np.ndarray, plane: str, slice_index: int
@@ -531,14 +561,7 @@ class DicomVolumeService:
             rotated = ndimage.rotate(volume, azimuth, axes=(1, 2), reshape=False, order=1)
             rotated = ndimage.rotate(rotated, elevation, axes=(0, 2), reshape=False, order=1)
 
-        if mode == "mip":
-            projection = np.max(rotated, axis=0)
-        elif mode == "minip":
-            projection = np.min(rotated, axis=0)
-        elif mode == "avg":
-            projection = np.mean(rotated, axis=0)
-        else:
-            projection = np.max(rotated, axis=0)
+        projection = self._project_volume(rotated, mode)
 
         rendered = self._normalize_for_display(projection, params, volume, is_projection=True)
         return self._array_to_png(rendered, max_edge=max_edge)
@@ -578,18 +601,13 @@ class DicomVolumeService:
         if azimuth or elevation:
             rotated = ndimage.rotate(volume, azimuth, axes=(1, 2), reshape=False, order=1)
             rotated = ndimage.rotate(rotated, elevation, axes=(0, 2), reshape=False, order=1)
-        if mode == "minip":
-            projection = np.min(rotated, axis=0)
-        elif mode == "avg":
-            projection = np.mean(rotated, axis=0)
-        else:
-            projection = np.max(rotated, axis=0)
+        projection = self._project_volume(rotated, mode)
         vr_rendered = self._normalize_for_display(projection, params, volume, is_projection=True)
         vr_b64 = base64.b64encode(self._array_to_png(vr_rendered, max_edge=max_edge)).decode("ascii")
 
         study = self._get_study(study_uid)
         series = self._select_series(study) if study else None
-        warning = self._volume_warning(series)
+        warning = self._volume_warning(series, num_slices=z)
 
         return {
             "study_uid": study_uid,

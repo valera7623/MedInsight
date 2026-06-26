@@ -4,6 +4,13 @@
 
 const PREVIEW_MAX_EDGE = 512;
 
+const MODE_LABELS = {
+  mip: 'MIP — проекция объёма',
+  minip: 'MinIP — проекция объёма',
+  avg: 'Average — усреднение',
+  vr: 'VR — объём с освещением',
+};
+
 const viewer3dState = {
   studyUid: null,
   volumeInfo: null,
@@ -71,6 +78,42 @@ async function api3dImage(path, cacheKey) {
   if (cacheKey) setImageUrl(cacheKey, url);
   else viewer3dState.objectUrls.push(url);
   return url;
+}
+
+function updateVrPanelTitle() {
+  const el = document.getElementById('vr-panel-title');
+  if (el) el.textContent = MODE_LABELS[viewer3dState.mode] || MODE_LABELS.mip;
+}
+
+function setupVrDrag() {
+  const canvas = document.getElementById('vr-fallback-canvas');
+  if (!canvas) return;
+  let dragging = false;
+  let lastX = 0;
+  let lastY = 0;
+  canvas.style.cursor = 'grab';
+  canvas.title = 'Перетащите для поворота проекции';
+
+  canvas.addEventListener('mousedown', (e) => {
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    canvas.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => {
+    dragging = false;
+    canvas.style.cursor = 'grab';
+  });
+  canvas.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    viewer3dState.azimuth = (viewer3dState.azimuth + dx * 0.4) % 360;
+    viewer3dState.elevation = Math.max(-90, Math.min(90, viewer3dState.elevation - dy * 0.25));
+    scheduleVrRefresh();
+  });
 }
 
 function setStatus(text, isError = false) {
@@ -329,6 +372,7 @@ function onToolbarAction(action, value) {
       break;
     case 'mode':
       viewer3dState.mode = value;
+      updateVrPanelTitle();
       scheduleVrRefresh();
       break;
     case 'window':
@@ -352,6 +396,7 @@ function onToolbarAction(action, value) {
       viewer3dState.preset = 'default';
       viewer3dState.mode = 'mip';
       viewer3dState.zoom = 1;
+      updateVrPanelTitle();
       scheduleDisplayRefresh();
       if (typeof Dicom3dToolbar !== 'undefined') Dicom3dToolbar.resetUi();
       break;
@@ -378,6 +423,8 @@ async function initDicom3dViewer(studyUid) {
   if (typeof Dicom3dToolbar !== 'undefined') {
     Dicom3dToolbar.mount(document.getElementById('toolbar-host'), onToolbarAction);
   }
+  setupVrDrag();
+  updateVrPanelTitle();
 
   try {
     const info = await ensureVolumeReady(studyUid);
