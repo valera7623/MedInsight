@@ -19,13 +19,25 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            poetry-${{ runner.os }}-
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+          poetry install --without dev,test,docs --no-interaction --no-ansi
 
       - name: Smoke test
-        run: python -c "from app.main import app; print('OK', app.title)"
+        run: poetry run python -c "from app.main import app; print('OK', app.title)"
 
   deploy:
     needs: test

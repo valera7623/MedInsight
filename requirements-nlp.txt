@@ -1,7 +1,0 @@
-# NLP-зависимости (Python 3.11–3.12 рекомендуется)
--r requirements.txt
-spacy==3.8.2
-
-# Модель устанавливается в Dockerfile напрямую через pip (wheel),
-# без `spacy download` — он тянет compatibility.json с raw.githubusercontent.com
-# и часто падает в CI/VPS из-за SSL/сети.

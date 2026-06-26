@@ -10,16 +10,20 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt requirements-nlp.txt ./
+COPY pyproject.toml poetry.lock ./
 
 ARG INSTALL_SPACY_MODEL=0
 ARG SPACY_MODEL_URL=https://github.com/explosion/spacy-models/releases/download/ru_core_news_lg-3.8.0/ru_core_news_lg-3.8.0-py3-none-any.whl
 
-ENV PIP_DEFAULT_TIMEOUT=300 \
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=false \
+    PIP_DEFAULT_TIMEOUT=300 \
     PIP_RETRIES=5
 
-RUN pip install --no-cache-dir --retries 5 --timeout 300 -r requirements.txt \
-    && pip install --no-cache-dir --retries 5 --timeout 300 -r requirements-nlp.txt \
+RUN pip install --no-cache-dir poetry \
+    && poetry config virtualenvs.create false \
+    && poetry install --without dev,test,docs --no-ansi --no-root \
+    && poetry install --only nlp --no-ansi --no-root \
     && if [ "$INSTALL_SPACY_MODEL" = "1" ]; then \
          pip install --no-cache-dir --retries 1 --timeout 120 \
            "${SPACY_MODEL_URL}" \
@@ -56,7 +60,9 @@ COPY . .
 RUN if [ -f site/index.html ]; then \
       echo "Documentation site/ found ($(du -sh site | cut -f1)) — /help/ enabled"; \
     elif [ "$BUILD_DOCS" = "1" ]; then \
-      pip install --no-cache-dir --retries 5 --timeout 600 -r requirements-docs.txt \
+      pip install --no-cache-dir poetry \
+      && poetry config virtualenvs.create false \
+      && poetry install --only docs --no-ansi --no-root \
       && python scripts/generate_api_docs.py --import-app \
       && mkdocs build; \
     else \

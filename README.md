@@ -19,6 +19,7 @@
 ## Требования
 
 - **Python 3.11–3.12** — рекомендуется для локальной разработки со spaCy
+- **Poetry** — управление зависимостями ([установка](https://python-poetry.org/docs/#installation))
 - **Python 3.14** — работает без spaCy (regex-only NER); для spaCy используйте Docker
 - **Docker** — предпочтительный способ деплоя (Python 3.12 + spaCy + Celery внутри образа)
 - **Redis** — брокер для Celery (включён в docker-compose)
@@ -27,10 +28,13 @@
 
 ```bash
 cd medinsight
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+poetry install                    # основные зависимости
+poetry install --with nlp         # опционально: spaCy для NER
+poetry install --with dev,test    # для разработки и тестов
 cp .env.example .env
+
+# Активировать виртуальное окружение (или использовать poetry run перед командами)
+poetry shell
 
 # Запустить Redis (отдельный терминал)
 docker run -d -p 6379:6379 redis:7-alpine
@@ -40,10 +44,12 @@ docker run -d -p 6379:6379 redis:7-alpine
 # CELERY_RESULT_BACKEND=redis://localhost:6379/1
 
 # Терминал 1: API
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# или: medinsight-api  (после poetry install)
 
 # Терминал 2: Celery worker
-celery -A app.tasks.celery_app worker --loglevel=info
+poetry run celery -A app.tasks.celery_app worker --loglevel=info
+# или: medinsight-celery
 ```
 
 Открыть:
@@ -447,7 +453,7 @@ python scripts/test_phase4.py
 | `FREEMIUM_ANALYSIS_LIMIT` / `PRO_ANALYSIS_LIMIT` / `ENTERPRISE_ANALYSIS_LIMIT` | Месячные лимиты |
 
 > **ChromaDB опционален.** Пакет `chromadb` тянет `onnxruntime` (~200 МБ).
-> Для лёгкого деплоя его можно закомментировать в `requirements.txt` —
+> Для лёгкого деплоя его можно исключить из `pyproject.toml` —
 > self-healing продолжит работать через SQL keyword-fallback.
 
 ## Разграничение доступа по отделениям

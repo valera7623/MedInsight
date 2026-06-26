@@ -127,3 +127,8 @@ def redis_available() -> bool:
         return True
     except Exception:
         return False
+
+
+def start_worker() -> None:
+    """Entry point for ``medinsight-celery`` (Poetry script / CLI)."""
+    celery_app.worker_main(argv=["worker", "--loglevel=info"])

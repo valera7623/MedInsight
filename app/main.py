@@ -395,3 +395,10 @@ def appointments_page():
 @app.get("/appointments/schedule")
 def appointments_schedule_page():
     return FileResponse(static_dir / "pages" / "appointments.html")
+
+
+def main() -> None:
+    """Entry point for ``medinsight-api`` (Poetry script / CLI)."""
+    import uvicorn
+
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=False)
