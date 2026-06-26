@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import logging
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Literal
-from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse, StreamingResponse
@@ -60,18 +58,6 @@ def _get_patient_or_404(db: Session, patient_id: int, user: User, request: Reque
 def _safe_docx_filename(patient: Patient) -> str:
     slug = f"{patient.last_name}_{patient.first_name}".replace(" ", "_")
     return f"patient_card_{patient.id}_{slug}_{datetime.utcnow():%Y%m%d}.docx"
-
-
-def _ascii_filename_fallback(filename: str) -> str:
-    ascii_name = re.sub(r"[^\w.\-]+", "_", filename, flags=re.ASCII)
-    ascii_name = re.sub(r"_+", "_", ascii_name).strip("._")
-    return ascii_name or "patient_card.docx"
-
-
-def _attachment_disposition(filename: str) -> str:
-    """HTTP headers must be latin-1; use RFC 5987 for Cyrillic filenames."""
-    fallback = _ascii_filename_fallback(filename)
-    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(filename)}"
 
 
 @router.post("/patient-card")
@@ -144,7 +130,7 @@ def export_patient_card_docx(
     return StreamingResponse(
         buffer,
         media_type=DOCX_MEDIA,
-        headers={"Content-Disposition": _attachment_disposition(filename)},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

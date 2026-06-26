@@ -2,11 +2,11 @@
 
 # Export
 
-Auto-generated reference for **Export** endpoints (9 operations).
+Auto-generated reference for **Export** endpoints (7 operations).
 
 **OpenAPI tags:** export
 
-**Endpoints:** 9
+**Endpoints:** 7
 
 ---
 
@@ -105,72 +105,6 @@ Download Export
 
 ```bash
 curl -X GET https://fileguardian.com.ru/api/export/download/{job_id} \
-  -H "Authorization: Bearer $JWT"
-```
-
-## POST /api/export/patient-card
-
-Export Patient Card Docx
-
-**Authentication:** `Bearer JWT` (required)
-
-**Request Body:**
-
-```json
-{
-  "patient_id": 0,
-  "format": "docx",
-  "sections": [
-    "string"
-  ],
-  "async_export": false,
-  "watermark": "string"
-}
-```
-
-
-
-**Responses:**
-
-| Status | Description | Example |
-|--------|-------------|---------|
-| 200 | Successful Response | `null` |
-| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
-
-**Example:**
-
-```bash
-curl -X POST https://fileguardian.com.ru/api/export/patient-card \
-  -H "Authorization: Bearer $JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"patient_id":0,"format":"docx","sections":["string"],"async_export":false,"watermark":"string"}'
-```
-
-## GET /api/export/patient-card/download/{job_id}
-
-Download Async Patient Card
-
-**Authentication:** `Bearer JWT` (required)
-
-
-
-**Parameters:**
-
-| Parameter | In | Type | Required | Description |
-|-----------|----|------|----------|-------------|
-| job_id | path | string | ✅ | — |
-
-**Responses:**
-
-| Status | Description | Example |
-|--------|-------------|---------|
-| 200 | Successful Response | `null` |
-| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
-
-**Example:**
-
-```bash
-curl -X GET https://fileguardian.com.ru/api/export/patient-card/download/{job_id} \
   -H "Authorization: Bearer $JWT"
 ```
 
