@@ -16,7 +16,7 @@
         <link rel="prev" href="../analytics/">
       
       
-        <link rel="next" href="../../deployment/docker/">
+        <link rel="next" href="../exports/">
       
       
         
@@ -31,7 +31,7 @@
     
     
       
-        <title>API — Predictions - MedInsight Documentation</title>
+        <title>Predictions - MedInsight Documentation</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#api-predictions" class="md-skip">
+        <a href="#predictions" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              API — Predictions
+              Predictions
             
           </span>
         </div>
@@ -1108,7 +1108,7 @@
   <span class="md-ellipsis">
     
   
-    API — Overview
+    Index
   
 
     
@@ -1136,7 +1136,7 @@
   <span class="md-ellipsis">
     
   
-    API — Authentication
+    Auth
   
 
     
@@ -1164,7 +1164,7 @@
   <span class="md-ellipsis">
     
   
-    API — Patients
+    Patients
   
 
     
@@ -1192,7 +1192,7 @@
   <span class="md-ellipsis">
     
   
-    API — Documents
+    Documents
   
 
     
@@ -1220,7 +1220,7 @@
   <span class="md-ellipsis">
     
   
-    API — DICOM
+    Dicom
   
 
     
@@ -1248,7 +1248,7 @@
   <span class="md-ellipsis">
     
   
-    API — Analytics
+    Analytics
   
 
     
@@ -1285,7 +1285,7 @@
   <span class="md-ellipsis">
     
   
-    API — Predictions
+    Predictions
   
 
     
@@ -1303,7 +1303,7 @@
   <span class="md-ellipsis">
     
   
-    API — Predictions
+    Predictions
   
 
     
@@ -1329,10 +1329,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#post-apipredictionsrun" class="md-nav__link">
+  <a href="#get-apianalyticsdashboardpredictions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /api/predictions/run
+        GET /api/analytics/dashboard/predictions
       
     </span>
   </a>
@@ -1340,10 +1340,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apipredictionspatientpatient_id" class="md-nav__link">
+  <a href="#post-apianalyticsinsightspatient_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/predictions/patient/{patient_id}
+        POST /api/analytics/insights/{patient_id}
       
     </span>
   </a>
@@ -1351,10 +1351,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apipredictionshigh-risk" class="md-nav__link">
+  <a href="#post-apianalyticspredict-with-dicompatient_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/predictions/high-risk
+        POST /api/analytics/predict-with-dicom/{patient_id}
       
     </span>
   </a>
@@ -1362,10 +1362,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#post-apipredictionsidvalidate" class="md-nav__link">
+  <a href="#get-apianalyticspredictstatusjob_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /api/predictions/{id}/validate
+        GET /api/analytics/predict/status/{job_id}
       
     </span>
   </a>
@@ -1373,10 +1373,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apipredictionsexportexcel" class="md-nav__link">
+  <a href="#post-apianalyticspredictpatient_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/predictions/export/excel
+        POST /api/analytics/predict/{patient_id}
       
     </span>
   </a>
@@ -1384,10 +1384,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#plan-limits" class="md-nav__link">
+  <a href="#get-apianalyticspredictions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Plan limits
+        GET /api/analytics/predictions
       
     </span>
   </a>
@@ -1395,10 +1395,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#asynchronous-processing" class="md-nav__link">
+  <a href="#get-apianalyticspredictionsdetailprediction_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Asynchronous processing
+        GET /api/analytics/predictions/detail/{prediction_id}
       
     </span>
   </a>
@@ -1406,10 +1406,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fallback" class="md-nav__link">
+  <a href="#post-apianalyticspredictionsshapcomputeprediction_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fallback
+        POST /api/analytics/predictions/shap/compute/{prediction_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apianalyticspredictionsshaplocalprediction_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/analytics/predictions/shap/local/{prediction_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apianalyticspredictionsshapsummary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/analytics/predictions/shap/summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apianalyticspredictionspatient_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/analytics/predictions/{patient_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apianalyticsvalidate-predictionprediction_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/analytics/validate-prediction/{prediction_id}
       
     </span>
   </a>
@@ -1420,6 +1464,146 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../exports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../webhooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Webhooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Payments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../websocket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Websocket
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1805,10 +1989,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#post-apipredictionsrun" class="md-nav__link">
+  <a href="#get-apianalyticsdashboardpredictions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /api/predictions/run
+        GET /api/analytics/dashboard/predictions
       
     </span>
   </a>
@@ -1816,10 +2000,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apipredictionspatientpatient_id" class="md-nav__link">
+  <a href="#post-apianalyticsinsightspatient_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/predictions/patient/{patient_id}
+        POST /api/analytics/insights/{patient_id}
       
     </span>
   </a>
@@ -1827,10 +2011,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apipredictionshigh-risk" class="md-nav__link">
+  <a href="#post-apianalyticspredict-with-dicompatient_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/predictions/high-risk
+        POST /api/analytics/predict-with-dicom/{patient_id}
       
     </span>
   </a>
@@ -1838,10 +2022,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#post-apipredictionsidvalidate" class="md-nav__link">
+  <a href="#get-apianalyticspredictstatusjob_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /api/predictions/{id}/validate
+        GET /api/analytics/predict/status/{job_id}
       
     </span>
   </a>
@@ -1849,10 +2033,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apipredictionsexportexcel" class="md-nav__link">
+  <a href="#post-apianalyticspredictpatient_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/predictions/export/excel
+        POST /api/analytics/predict/{patient_id}
       
     </span>
   </a>
@@ -1860,10 +2044,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#plan-limits" class="md-nav__link">
+  <a href="#get-apianalyticspredictions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Plan limits
+        GET /api/analytics/predictions
       
     </span>
   </a>
@@ -1871,10 +2055,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#asynchronous-processing" class="md-nav__link">
+  <a href="#get-apianalyticspredictionsdetailprediction_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Asynchronous processing
+        GET /api/analytics/predictions/detail/{prediction_id}
       
     </span>
   </a>
@@ -1882,10 +2066,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fallback" class="md-nav__link">
+  <a href="#post-apianalyticspredictionsshapcomputeprediction_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fallback
+        POST /api/analytics/predictions/shap/compute/{prediction_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apianalyticspredictionsshaplocalprediction_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/analytics/predictions/shap/local/{prediction_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apianalyticspredictionsshapsummary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/analytics/predictions/shap/summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apianalyticspredictionspatient_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/analytics/predictions/{patient_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apianalyticsvalidate-predictionprediction_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/analytics/validate-prediction/{prediction_id}
       
     </span>
   </a>
@@ -1912,72 +2140,662 @@
   
 
 
-<h1 id="api-predictions">API — Predictions<a class="headerlink" href="#api-predictions" title="Permanent link">&para;</a></h1>
-<p>Prefix: <code>/api/predictions</code><br />
-Requires: Bearer token, WRITE_ROLES for creation</p>
-<h2 id="post-apipredictionsrun">POST /api/predictions/run<a class="headerlink" href="#post-apipredictionsrun" title="Permanent link">&para;</a></h2>
-<p>Run a prediction for a patient.</p>
-<p><strong>Body:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;patient_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<span class="p">}</span>
+<!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
+
+<h1 id="predictions">Predictions<a class="headerlink" href="#predictions" title="Permanent link">&para;</a></h1>
+<p>Auto-generated reference for <strong>Predictions</strong> endpoints (12 operations).</p>
+<p><strong>OpenAPI tags:</strong> predictions</p>
+<p><strong>Endpoints:</strong> 12</p>
+<hr />
+<h2 id="get-apianalyticsdashboardpredictions">GET /api/analytics/dashboard/predictions<a class="headerlink" href="#get-apianalyticsdashboardpredictions" title="Permanent link">&para;</a></h2>
+<p>Predictions Dashboard</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>department_id</td>
+<td>query</td>
+<td>integer</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"high_risk_patients": [{"id": 0, "name": "string", "readmission_risk": 0.0, "complication_risk": 0.0, "last_predicti...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/analytics/dashboard/predictions<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/api/predictions/run<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer TOKEN&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;patient_id&quot;: 1}&#39;</span>
+<h2 id="post-apianalyticsinsightspatient_id">POST /api/analytics/insights/{patient_id}<a class="headerlink" href="#post-apianalyticsinsightspatient_id" title="Permanent link">&para;</a></h2>
+<p>Patient Insights</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>patient_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"insights": "string", "recommendations": ["string"]}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/analytics/insights/<span class="o">{</span>patient_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
 </code></pre></div>
-<p><strong>Response 202:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;task_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abc-123&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;processing&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Prediction queued&quot;</span>
-<span class="p">}</span>
+<h2 id="post-apianalyticspredict-with-dicompatient_id">POST /api/analytics/predict-with-dicom/{patient_id}<a class="headerlink" href="#post-apianalyticspredict-with-dicompatient_id" title="Permanent link">&para;</a></h2>
+<p>Predict With Dicom</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>patient_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"job_id": "string", "status": "string", "prediction_id": 0, "prediction": {}, "dicom_sources": [{}]}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/analytics/predict-with-dicom/<span class="o">{</span>patient_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
 </code></pre></div>
-<h2 id="get-apipredictionspatientpatient_id">GET /api/predictions/patient/{patient_id}<a class="headerlink" href="#get-apipredictionspatientpatient_id" title="Permanent link">&para;</a></h2>
-<p>Patient prediction history.</p>
-<p><strong>Response:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;items&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;patient_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;readmission_risk&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.35</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;complication_risk&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.22</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;risk_level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;medium&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;gpt_explanation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Patient with comorbidities...&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;created_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-06-20T14:30:00Z&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;validated&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">  </span><span class="p">]</span>
-<span class="p">}</span>
+<h2 id="get-apianalyticspredictstatusjob_id">GET /api/analytics/predict/status/{job_id}<a class="headerlink" href="#get-apianalyticspredictstatusjob_id" title="Permanent link">&para;</a></h2>
+<p>Prediction Status</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>job_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"status": "string", "result": {}, "error": "string"}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/analytics/predict/status/<span class="o">{</span>job_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
 </code></pre></div>
-<h2 id="get-apipredictionshigh-risk">GET /api/predictions/high-risk<a class="headerlink" href="#get-apipredictionshigh-risk" title="Permanent link">&para;</a></h2>
-<p>High-risk patients (dashboard).</p>
-<p><strong>Query:</strong> <code>department_id</code>, <code>limit</code></p>
-<h2 id="post-apipredictionsidvalidate">POST /api/predictions/{id}/validate<a class="headerlink" href="#post-apipredictionsidvalidate" title="Permanent link">&para;</a></h2>
-<p>Clinician validation of a prediction.</p>
-<p><strong>Body:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;is_accurate&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;comment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Agree with the assessment&quot;</span>
-<span class="p">}</span>
+<h2 id="post-apianalyticspredictpatient_id">POST /api/analytics/predict/{patient_id}<a class="headerlink" href="#post-apianalyticspredictpatient_id" title="Permanent link">&para;</a></h2>
+<p>Start Prediction</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>patient_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"job_id": "string", "status": "string"}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/analytics/predict/<span class="o">{</span>patient_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
 </code></pre></div>
-<h2 id="get-apipredictionsexportexcel">GET /api/predictions/export/excel<a class="headerlink" href="#get-apipredictionsexportexcel" title="Permanent link">&para;</a></h2>
-<p>Export predictions to Excel.</p>
-<h2 id="plan-limits">Plan limits<a class="headerlink" href="#plan-limits" title="Permanent link">&para;</a></h2>
-<p>When monthly limit is exceeded:</p>
-<p><strong>Response 402:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;detail&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Monthly analysis limit exceeded&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;limit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;used&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
-<span class="p">}</span>
+<h2 id="get-apianalyticspredictions">GET /api/analytics/predictions<a class="headerlink" href="#get-apianalyticspredictions" title="Permanent link">&para;</a></h2>
+<p>List Predictions All</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>page</td>
+<td>query</td>
+<td>integer</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+<tr>
+<td>limit</td>
+<td>query</td>
+<td>integer</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+<tr>
+<td>patient_id</td>
+<td>query</td>
+<td>integer</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>type</td>
+<td>query</td>
+<td>string</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>validated</td>
+<td>query</td>
+<td>boolean</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>sort_by</td>
+<td>query</td>
+<td>string</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+<tr>
+<td>sort_order</td>
+<td>query</td>
+<td>string</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/analytics/predictions<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
 </code></pre></div>
-<h2 id="asynchronous-processing">Asynchronous processing<a class="headerlink" href="#asynchronous-processing" title="Permanent link">&para;</a></h2>
-<p>Result is available after Celery task completes. Subscribe to WebSocket or poll <code>GET /api/predictions/patient/{id}</code>.</p>
-<h2 id="fallback">Fallback<a class="headerlink" href="#fallback" title="Permanent link">&para;</a></h2>
-<p>If GPT is unavailable, <code>gpt_explanation</code> may be <code>null</code>; risks are calculated rule-based.</p>
+<h2 id="get-apianalyticspredictionsdetailprediction_id">GET /api/analytics/predictions/detail/{prediction_id}<a class="headerlink" href="#get-apianalyticspredictionsdetailprediction_id" title="Permanent link">&para;</a></h2>
+<p>Get Prediction Detail</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>prediction_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"id": 0, "patient_id": 0, "type": "string", "prediction": {}, "probabilities": {}, "confidence_score": 0.0, "validat...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/analytics/predictions/detail/<span class="o">{</span>prediction_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="post-apianalyticspredictionsshapcomputeprediction_id">POST /api/analytics/predictions/shap/compute/{prediction_id}<a class="headerlink" href="#post-apianalyticspredictionsshapcomputeprediction_id" title="Permanent link">&para;</a></h2>
+<p>Compute Shap Async</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>prediction_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/analytics/predictions/shap/compute/<span class="o">{</span>prediction_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apianalyticspredictionsshaplocalprediction_id">GET /api/analytics/predictions/shap/local/{prediction_id}<a class="headerlink" href="#get-apianalyticspredictionsshaplocalprediction_id" title="Permanent link">&para;</a></h2>
+<p>Get Prediction Shap</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>prediction_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"target": "readmission", "model_type": "string", "base_value": 0.0, "output_value": 0.0, "contributions": [{"feature...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/analytics/predictions/shap/local/<span class="o">{</span>prediction_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apianalyticspredictionsshapsummary">GET /api/analytics/predictions/shap/summary<a class="headerlink" href="#get-apianalyticspredictionsshapsummary" title="Permanent link">&para;</a></h2>
+<p>Get Shap Summary</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>target</td>
+<td>query</td>
+<td>string</td>
+<td>❌</td>
+<td>Prediction target for global SHAP summary</td>
+</tr>
+<tr>
+<td>sample_size</td>
+<td>query</td>
+<td>integer</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"target": "string", "tenant_id": 0, "model_type": "string", "sample_size": 0, "feature_names": ["string"], "summary_...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/analytics/predictions/shap/summary<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apianalyticspredictionspatient_id">GET /api/analytics/predictions/{patient_id}<a class="headerlink" href="#get-apianalyticspredictionspatient_id" title="Permanent link">&para;</a></h2>
+<p>List Predictions</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>patient_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"predictions": [{"id": 0, "patient_id": 0, "type": "string", "prediction": {}, "probabilities": {}, "confidence_scor...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/analytics/predictions/<span class="o">{</span>patient_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="post-apianalyticsvalidate-predictionprediction_id">POST /api/analytics/validate-prediction/{prediction_id}<a class="headerlink" href="#post-apianalyticsvalidate-predictionprediction_id" title="Permanent link">&para;</a></h2>
+<p>Validate Prediction</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>prediction_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"status": "string"}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/analytics/validate-prediction/<span class="o">{</span>prediction_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
 
 
 

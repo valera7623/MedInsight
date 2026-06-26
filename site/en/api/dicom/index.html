@@ -31,7 +31,7 @@
     
     
       
-        <title>API — DICOM - MedInsight Documentation</title>
+        <title>Dicom - MedInsight Documentation</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#api-dicom" class="md-skip">
+        <a href="#dicom" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              API — DICOM
+              Dicom
             
           </span>
         </div>
@@ -1108,7 +1108,7 @@
   <span class="md-ellipsis">
     
   
-    API — Overview
+    Index
   
 
     
@@ -1136,7 +1136,7 @@
   <span class="md-ellipsis">
     
   
-    API — Authentication
+    Auth
   
 
     
@@ -1164,7 +1164,7 @@
   <span class="md-ellipsis">
     
   
-    API — Patients
+    Patients
   
 
     
@@ -1192,7 +1192,7 @@
   <span class="md-ellipsis">
     
   
-    API — Documents
+    Documents
   
 
     
@@ -1229,7 +1229,7 @@
   <span class="md-ellipsis">
     
   
-    API — DICOM
+    Dicom
   
 
     
@@ -1247,7 +1247,7 @@
   <span class="md-ellipsis">
     
   
-    API — DICOM
+    Dicom
   
 
     
@@ -1273,10 +1273,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#post-apidicomupload" class="md-nav__link">
+  <a href="#get-apidicomframesinstance_uid" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /api/dicom/upload
+        GET /api/dicom/frames/{instance_uid}
       
     </span>
   </a>
@@ -1295,10 +1295,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apidicomstudiesstudy_id" class="md-nav__link">
+  <a href="#delete-apidicomstudiesstudy_uid" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/dicom/studies/{study_id}
+        DELETE /api/dicom/studies/{study_uid}
       
     </span>
   </a>
@@ -1306,10 +1306,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apidicomstudiesstudy_idviewer" class="md-nav__link">
+  <a href="#get-apidicomstudiesstudy_uid" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/dicom/studies/{study_id}/viewer
+        GET /api/dicom/studies/{study_uid}
       
     </span>
   </a>
@@ -1317,10 +1317,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apidicomstudiesstudy_idthumbnail" class="md-nav__link">
+  <a href="#get-apidicomstudiesstudy_uidarchive" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/dicom/studies/{study_id}/thumbnail
+        GET /api/dicom/studies/{study_uid}/archive
       
     </span>
   </a>
@@ -1328,10 +1328,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apidicomframesframe_idimage" class="md-nav__link">
+  <a href="#get-apidicomstudiesstudy_uidseriesseries_uidframes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/dicom/frames/{frame_id}/image
+        GET /api/dicom/studies/{study_uid}/series/{series_uid}/frames
       
     </span>
   </a>
@@ -1339,10 +1339,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#delete-apidicomstudiesstudy_id" class="md-nav__link">
+  <a href="#get-apidicomstudiesstudy_uidthumbnail" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DELETE /api/dicom/studies/{study_id}
+        GET /api/dicom/studies/{study_uid}/thumbnail
       
     </span>
   </a>
@@ -1350,10 +1350,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#statuses" class="md-nav__link">
+  <a href="#post-apidicomupload" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Statuses
+        POST /api/dicom/upload
       
     </span>
   </a>
@@ -1361,10 +1361,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#errors" class="md-nav__link">
+  <a href="#post-apidicomupload-zip" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Errors
+        POST /api/dicom/upload-zip
       
     </span>
   </a>
@@ -1372,10 +1372,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#frontend-routes" class="md-nav__link">
+  <a href="#get-apidicomupload-zipstatusjob_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Frontend routes
+        GET /api/dicom/upload-zip/status/{job_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apidicomuploadstatusstudy_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/dicom/upload/status/{study_id}
       
     </span>
   </a>
@@ -1405,7 +1416,7 @@
   <span class="md-ellipsis">
     
   
-    API — Analytics
+    Analytics
   
 
     
@@ -1433,7 +1444,147 @@
   <span class="md-ellipsis">
     
   
-    API — Predictions
+    Predictions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../exports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../webhooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Webhooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Payments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../websocket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Websocket
   
 
     
@@ -1827,10 +1978,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#post-apidicomupload" class="md-nav__link">
+  <a href="#get-apidicomframesinstance_uid" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /api/dicom/upload
+        GET /api/dicom/frames/{instance_uid}
       
     </span>
   </a>
@@ -1849,10 +2000,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apidicomstudiesstudy_id" class="md-nav__link">
+  <a href="#delete-apidicomstudiesstudy_uid" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/dicom/studies/{study_id}
+        DELETE /api/dicom/studies/{study_uid}
       
     </span>
   </a>
@@ -1860,10 +2011,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apidicomstudiesstudy_idviewer" class="md-nav__link">
+  <a href="#get-apidicomstudiesstudy_uid" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/dicom/studies/{study_id}/viewer
+        GET /api/dicom/studies/{study_uid}
       
     </span>
   </a>
@@ -1871,10 +2022,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apidicomstudiesstudy_idthumbnail" class="md-nav__link">
+  <a href="#get-apidicomstudiesstudy_uidarchive" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/dicom/studies/{study_id}/thumbnail
+        GET /api/dicom/studies/{study_uid}/archive
       
     </span>
   </a>
@@ -1882,10 +2033,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apidicomframesframe_idimage" class="md-nav__link">
+  <a href="#get-apidicomstudiesstudy_uidseriesseries_uidframes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/dicom/frames/{frame_id}/image
+        GET /api/dicom/studies/{study_uid}/series/{series_uid}/frames
       
     </span>
   </a>
@@ -1893,10 +2044,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#delete-apidicomstudiesstudy_id" class="md-nav__link">
+  <a href="#get-apidicomstudiesstudy_uidthumbnail" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DELETE /api/dicom/studies/{study_id}
+        GET /api/dicom/studies/{study_uid}/thumbnail
       
     </span>
   </a>
@@ -1904,10 +2055,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#statuses" class="md-nav__link">
+  <a href="#post-apidicomupload" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Statuses
+        POST /api/dicom/upload
       
     </span>
   </a>
@@ -1915,10 +2066,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#errors" class="md-nav__link">
+  <a href="#post-apidicomupload-zip" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Errors
+        POST /api/dicom/upload-zip
       
     </span>
   </a>
@@ -1926,10 +2077,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#frontend-routes" class="md-nav__link">
+  <a href="#get-apidicomupload-zipstatusjob_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Frontend routes
+        GET /api/dicom/upload-zip/status/{job_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apidicomuploadstatusstudy_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/dicom/upload/status/{study_id}
       
     </span>
   </a>
@@ -1956,139 +2118,666 @@
   
 
 
-<h1 id="api-dicom">API — DICOM<a class="headerlink" href="#api-dicom" title="Permanent link">&para;</a></h1>
-<p>Prefix: <code>/api/dicom</code><br />
-Requires: Bearer token</p>
+<!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
+
+<h1 id="dicom">DICOM<a class="headerlink" href="#dicom" title="Permanent link">&para;</a></h1>
+<p>Auto-generated reference for <strong>DICOM</strong> endpoints (11 operations).</p>
+<p><strong>OpenAPI tags:</strong> dicom</p>
+<p><strong>Endpoints:</strong> 11</p>
+<hr />
+<h2 id="get-apidicomframesinstance_uid">GET /api/dicom/frames/{instance_uid}<a class="headerlink" href="#get-apidicomframesinstance_uid" title="Permanent link">&para;</a></h2>
+<p>Get Dicom Frame</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>instance_uid</td>
+<td>path</td>
+<td>string</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>study_uid</td>
+<td>query</td>
+<td>string</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>frame</td>
+<td>query</td>
+<td>integer</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/dicom/frames/<span class="o">{</span>instance_uid<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apidicomstudies">GET /api/dicom/studies<a class="headerlink" href="#get-apidicomstudies" title="Permanent link">&para;</a></h2>
+<p>List Dicom Studies</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>page</td>
+<td>query</td>
+<td>integer</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+<tr>
+<td>limit</td>
+<td>query</td>
+<td>integer</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+<tr>
+<td>search</td>
+<td>query</td>
+<td>string</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>patient_id</td>
+<td>query</td>
+<td>integer</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>modality</td>
+<td>query</td>
+<td>string</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>status</td>
+<td>query</td>
+<td>string</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>date_from</td>
+<td>query</td>
+<td>string (date-time)</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>date_to</td>
+<td>query</td>
+<td>string (date-time)</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>sort_by</td>
+<td>query</td>
+<td>string</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+<tr>
+<td>sort_order</td>
+<td>query</td>
+<td>string</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/dicom/studies<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="delete-apidicomstudiesstudy_uid">DELETE /api/dicom/studies/{study_uid}<a class="headerlink" href="#delete-apidicomstudiesstudy_uid" title="Permanent link">&para;</a></h2>
+<p>Delete Dicom Study</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>study_uid</td>
+<td>path</td>
+<td>string</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>204</td>
+<td>Successful Response</td>
+<td><code>{}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>DELETE<span class="w"> </span>https://fileguardian.com.ru/api/dicom/studies/<span class="o">{</span>study_uid<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apidicomstudiesstudy_uid">GET /api/dicom/studies/{study_uid}<a class="headerlink" href="#get-apidicomstudiesstudy_uid" title="Permanent link">&para;</a></h2>
+<p>Get Dicom Study</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>study_uid</td>
+<td>path</td>
+<td>string</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/dicom/studies/<span class="o">{</span>study_uid<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apidicomstudiesstudy_uidarchive">GET /api/dicom/studies/{study_uid}/archive<a class="headerlink" href="#get-apidicomstudiesstudy_uidarchive" title="Permanent link">&para;</a></h2>
+<p>Download Dicom Archive</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>study_uid</td>
+<td>path</td>
+<td>string</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/dicom/studies/<span class="o">{</span>study_uid<span class="o">}</span>/archive<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apidicomstudiesstudy_uidseriesseries_uidframes">GET /api/dicom/studies/{study_uid}/series/{series_uid}/frames<a class="headerlink" href="#get-apidicomstudiesstudy_uidseriesseries_uidframes" title="Permanent link">&para;</a></h2>
+<p>List Series Frames</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>study_uid</td>
+<td>path</td>
+<td>string</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>series_uid</td>
+<td>path</td>
+<td>string</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/dicom/studies/<span class="o">{</span>study_uid<span class="o">}</span>/series/<span class="o">{</span>series_uid<span class="o">}</span>/frames<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apidicomstudiesstudy_uidthumbnail">GET /api/dicom/studies/{study_uid}/thumbnail<a class="headerlink" href="#get-apidicomstudiesstudy_uidthumbnail" title="Permanent link">&para;</a></h2>
+<p>Get Study Thumbnail</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>study_uid</td>
+<td>path</td>
+<td>string</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/dicom/studies/<span class="o">{</span>study_uid<span class="o">}</span>/thumbnail<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
 <h2 id="post-apidicomupload">POST /api/dicom/upload<a class="headerlink" href="#post-apidicomupload" title="Permanent link">&para;</a></h2>
-<p>Upload a DICOM file (multipart).</p>
+<p>Upload Dicom</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Form Data:</strong></p>
 <table>
 <thead>
 <tr>
 <th>Field</th>
 <th>Type</th>
+<th>Required</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>file</td>
-<td>file</td>
-<td><code>.dcm</code></td>
-</tr>
 <tr>
 <td>patient_id</td>
-<td>int</td>
-<td>Patient ID</td>
+<td>integer</td>
+<td>✅</td>
+<td>Patient Id</td>
+</tr>
+<tr>
+<td>file</td>
+<td>string</td>
+<td>✅</td>
+<td>File</td>
 </tr>
 </tbody>
 </table>
-<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/api/dicom/upload<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer TOKEN&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@scan.dcm&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;patient_id=1&quot;</span>
-</code></pre></div>
-<p><strong>Response 201:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;study_uid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.2.840.113619.2.55.3...&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;processing&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;patient_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<span class="p">}</span>
-</code></pre></div>
-<h2 id="get-apidicomstudies">GET /api/dicom/studies<a class="headerlink" href="#get-apidicomstudies" title="Permanent link">&para;</a></h2>
-<p>List studies.</p>
-<p><strong>Query:</strong> <code>patient_id</code>, <code>modality</code>, <code>status</code>, <code>search</code>, <code>skip</code>, <code>limit</code></p>
-<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer TOKEN&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span><span class="s2">&quot;http://localhost:8000/api/dicom/studies?modality=CT&amp;limit=20&quot;</span>
-</code></pre></div>
-<p><strong>Response:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;items&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;study_uid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.2.840...&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;modality&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CT&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;study_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Chest CT&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;body_part&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CHEST&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ready&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;frame_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">120</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;thumbnail_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/api/dicom/studies/3/thumbnail&quot;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
-<span class="p">}</span>
-</code></pre></div>
-<h2 id="get-apidicomstudiesstudy_id">GET /api/dicom/studies/{study_id}<a class="headerlink" href="#get-apidicomstudiesstudy_id" title="Permanent link">&para;</a></h2>
-<p>Study details + series.</p>
-<h2 id="get-apidicomstudiesstudy_idviewer">GET /api/dicom/studies/{study_id}/viewer<a class="headerlink" href="#get-apidicomstudiesstudy_idviewer" title="Permanent link">&para;</a></h2>
-<p>Viewer data (series, frames, window/level).</p>
-<h2 id="get-apidicomstudiesstudy_idthumbnail">GET /api/dicom/studies/{study_id}/thumbnail<a class="headerlink" href="#get-apidicomstudiesstudy_idthumbnail" title="Permanent link">&para;</a></h2>
-<p>PNG preview (first frame).</p>
-<h2 id="get-apidicomframesframe_idimage">GET /api/dicom/frames/{frame_id}/image<a class="headerlink" href="#get-apidicomframesframe_idimage" title="Permanent link">&para;</a></h2>
-<p>PNG for a specific frame.</p>
-<h2 id="delete-apidicomstudiesstudy_id">DELETE /api/dicom/studies/{study_id}<a class="headerlink" href="#delete-apidicomstudiesstudy_id" title="Permanent link">&para;</a></h2>
-<p>Delete (admin).</p>
-<h2 id="statuses">Statuses<a class="headerlink" href="#statuses" title="Permanent link">&para;</a></h2>
+<p><strong>Responses:</strong></p>
 <table>
 <thead>
 <tr>
-<th>status</th>
+<th>Status</th>
 <th>Description</th>
+<th>Example</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>processing</td>
-<td>Celery processing</td>
-</tr>
-<tr>
-<td>ready</td>
-<td>Ready to view</td>
-</tr>
-<tr>
-<td>failed</td>
-<td>Parse error</td>
-</tr>
-</tbody>
-</table>
-<h2 id="errors">Errors<a class="headerlink" href="#errors" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Code</th>
-<th>Cause</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>413</td>
-<td>DICOM_MAX_FILE_SIZE_MB exceeded</td>
+<td>202</td>
+<td>Successful Response</td>
+<td><code>{"study_uid": "string", "study_id": 0, "job_id": "string", "status": "string"}</code></td>
 </tr>
 <tr>
 <td>422</td>
-<td>Invalid DICOM</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
 </tr>
 </tbody>
 </table>
-<h2 id="frontend-routes">Frontend routes<a class="headerlink" href="#frontend-routes" title="Permanent link">&para;</a></h2>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/dicom/upload<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;patient_id=value&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=file.pdf&quot;</span>
+</code></pre></div>
+<h2 id="post-apidicomupload-zip">POST /api/dicom/upload-zip<a class="headerlink" href="#post-apidicomupload-zip" title="Permanent link">&para;</a></h2>
+<p>Upload Dicom Zip</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Form Data:</strong></p>
 <table>
 <thead>
 <tr>
-<th>URL</th>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>/dicom</code></td>
-<td>List</td>
+<td>patient_id</td>
+<td>integer</td>
+<td>✅</td>
+<td>Patient Id</td>
 </tr>
 <tr>
-<td><code>/dicom/viewer/{study_uid}</code></td>
-<td>Viewer</td>
+<td>zip_file</td>
+<td>string</td>
+<td>✅</td>
+<td>Zip File</td>
 </tr>
 </tbody>
 </table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>202</td>
+<td>Successful Response</td>
+<td><code>{"study_uid": "string", "study_id": 0, "job_id": "string", "status": "string", "total_files": 0}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/dicom/upload-zip<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;patient_id=value&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;zip_file=file.pdf&quot;</span>
+</code></pre></div>
+<h2 id="get-apidicomupload-zipstatusjob_id">GET /api/dicom/upload-zip/status/{job_id}<a class="headerlink" href="#get-apidicomupload-zipstatusjob_id" title="Permanent link">&para;</a></h2>
+<p>Get Dicom Zip Status</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>job_id</td>
+<td>path</td>
+<td>string</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>study_id</td>
+<td>query</td>
+<td>integer</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"job_id": "string", "status": "string", "study_uid": "string", "processed_files": 0, "total_files": 0, "percent": 0,...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/dicom/upload-zip/status/<span class="o">{</span>job_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apidicomuploadstatusstudy_id">GET /api/dicom/upload/status/{study_id}<a class="headerlink" href="#get-apidicomuploadstatusstudy_id" title="Permanent link">&para;</a></h2>
+<p>Get Dicom Upload Status</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>study_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"study_id": 0, "study_uid": "string", "status": "string", "num_instances": 0, "error_message": "string"}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/dicom/upload/status/<span class="o">{</span>study_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
 
 
 

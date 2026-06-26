@@ -31,7 +31,7 @@
     
     
       
-        <title>API — Authentication - MedInsight Documentation</title>
+        <title>Auth - MedInsight Documentation</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#api-authentication" class="md-skip">
+        <a href="#authentication" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              API — Authentication
+              Auth
             
           </span>
         </div>
@@ -1108,7 +1108,7 @@
   <span class="md-ellipsis">
     
   
-    API — Overview
+    Index
   
 
     
@@ -1145,7 +1145,7 @@
   <span class="md-ellipsis">
     
   
-    API — Authentication
+    Auth
   
 
     
@@ -1163,7 +1163,7 @@
   <span class="md-ellipsis">
     
   
-    API — Authentication
+    Auth
   
 
     
@@ -1189,10 +1189,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#post-apiauthregister" class="md-nav__link">
+  <a href="#get-apiauthdepartments" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /api/auth/register
+        GET /api/auth/departments
       
     </span>
   </a>
@@ -1222,10 +1222,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apiauthdepartments" class="md-nav__link">
+  <a href="#post-apiauthregister" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/auth/departments
+        POST /api/auth/register
       
     </span>
   </a>
@@ -1233,10 +1233,76 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#errors" class="md-nav__link">
+  <a href="#post-apiauthrequest-reset" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Errors
+        POST /api/auth/request-reset
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiauthresend-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/resend-verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apiauthtenants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/auth/tenants
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiauthverify-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/verify-email
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apipreferences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/preferences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#put-apipreferences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PUT /api/preferences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#put-apipreferencestheme" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PUT /api/preferences/theme
       
     </span>
   </a>
@@ -1266,7 +1332,7 @@
   <span class="md-ellipsis">
     
   
-    API — Patients
+    Patients
   
 
     
@@ -1294,7 +1360,7 @@
   <span class="md-ellipsis">
     
   
-    API — Documents
+    Documents
   
 
     
@@ -1322,7 +1388,7 @@
   <span class="md-ellipsis">
     
   
-    API — DICOM
+    Dicom
   
 
     
@@ -1350,7 +1416,7 @@
   <span class="md-ellipsis">
     
   
-    API — Analytics
+    Analytics
   
 
     
@@ -1378,7 +1444,147 @@
   <span class="md-ellipsis">
     
   
-    API — Predictions
+    Predictions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../exports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../webhooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Webhooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Payments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../websocket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Websocket
   
 
     
@@ -1772,10 +1978,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#post-apiauthregister" class="md-nav__link">
+  <a href="#get-apiauthdepartments" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /api/auth/register
+        GET /api/auth/departments
       
     </span>
   </a>
@@ -1805,10 +2011,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apiauthdepartments" class="md-nav__link">
+  <a href="#post-apiauthregister" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/auth/departments
+        POST /api/auth/register
       
     </span>
   </a>
@@ -1816,10 +2022,76 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#errors" class="md-nav__link">
+  <a href="#post-apiauthrequest-reset" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Errors
+        POST /api/auth/request-reset
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiauthresend-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/resend-verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apiauthtenants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/auth/tenants
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiauthverify-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/verify-email
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-apipreferences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/preferences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#put-apipreferences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PUT /api/preferences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#put-apipreferencestheme" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PUT /api/preferences/theme
       
     </span>
   </a>
@@ -1846,15 +2118,22 @@
   
 
 
-<h1 id="api-authentication">API — Authentication<a class="headerlink" href="#api-authentication" title="Permanent link">&para;</a></h1>
-<p>Prefix: <code>/api/auth</code></p>
-<h2 id="post-apiauthregister">POST /api/auth/register<a class="headerlink" href="#post-apiauthregister" title="Permanent link">&para;</a></h2>
-<p>Register a user.</p>
-<p><strong>Body (JSON):</strong></p>
+<!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
+
+<h1 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h1>
+<p>Auto-generated reference for <strong>Authentication</strong> endpoints (11 operations).</p>
+<p><strong>OpenAPI tags:</strong> auth, preferences</p>
+<p><strong>Endpoints:</strong> 11</p>
+<hr />
+<h2 id="get-apiauthdepartments">GET /api/auth/departments<a class="headerlink" href="#get-apiauthdepartments" title="Permanent link">&para;</a></h2>
+<p>List Public Departments</p>
+<p><strong>Authentication:</strong> none</p>
+<p><strong>Parameters:</strong></p>
 <table>
 <thead>
 <tr>
-<th>Field</th>
+<th>Parameter</th>
+<th>In</th>
 <th>Type</th>
 <th>Required</th>
 <th>Description</th>
@@ -1862,117 +2141,388 @@
 </thead>
 <tbody>
 <tr>
-<td>email</td>
-<td>string</td>
-<td>yes</td>
-<td>Email</td>
-</tr>
-<tr>
-<td>password</td>
-<td>string</td>
-<td>yes</td>
-<td>Password</td>
-</tr>
-<tr>
-<td>full_name</td>
-<td>string</td>
-<td>yes</td>
-<td>Full name</td>
-</tr>
-<tr>
-<td>role</td>
-<td>string</td>
-<td>yes</td>
-<td>admin, doctor, nurse, …</td>
-</tr>
-<tr>
 <td>subdomain</td>
+<td>query</td>
 <td>string</td>
-<td>yes</td>
-<td>Clinic</td>
-</tr>
-<tr>
-<td>department_id</td>
-<td>int</td>
-<td>for nurse/head</td>
-<td>Department ID</td>
+<td>✅</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Example:</strong></p>
-<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/api/auth/register<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
-<span class="s1">    &quot;email&quot;: &quot;doctor@clinic.ru&quot;,</span>
-<span class="s1">    &quot;password&quot;: &quot;SecurePass123&quot;,</span>
-<span class="s1">    &quot;full_name&quot;: &quot;Ivan Ivanov&quot;,</span>
-<span class="s1">    &quot;role&quot;: &quot;doctor&quot;,</span>
-<span class="s1">    &quot;subdomain&quot;: &quot;demo&quot;,</span>
-<span class="s1">    &quot;department_id&quot;: 1</span>
-<span class="s1">  }&#39;</span>
-</code></pre></div>
-<p><strong>Response 201:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;doctor@clinic.ru&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;full_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Ivan Ivanov&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;doctor&quot;</span>
-<span class="p">}</span>
-</code></pre></div>
-<h2 id="post-apiauthlogin">POST /api/auth/login<a class="headerlink" href="#post-apiauthlogin" title="Permanent link">&para;</a></h2>
-<p><strong>Body:</strong> <code>email</code>, <code>password</code>, <code>subdomain</code></p>
-<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/api/auth/login<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;email&quot;:&quot;doctor@clinic.ru&quot;,&quot;password&quot;:&quot;SecurePass123&quot;,&quot;subdomain&quot;:&quot;demo&quot;}&#39;</span>
-</code></pre></div>
-<p><strong>Response 200:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;access_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eyJ...&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;token_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bearer&quot;</span>
-<span class="p">}</span>
-</code></pre></div>
-<h2 id="get-apiauthme">GET /api/auth/me<a class="headerlink" href="#get-apiauthme" title="Permanent link">&para;</a></h2>
-<p>Current user. Requires Bearer token.</p>
-<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer TOKEN&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>http://localhost:8000/api/auth/me
-</code></pre></div>
-<p><strong>Response:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;doctor@clinic.ru&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;full_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Ivan Ivanov&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;doctor&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;department_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;department_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Therapy&quot;</span>
-<span class="p">}</span>
-</code></pre></div>
-<h2 id="get-apiauthdepartments">GET /api/auth/departments<a class="headerlink" href="#get-apiauthdepartments" title="Permanent link">&para;</a></h2>
-<p>Public list of clinic departments.</p>
-<div class="highlight"><pre><span></span><code>GET /api/auth/departments?subdomain=demo
-</code></pre></div>
-<h2 id="errors">Errors<a class="headerlink" href="#errors" title="Permanent link">&para;</a></h2>
+<p><strong>Responses:</strong></p>
 <table>
 <thead>
 <tr>
-<th>Code</th>
-<th>Cause</th>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>400</td>
-<td>Email already taken, invalid role</td>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>[{"id": 0, "name": "string"}]</code></td>
 </tr>
 <tr>
-<td>401</td>
-<td>Wrong password</td>
-</tr>
-<tr>
-<td>404</td>
-<td>Subdomain not found</td>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
 </tr>
 </tbody>
 </table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/auth/departments<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="post-apiauthlogin">POST /api/auth/login<a class="headerlink" href="#post-apiauthlogin" title="Permanent link">&para;</a></h2>
+<p>Login</p>
+<p><strong>Authentication:</strong> none</p>
+<p><strong>Request Body:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;subdomain&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"access_token": "string", "token_type": "bearer", "tenant_id": 0, "role": "string"}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/auth/login<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;email&quot;:&quot;user@example.com&quot;,&quot;password&quot;:&quot;string&quot;,&quot;subdomain&quot;:&quot;string&quot;}&#39;</span>
+</code></pre></div>
+<h2 id="get-apiauthme">GET /api/auth/me<a class="headerlink" href="#get-apiauthme" title="Permanent link">&para;</a></h2>
+<p>Me</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"id": 0, "email": "string", "full_name": "string", "role": "string", "tenant_id": 0, "department_id": 0, "department...</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/auth/me<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="post-apiauthregister">POST /api/auth/register<a class="headerlink" href="#post-apiauthregister" title="Permanent link">&para;</a></h2>
+<p>Register</p>
+<p><strong>Authentication:</strong> none</p>
+<p><strong>Request Body:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;full_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;doctor&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;subdomain&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;department_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>201</td>
+<td>Successful Response</td>
+<td><code>{"id": 0, "email": "string", "full_name": "string", "role": "string", "tenant_id": 0, "department_id": 0, "department...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/auth/register<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;email&quot;:&quot;user@example.com&quot;,&quot;password&quot;:&quot;string&quot;,&quot;full_name&quot;:&quot;string&quot;,&quot;role&quot;:&quot;doctor&quot;,&quot;subdomain&quot;:&quot;string&quot;,&quot;department_id&quot;:0}&#39;</span>
+</code></pre></div>
+<h2 id="post-apiauthrequest-reset">POST /api/auth/request-reset<a class="headerlink" href="#post-apiauthrequest-reset" title="Permanent link">&para;</a></h2>
+<p>Request Reset</p>
+<p><strong>Authentication:</strong> none</p>
+<p><strong>Request Body:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;subdomain&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>202</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/auth/request-reset<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;email&quot;:&quot;user@example.com&quot;,&quot;subdomain&quot;:&quot;string&quot;}&#39;</span>
+</code></pre></div>
+<h2 id="post-apiauthresend-verification">POST /api/auth/resend-verification<a class="headerlink" href="#post-apiauthresend-verification" title="Permanent link">&para;</a></h2>
+<p>Resend Verification</p>
+<p><strong>Authentication:</strong> none</p>
+<p><strong>Request Body:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;subdomain&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>202</td>
+<td>Successful Response</td>
+<td><code>{"detail": "string", "email_verified": true}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/auth/resend-verification<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;email&quot;:&quot;user@example.com&quot;,&quot;subdomain&quot;:&quot;string&quot;}&#39;</span>
+</code></pre></div>
+<h2 id="get-apiauthtenants">GET /api/auth/tenants<a class="headerlink" href="#get-apiauthtenants" title="Permanent link">&para;</a></h2>
+<p>List Public Tenants</p>
+<p><strong>Authentication:</strong> none</p>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>[{"id": 0, "name": "string", "subdomain": "string"}]</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/auth/tenants<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="post-apiauthverify-email">POST /api/auth/verify-email<a class="headerlink" href="#post-apiauthverify-email" title="Permanent link">&para;</a></h2>
+<p>Verify Email</p>
+<p><strong>Authentication:</strong> none</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>token</td>
+<td>query</td>
+<td>string</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"detail": "string", "email_verified": true}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/auth/verify-email<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apipreferences">GET /api/preferences<a class="headerlink" href="#get-apipreferences" title="Permanent link">&para;</a></h2>
+<p>Read Preferences</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/preferences<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="put-apipreferences">PUT /api/preferences<a class="headerlink" href="#put-apipreferences" title="Permanent link">&para;</a></h2>
+<p>Write Preferences</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Request Body:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;theme&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;settings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>PUT<span class="w"> </span>https://fileguardian.com.ru/api/preferences<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;theme&quot;:&quot;string&quot;,&quot;settings&quot;:{}}&#39;</span>
+</code></pre></div>
+<h2 id="put-apipreferencestheme">PUT /api/preferences/theme<a class="headerlink" href="#put-apipreferencestheme" title="Permanent link">&para;</a></h2>
+<p>Write Theme</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Request Body:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;theme&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>PUT<span class="w"> </span>https://fileguardian.com.ru/api/preferences/theme<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;theme&quot;:&quot;string&quot;}&#39;</span>
+</code></pre></div>
 
 
 

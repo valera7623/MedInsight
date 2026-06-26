@@ -31,7 +31,7 @@
     
     
       
-        <title>API — Documents - MedInsight Documentation</title>
+        <title>Documents - MedInsight Documentation</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#api-documents" class="md-skip">
+        <a href="#documents" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              API — Documents
+              Documents
             
           </span>
         </div>
@@ -1108,7 +1108,7 @@
   <span class="md-ellipsis">
     
   
-    API — Overview
+    Index
   
 
     
@@ -1136,7 +1136,7 @@
   <span class="md-ellipsis">
     
   
-    API — Authentication
+    Auth
   
 
     
@@ -1164,7 +1164,7 @@
   <span class="md-ellipsis">
     
   
-    API — Patients
+    Patients
   
 
     
@@ -1201,7 +1201,7 @@
   <span class="md-ellipsis">
     
   
-    API — Documents
+    Documents
   
 
     
@@ -1219,7 +1219,7 @@
   <span class="md-ellipsis">
     
   
-    API — Documents
+    Documents
   
 
     
@@ -1245,17 +1245,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#post-apidocumentsupload" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        POST /api/documents/upload
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#get-apidocuments" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1267,10 +1256,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apidocumentsid" class="md-nav__link">
+  <a href="#get-apidocumentspatientpatient_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/documents/{id}
+        GET /api/documents/patient/{patient_id}
       
     </span>
   </a>
@@ -1278,10 +1267,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apidocumentsiddownload" class="md-nav__link">
+  <a href="#post-apidocumentsupload" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/documents/{id}/download
+        POST /api/documents/upload
       
     </span>
   </a>
@@ -1289,10 +1278,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#delete-apidocumentsid" class="md-nav__link">
+  <a href="#delete-apidocumentsdocument_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DELETE /api/documents/{id}
+        DELETE /api/documents/{document_id}
       
     </span>
   </a>
@@ -1300,10 +1289,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#statuses" class="md-nav__link">
+  <a href="#get-apidocumentsdocument_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Statuses
+        GET /api/documents/{document_id}
       
     </span>
   </a>
@@ -1311,10 +1300,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#errors" class="md-nav__link">
+  <a href="#get-apidocumentsdocument_iddownload" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Errors
+        GET /api/documents/{document_id}/download
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apidocumentsdocument_idreparse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/documents/{document_id}/reparse
       
     </span>
   </a>
@@ -1344,7 +1344,7 @@
   <span class="md-ellipsis">
     
   
-    API — DICOM
+    Dicom
   
 
     
@@ -1372,7 +1372,7 @@
   <span class="md-ellipsis">
     
   
-    API — Analytics
+    Analytics
   
 
     
@@ -1400,7 +1400,147 @@
   <span class="md-ellipsis">
     
   
-    API — Predictions
+    Predictions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../exports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../webhooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Webhooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Payments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../websocket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Websocket
   
 
     
@@ -1794,17 +1934,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#post-apidocumentsupload" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        POST /api/documents/upload
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#get-apidocuments" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1816,10 +1945,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apidocumentsid" class="md-nav__link">
+  <a href="#get-apidocumentspatientpatient_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/documents/{id}
+        GET /api/documents/patient/{patient_id}
       
     </span>
   </a>
@@ -1827,10 +1956,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#get-apidocumentsiddownload" class="md-nav__link">
+  <a href="#post-apidocumentsupload" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/documents/{id}/download
+        POST /api/documents/upload
       
     </span>
   </a>
@@ -1838,10 +1967,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#delete-apidocumentsid" class="md-nav__link">
+  <a href="#delete-apidocumentsdocument_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DELETE /api/documents/{id}
+        DELETE /api/documents/{document_id}
       
     </span>
   </a>
@@ -1849,10 +1978,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#statuses" class="md-nav__link">
+  <a href="#get-apidocumentsdocument_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Statuses
+        GET /api/documents/{document_id}
       
     </span>
   </a>
@@ -1860,10 +1989,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#errors" class="md-nav__link">
+  <a href="#get-apidocumentsdocument_iddownload" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Errors
+        GET /api/documents/{document_id}/download
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apidocumentsdocument_idreparse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/documents/{document_id}/reparse
       
     </span>
   </a>
@@ -1890,123 +2030,432 @@
   
 
 
-<h1 id="api-documents">API — Documents<a class="headerlink" href="#api-documents" title="Permanent link">&para;</a></h1>
-<p>Prefix: <code>/api/documents</code><br />
-Requires: Bearer token</p>
+<!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
+
+<h1 id="documents">Documents<a class="headerlink" href="#documents" title="Permanent link">&para;</a></h1>
+<p>Auto-generated reference for <strong>Documents</strong> endpoints (7 operations).</p>
+<p><strong>OpenAPI tags:</strong> documents</p>
+<p><strong>Endpoints:</strong> 7</p>
+<hr />
+<h2 id="get-apidocuments">GET /api/documents<a class="headerlink" href="#get-apidocuments" title="Permanent link">&para;</a></h2>
+<p>List Documents</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>page</td>
+<td>query</td>
+<td>integer</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+<tr>
+<td>limit</td>
+<td>query</td>
+<td>integer</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+<tr>
+<td>search</td>
+<td>query</td>
+<td>string</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>patient_id</td>
+<td>query</td>
+<td>integer</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>document_type</td>
+<td>query</td>
+<td>string</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>status</td>
+<td>query</td>
+<td>string</td>
+<td>null</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>sort_by</td>
+<td>query</td>
+<td>string</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+<tr>
+<td>sort_order</td>
+<td>query</td>
+<td>string</td>
+<td>❌</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/documents<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apidocumentspatientpatient_id">GET /api/documents/patient/{patient_id}<a class="headerlink" href="#get-apidocumentspatientpatient_id" title="Permanent link">&para;</a></h2>
+<p>List Patient Documents</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>patient_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>[{"id": 0, "tenant_id": 0, "patient_id": 0, "user_id": 0, "filename": "string", "file_size": 0, "mime_type": "string"...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/documents/patient/<span class="o">{</span>patient_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
 <h2 id="post-apidocumentsupload">POST /api/documents/upload<a class="headerlink" href="#post-apidocumentsupload" title="Permanent link">&para;</a></h2>
-<p>Upload a document (multipart/form-data).</p>
+<p>Upload Document</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Form Data:</strong></p>
 <table>
 <thead>
 <tr>
 <th>Field</th>
 <th>Type</th>
+<th>Required</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>file</td>
-<td>file</td>
-<td>PDF or DOCX</td>
-</tr>
-<tr>
 <td>patient_id</td>
-<td>int</td>
-<td>Patient ID</td>
+<td>integer</td>
+<td>✅</td>
+<td>Patient Id</td>
 </tr>
 <tr>
 <td>document_type</td>
 <td>string</td>
-<td>discharge, lab, history</td>
+<td>❌</td>
+<td>Document Type</td>
+</tr>
+<tr>
+<td>file</td>
+<td>string</td>
+<td>✅</td>
+<td>File</td>
 </tr>
 </tbody>
 </table>
-<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/api/documents/upload<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer TOKEN&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=@discharge.pdf&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;patient_id=1&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;document_type=discharge&quot;</span>
-</code></pre></div>
-<p><strong>Response 201:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;patient_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;filename&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;discharge.pdf&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uploaded&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;document_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;discharge&quot;</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>After upload, Celery queues parsing → status <code>processing</code> → <code>parsed</code>.</p>
-<h2 id="get-apidocuments">GET /api/documents<a class="headerlink" href="#get-apidocuments" title="Permanent link">&para;</a></h2>
-<p>List documents.</p>
-<p><strong>Query:</strong> <code>patient_id</code>, <code>status</code>, <code>skip</code>, <code>limit</code></p>
-<h2 id="get-apidocumentsid">GET /api/documents/{id}<a class="headerlink" href="#get-apidocumentsid" title="Permanent link">&para;</a></h2>
-<p>Document metadata + parsed data (if ready).</p>
-<p><strong>Response (parsed):</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;parsed&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;parsed_data&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;diagnoses&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;I10&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;E11&quot;</span><span class="p">],</span>
-<span class="w">    </span><span class="nt">&quot;medications&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;metformin&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;enalapril&quot;</span><span class="p">],</span>
-<span class="w">    </span><span class="nt">&quot;raw_text_preview&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-<h2 id="get-apidocumentsiddownload">GET /api/documents/{id}/download<a class="headerlink" href="#get-apidocumentsiddownload" title="Permanent link">&para;</a></h2>
-<p>Download decrypted file (stream).</p>
-<h2 id="delete-apidocumentsid">DELETE /api/documents/{id}<a class="headerlink" href="#delete-apidocumentsid" title="Permanent link">&para;</a></h2>
-<p>Delete (admin / head_of_department).</p>
-<h2 id="statuses">Statuses<a class="headerlink" href="#statuses" title="Permanent link">&para;</a></h2>
+<p><strong>Responses:</strong></p>
 <table>
 <thead>
 <tr>
-<th>status</th>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>201</td>
+<td>Successful Response</td>
+<td><code>{"id": 0, "tenant_id": 0, "patient_id": 0, "user_id": 0, "filename": "string", "file_size": 0, "mime_type": "string",...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/documents/upload<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;patient_id=value&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;document_type=value&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-F<span class="w"> </span><span class="s2">&quot;file=file.pdf&quot;</span>
+</code></pre></div>
+<h2 id="delete-apidocumentsdocument_id">DELETE /api/documents/{document_id}<a class="headerlink" href="#delete-apidocumentsdocument_id" title="Permanent link">&para;</a></h2>
+<p>Delete Document</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>uploaded</td>
-<td>Accepted</td>
-</tr>
-<tr>
-<td>processing</td>
-<td>Parsing</td>
-</tr>
-<tr>
-<td>parsed</td>
-<td>Ready</td>
-</tr>
-<tr>
-<td>failed</td>
-<td>Error</td>
+<td>document_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
-<h2 id="errors">Errors<a class="headerlink" href="#errors" title="Permanent link">&para;</a></h2>
+<p><strong>Responses:</strong></p>
 <table>
 <thead>
 <tr>
-<th>Code</th>
-<th>Cause</th>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>403</td>
-<td>No permission for patient</td>
+<td>204</td>
+<td>Successful Response</td>
+<td><code>{}</code></td>
 </tr>
 <tr>
-<td>413</td>
-<td>File too large</td>
-</tr>
-<tr>
-<td>415</td>
-<td>Unsupported format</td>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
 </tr>
 </tbody>
 </table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>DELETE<span class="w"> </span>https://fileguardian.com.ru/api/documents/<span class="o">{</span>document_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apidocumentsdocument_id">GET /api/documents/{document_id}<a class="headerlink" href="#get-apidocumentsdocument_id" title="Permanent link">&para;</a></h2>
+<p>Get Document</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>document_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"id": 0, "tenant_id": 0, "patient_id": 0, "user_id": 0, "filename": "string", "file_size": 0, "mime_type": "string",...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/documents/<span class="o">{</span>document_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="get-apidocumentsdocument_iddownload">GET /api/documents/{document_id}/download<a class="headerlink" href="#get-apidocumentsdocument_iddownload" title="Permanent link">&para;</a></h2>
+<p>Download Document</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>document_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>inline</td>
+<td>query</td>
+<td>boolean</td>
+<td>❌</td>
+<td>Open in browser when supported (PDF)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/documents/<span class="o">{</span>document_id<span class="o">}</span>/download<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="post-apidocumentsdocument_idreparse">POST /api/documents/{document_id}/reparse<a class="headerlink" href="#post-apidocumentsdocument_idreparse" title="Permanent link">&para;</a></h2>
+<p>Reparse Document</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>document_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"id": 0, "tenant_id": 0, "patient_id": 0, "user_id": 0, "filename": "string", "file_size": 0, "mime_type": "string",...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/documents/<span class="o">{</span>document_id<span class="o">}</span>/reparse<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
 
 
 
