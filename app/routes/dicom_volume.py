@@ -99,6 +99,7 @@ def render_volume_preview(
     axial_slice: int | None = Query(None, ge=0),
     coronal_slice: int | None = Query(None, ge=0),
     sagittal_slice: int | None = Query(None, ge=0),
+    preview_max_edge: int | None = Query(None, ge=128, le=2048),
 ):
     """Single-request bootstrap: VR + axial/coronal/sagittal MPR (base64 PNG)."""
     _ensure_3d_enabled()
@@ -120,7 +121,9 @@ def render_volume_preview(
     if sagittal_slice is not None:
         slice_map["sagittal"] = sagittal_slice
     try:
-        payload = service.render_preview(study_uid, slices=slice_map or None, params=params)
+        payload = service.render_preview(
+            study_uid, slices=slice_map or None, params=params, max_edge=preview_max_edge
+        )
     except DicomVolumeError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return VolumePreviewResponse(
@@ -162,6 +165,7 @@ def render_volume(
     mode: str = Query("mip", pattern="^(mip|minip|avg|vr)$"),
     azimuth: float = Query(0, ge=-180, le=180),
     elevation: float = Query(0, ge=-90, le=90),
+    preview_max_edge: int | None = Query(None, ge=128, le=2048),
 ):
     _ensure_3d_enabled()
     study = _get_study_or_404(db, study_uid, current_user, request)
@@ -175,7 +179,7 @@ def render_volume(
         elevation=elevation,
     )
     try:
-        png = service.render_volume(study_uid, params)
+        png = service.render_volume(study_uid, params, max_edge=preview_max_edge)
     except DicomVolumeError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
@@ -209,6 +213,7 @@ def render_mpr_slice(
     window_center: float | None = Query(None),
     window_width: float | None = Query(None),
     preset: str | None = Query(None),
+    preview_max_edge: int | None = Query(None, ge=128, le=2048),
 ):
     _ensure_3d_enabled()
     study = _get_study_or_404(db, study_uid, current_user, request)
@@ -218,7 +223,7 @@ def render_mpr_slice(
     service = DicomVolumeService(db)
     params = _render_params(window_center=window_center, window_width=window_width, preset=preset)
     try:
-        png = service.render_mpr(study_uid, plane, slice_index, params)
+        png = service.render_mpr(study_uid, plane, slice_index, params, max_edge=preview_max_edge)
     except DicomVolumeError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 

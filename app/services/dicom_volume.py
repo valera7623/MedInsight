@@ -468,8 +468,18 @@ class DicomVolumeService:
             return slab
         return ndimage.zoom(slab, (target / thick, 1), order=1)
 
-    def _array_to_png(self, arr: np.ndarray) -> bytes:
+    def _array_to_png(self, arr: np.ndarray, *, max_edge: int | None = None) -> bytes:
         img = Image.fromarray(arr, mode="L")
+        edge_limit = max_edge if max_edge is not None else settings.DICOM_3D_PREVIEW_MAX_EDGE
+        if edge_limit and edge_limit > 0:
+            w, h = img.size
+            edge = max(w, h)
+            if edge > edge_limit:
+                scale = edge_limit / edge
+                img = img.resize(
+                    (max(1, int(w * scale)), max(1, int(h * scale))),
+                    Image.Resampling.BILINEAR,
+                )
         buf = io.BytesIO()
         img.save(buf, format="PNG", compress_level=settings.DICOM_PNG_COMPRESS_LEVEL)
         return buf.getvalue()
@@ -490,6 +500,8 @@ class DicomVolumeService:
         plane: str,
         slice_index: int,
         params: dict[str, Any] | None = None,
+        *,
+        max_edge: int | None = None,
     ) -> bytes:
         """Render an MPR slice as PNG."""
         if plane.lower() not in PLANES:
@@ -501,9 +513,11 @@ class DicomVolumeService:
         slice_data = self._slice_volume(volume, plane, slice_index)
         slice_data = self._enhance_mpr_slice(slice_data, plane.lower(), volume.shape, spacing)
         rendered = self._normalize_for_display(slice_data, params, volume)
-        return self._array_to_png(rendered)
+        return self._array_to_png(rendered, max_edge=max_edge)
 
-    def render_volume(self, study_uid: str, params: dict[str, Any] | None = None) -> bytes:
+    def render_volume(
+        self, study_uid: str, params: dict[str, Any] | None = None, *, max_edge: int | None = None
+    ) -> bytes:
         """Render a 3D projection (MIP or rotated MIP) as PNG."""
         params = params or {}
         volume, _info = self._get_volume_or_build(study_uid)
@@ -527,7 +541,7 @@ class DicomVolumeService:
             projection = np.max(rotated, axis=0)
 
         rendered = self._normalize_for_display(projection, params, volume, is_projection=True)
-        return self._array_to_png(rendered)
+        return self._array_to_png(rendered, max_edge=max_edge)
 
     def render_preview(
         self,
@@ -535,6 +549,7 @@ class DicomVolumeService:
         *,
         slices: dict[str, int] | None = None,
         params: dict[str, Any] | None = None,
+        max_edge: int | None = None,
     ) -> dict[str, Any]:
         """Render VR + all MPR planes in one pass (single volume load)."""
         params = params or {}
@@ -554,7 +569,7 @@ class DicomVolumeService:
             slice_data = self._slice_volume(volume, plane, slice_idx[plane])
             slice_data = self._enhance_mpr_slice(slice_data, plane, volume.shape, spacing)
             rendered = self._normalize_for_display(slice_data, params, volume)
-            mpr_b64[plane] = base64.b64encode(self._array_to_png(rendered)).decode("ascii")
+            mpr_b64[plane] = base64.b64encode(self._array_to_png(rendered, max_edge=max_edge)).decode("ascii")
 
         mode = (params.get("mode") or "mip").lower()
         azimuth = float(params.get("azimuth", 0))
@@ -570,7 +585,7 @@ class DicomVolumeService:
         else:
             projection = np.max(rotated, axis=0)
         vr_rendered = self._normalize_for_display(projection, params, volume, is_projection=True)
-        vr_b64 = base64.b64encode(self._array_to_png(vr_rendered)).decode("ascii")
+        vr_b64 = base64.b64encode(self._array_to_png(vr_rendered, max_edge=max_edge)).decode("ascii")
 
         study = self._get_study(study_uid)
         series = self._select_series(study) if study else None

@@ -168,6 +168,8 @@ class Settings(BaseSettings):
     # Build volume synchronously when slice count is at or below this (avoids Celery poll latency).
     DICOM_3D_SYNC_BUILD_MAX_SLICES: int = 120
     DICOM_3D_FRAME_LOAD_WORKERS: int = 8
+    # Downscale server-rendered preview images (faster encode + smaller HTTP payloads).
+    DICOM_3D_PREVIEW_MAX_EDGE: int = 512
 
     # Phase 12e: DICOM metadata → GPT predictions (RAG index)
     DICOM_RAG_ENABLED: bool = True
