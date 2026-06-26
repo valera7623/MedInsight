@@ -7,6 +7,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.core.cache import cache_service
 from app.models import CacheVersion
 
@@ -49,6 +50,10 @@ class CacheInvalidationService:
         cache_service.invalidate_pattern_sync(f"docx:{patient_id}:*")
         cache_service.invalidate_pattern_sync(f"dicom:studies:patient:{patient_id}*")
         cache_service.invalidate_pattern_sync(f"patients:*")
+        if settings.STATIC_CACHE_ENABLED:
+            from app.services.static_cache import StaticCache
+
+            StaticCache().invalidate(patient_id)
         if tenant_id is not None:
             self.invalidate_for_tenant(tenant_id)
         logger.info("Cache invalidated for patient %s", patient_id)

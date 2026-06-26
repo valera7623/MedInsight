@@ -217,6 +217,7 @@ def run_migrations():
             "026_migrate_reports.py",
             "027_migrate_appointments.py",
             "028_migrate_cache_versions.py",
+            "029_migrate_cache_stats.py",
         ):
             migration_path = migrations_dir / migration_file
             spec = importlib.util.spec_from_file_location(migration_file.replace(".py", ""), migration_path)

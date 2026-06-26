@@ -1578,7 +1578,7 @@ python scripts/test_fhir.py
 
 | Данные | Ключ Redis | TTL |
 |--------|------------|-----|
-| DOCX карточка | `docx:{patient_id}:{options_hash}:v{version}` | 7 дней |
+| DOCX карточка | `docx:{patient_id}:{options_hash}:v{version}` | 1 ч (Redis hot) + диск |
 | Список пациентов | `patients:tenant:{tid}:…` | 5 мин |
 | Дашборд | `dashboard:tenant:{tid}:user:{uid}:…` | 5 мин |
 | DICOM studies | `dicom:studies:patient:{id}:…` | 5 мин |
@@ -1612,6 +1612,51 @@ pytest tests/test_cache.py -q
 ### Переменные окружения
 
 См. `.env.example`: `REDIS_CACHE_ENABLED`, `REDIS_CACHE_*_TTL`.
+
+## Static Cache (Disk) — Фаза 20
+
+Дисковый кэш дополняет Redis: Redis — быстрый слой (TTL 1 ч), `./static_cache` — постоянное хранение сгенерированных DOCX.
+
+### Поток DOCX
+
+```
+Запрос → Redis (1 ч) → Static disk → Celery генерация → Redis + disk
+```
+
+### Модули
+
+| Файл | Назначение |
+|------|------------|
+| `app/services/static_cache.py` | `StaticCache` — save/load/cleanup на диске |
+| `app/services/cache_manager.py` | `CacheManager` — двухуровневый get/set/invalidate |
+| `app/routes/export_async.py` | `GET /api/export/status/{job_id}`, `/download/{job_id}` |
+| `app/routes/cache_admin.py` | Admin: stats, invalidate, warmup, cleanup |
+| `app/tasks/cache_tasks.py` | Celery: `cleanup_static_cache`, `warmup_cache` |
+
+### Admin API
+
+| Method | Path | Описание |
+|--------|------|----------|
+| GET | `/api/admin/cache/stats` | Статистика Redis + disk |
+| POST | `/api/admin/cache/invalidate` | Инвалидация (`patient_id` или `all`) |
+| POST | `/api/admin/cache/warmup` | Предгенерация DOCX |
+| POST | `/api/admin/cache/cleanup` | Очистка static cache (Celery) |
+
+### Cron
+
+```bash
+python scripts/cleanup_cache.py
+```
+
+### Тестирование
+
+```bash
+python scripts/test_static_cache.py
+```
+
+### Переменные окружения
+
+`STATIC_CACHE_ENABLED`, `STATIC_CACHE_DIR`, `STATIC_CACHE_MAX_SIZE_MB`, `STATIC_CACHE_RETENTION_DAYS`, `STATIC_CACHE_AUTO_CLEANUP`.
 
 ## DOCX Export (Фаза 18: карточка пациента)
 

@@ -23,7 +23,7 @@ from app.middleware.audit_append_only import register_append_only_listeners
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
 from app.middleware.cache_middleware import CacheMiddleware
-from app.routes import admin, admin_backup, analytics, appointments, audit_export, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, docx_export, documents, export, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, reports, telegram, templates, users, webhooks
+from app.routes import admin, admin_backup, analytics, appointments, audit_export, cache_admin, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, docx_export, documents, export, export_async, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, reports, telegram, templates, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
@@ -171,6 +171,8 @@ async def lifespan(app: FastAPI):
     if settings.DICOM_ENABLED:
         Path(settings.DICOM_STORAGE_PATH).mkdir(parents=True, exist_ok=True)
     Path(settings.EXPORT_TEMP_DIR).mkdir(parents=True, exist_ok=True)
+    if settings.STATIC_CACHE_ENABLED:
+        Path(settings.STATIC_CACHE_DIR).mkdir(parents=True, exist_ok=True)
     if settings.BACKUP_ENABLED:
         Path(settings.BACKUP_DIR).mkdir(parents=True, exist_ok=True)
     Path(settings.ENCRYPTION_KEY_PATH).parent.mkdir(parents=True, exist_ok=True)
@@ -277,7 +279,9 @@ app.include_router(analytics.router, prefix="/api")
 app.include_router(predictions.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
 app.include_router(docx_export.router, prefix="/api")
+app.include_router(export_async.router, prefix="/api")
 app.include_router(export_excel.router, prefix="/api")
+app.include_router(cache_admin.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(audit_export.router, prefix="/api")
 app.include_router(admin_backup.router, prefix="/api")

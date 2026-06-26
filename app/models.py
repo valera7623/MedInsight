@@ -749,3 +749,17 @@ class CacheVersion(Base):
     cache_key: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CacheStats(Base):
+    """Access statistics for Redis/static cache entries."""
+
+    __tablename__ = "cache_stats"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    cache_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    key: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_accessed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    access_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

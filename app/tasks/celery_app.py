@@ -25,6 +25,7 @@ celery_app = Celery(
         "app.tasks.fhir_export_task",
         "app.tasks.report_task",
         "app.tasks.docx_task",
+        "app.tasks.cache_tasks",
         "app.tasks.appointment_tasks",
         "app.tasks.shap_task",
     ],
@@ -100,6 +101,12 @@ if settings.APPOINTMENTS_ENABLED:
             "schedule": 60 * 60.0,
         },
     })
+
+if settings.STATIC_CACHE_ENABLED and settings.STATIC_CACHE_AUTO_CLEANUP:
+    celery_app.conf.beat_schedule["cleanup-static-cache-daily"] = {
+        "task": "app.tasks.cache_tasks.cleanup_static_cache",
+        "schedule": 24 * 60 * 60.0,
+    }
 
 
 if settings.OTEL_ENABLED:

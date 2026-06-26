@@ -33,10 +33,19 @@ class Settings(BaseSettings):
     # Phase 19: Redis response cache
     REDIS_CACHE_ENABLED: bool = True
     REDIS_CACHE_DEFAULT_TTL: int = 3600
-    REDIS_CACHE_DOCX_TTL: int = 604800  # 7 days
+    REDIS_CACHE_DOCX_TTL: int = 604800  # legacy / long TTL
+    REDIS_CACHE_DOCX_HOT_TTL: int = 3600  # hot DOCX layer in Redis (1 hour)
     REDIS_CACHE_API_TTL: int = 300  # 5 minutes
     REDIS_CACHE_DICOM_TTL: int = 86400  # 24 hours
     REDIS_CACHE_STATIC_TTL: int = 3600  # 1 hour for semi-static API data
+
+    # Phase 20: static disk cache for DOCX
+    STATIC_CACHE_ENABLED: bool = True
+    STATIC_CACHE_DIR: str = "./static_cache"
+    STATIC_CACHE_MAX_SIZE_MB: int = 10240
+    STATIC_CACHE_RETENTION_DAYS: int = 7
+    STATIC_CACHE_WARMUP_ENABLED: bool = False
+    STATIC_CACHE_AUTO_CLEANUP: bool = True
 
     OPENAI_API_KEY: str = ""
     OPENAI_BASE_URL: str = "https://api.proxyapi.ru/openai/v1"
