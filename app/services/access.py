@@ -59,6 +59,9 @@ def require_tenant_access(user: User, tenant_id: int) -> None:
 def patients_query(db: Session, user: User, tenant_id: int | None = None) -> Query:
     """Return a Patient query scoped to what the user is allowed to read."""
     query = db.query(Patient)
+    if not is_super_admin(user) and user.tenant_id is None:
+        return query.filter(false())
+
     tid = effective_tenant_id(user, tenant_id)
     if tid is not None:
         query = query.filter(Patient.tenant_id == tid)

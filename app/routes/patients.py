@@ -90,11 +90,8 @@ def _get_patient_or_404(
     db: Session, patient_id: int, user: User, request: Request | None = None
 ) -> Patient:
     tid = effective_tenant_id(user, get_request_tenant_id(request) if request else None)
-    query = db.query(Patient).filter(Patient.id == patient_id)
-    if tid is not None:
-        query = query.filter(Patient.tenant_id == tid)
-    patient = query.first()
-    if not patient or not can_view_patient(user, patient):
+    patient = patients_query(db, user, tid).filter(Patient.id == patient_id).first()
+    if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
     return patient
 

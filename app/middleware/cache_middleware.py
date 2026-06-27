@@ -32,10 +32,14 @@ def _match_rule(path: str) -> int | None:
 
 
 def _request_cache_key(request: Request) -> str:
+    from app.middleware.tenant import get_request_tenant_id
+
     auth = request.headers.get("authorization", "")
     auth_hash = hashlib.sha256(auth.encode()).hexdigest()[:12] if auth else "anon"
+    tenant_id = get_request_tenant_id(request)
+    tenant_part = str(tenant_id) if tenant_id is not None else "none"
     query = request.url.query
-    return f"http_cache:{request.method}:{request.url.path}?{query}:auth:{auth_hash}"
+    return f"http_cache:{request.method}:{request.url.path}?{query}:auth:{auth_hash}:tenant:{tenant_part}"
 
 
 class CacheMiddleware(BaseHTTPMiddleware):
