@@ -273,11 +273,12 @@ class DicomVolumeService:
         if info:
             study = self._get_study(study_uid)
             series = self._select_series(study) if study else None
+            num_slices = int(info.get("num_slices") or (info.get("dimensions") or [0])[0])
             return {
                 **info,
                 "cached": True,
                 "status": "ready",
-                "warning": self._volume_warning(series, num_slices=len(frames)),
+                "warning": self._volume_warning(series, num_slices=num_slices),
             }
 
         study = self._get_study(study_uid)
