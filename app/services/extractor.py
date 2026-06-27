@@ -132,7 +132,7 @@ DIAGNOSIS_LINE_PATTERN = re.compile(
 )
 
 DIAGNOSIS_SECTION_STOP = re.compile(
-    r"\.\s+(?:Рекоменд|Назнач|Телефон|Лечение|План\s+лечения|Консультация)\b",
+    r"\.\s+(?:Рекоменд\w*|Назнач\w*|Телефон|Лечение|План\s+лечения|Консультация)\b",
     re.IGNORECASE,
 )
 
@@ -261,6 +261,7 @@ def _trim_diagnosis_section(section: str) -> str:
 def _split_diagnosis_clauses(section: str) -> list[str]:
     clauses: list[str] = []
     for i, part in enumerate(re.split(r"[,;]", section)):
+        part = _trim_diagnosis_section(part.strip())
         normalized = _normalize_diagnosis_phrase(part)
         if not normalized:
             continue
