@@ -2242,7 +2242,9 @@
 <span class="w">    </span><span class="s2">&quot;string&quot;</span>
 <span class="w">  </span><span class="p">],</span>
 <span class="w">  </span><span class="nt">&quot;async_export&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;watermark&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<span class="w">  </span><span class="nt">&quot;watermark&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;fill_demo&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;force_regenerate&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
 <span class="p">}</span>
 </code></pre></div>
 <p><strong>Responses:</strong></p>
@@ -2271,7 +2273,7 @@
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/export/patient-card<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;patient_id&quot;:0,&quot;format&quot;:&quot;docx&quot;,&quot;sections&quot;:[&quot;string&quot;],&quot;async_export&quot;:false,&quot;watermark&quot;:&quot;string&quot;}&#39;</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;patient_id&quot;:0,&quot;format&quot;:&quot;docx&quot;,&quot;sections&quot;:[&quot;string&quot;],&quot;async_export&quot;:false,&quot;watermark&quot;:&quot;string&quot;,&quot;fill_demo&quot;:true,&quot;force_regenerate&quot;:false}&#39;</span>
 </code></pre></div>
 <h2 id="get-apiexportpatient-carddownloadjob_id">GET /api/export/patient-card/download/{job_id}<a class="headerlink" href="#get-apiexportpatient-carddownloadjob_id" title="Permanent link">&para;</a></h2>
 <p>Download Async Patient Card</p>

@@ -124,7 +124,9 @@ Export Patient Card Docx
     "string"
   ],
   "async_export": false,
-  "watermark": "string"
+  "watermark": "string",
+  "fill_demo": true,
+  "force_regenerate": false
 }
 ```
 
@@ -143,7 +145,7 @@ Export Patient Card Docx
 curl -X POST https://fileguardian.com.ru/api/export/patient-card \
   -H "Authorization: Bearer $JWT" \
   -H "Content-Type: application/json" \
-  -d '{"patient_id":0,"format":"docx","sections":["string"],"async_export":false,"watermark":"string"}'
+  -d '{"patient_id":0,"format":"docx","sections":["string"],"async_export":false,"watermark":"string","fill_demo":true,"force_regenerate":false}'
 ```
 
 ## GET /api/export/patient-card/download/{job_id}
