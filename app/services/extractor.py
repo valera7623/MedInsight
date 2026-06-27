@@ -57,9 +57,9 @@ RU_MONTHS = {
 
 # Anamnesis vitae sections — stored separately, not as primary diagnoses.
 ANAMNESIS_VITAE_PATTERNS = [
-    re.compile(r"перенес[её]нные\s+заболевания[:\s]+([^.\n]+)", re.IGNORECASE),
-    re.compile(r"перенес[её]нные\s+гинекологические\s+заболевания[:\s]+([^.\n]+)", re.IGNORECASE),
-    re.compile(r"гистологическое\s+описание[^:]*:\s*([^.\n]+)", re.IGNORECASE),
+    re.compile(r"перенес[её]нные\s+заболевания[:\s]+([^\n]+)", re.IGNORECASE),
+    re.compile(r"перенес[её]нные\s+гинекологические\s+заболевания[:\s]+([^\n]+)", re.IGNORECASE),
+    re.compile(r"гистологическое\s+описание[^:]*:\s*([^\n]+)", re.IGNORECASE),
 ]
 
 OPERATIONS_SECTION = re.compile(
@@ -127,7 +127,7 @@ LAB_SECTION_LABELS = {
 }
 
 DIAGNOSIS_LINE_PATTERN = re.compile(
-    r"(?:основной\s+)?диагноз(?:\s+по\s+мкб[-\s–]*10)?[:\s]+([^.\n]{3,200})",
+    r"(?:основной\s+)?диагноз(?:\s+по\s+мкб[-\s–]*10)?[:\s]+([^\n]{3,250})",
     re.IGNORECASE,
 )
 
@@ -271,6 +271,12 @@ def _format_icd_diagnosis(code: str, descriptors: list[str]) -> str:
     return code
 
 
+def _is_icd_subsumed_by_specific_code(code: str, existing: set[str]) -> bool:
+    """Drop bare N97 when N97.0 is already present."""
+    upper = code.upper()
+    return any(other.startswith(f"{upper}.") for other in existing)
+
+
 def _is_icd_descriptor(text: str) -> bool:
     """Short qualifiers that belong to the same coded diagnosis line (not anamnesis)."""
     lowered = text.casefold().strip()
@@ -340,9 +346,10 @@ def _extract_diagnoses(text: str) -> list[str]:
 
     for match in ICD10_PATTERN.finditer(text):
         code = match.group(1).upper()
-        if code not in covered_codes:
-            raw.append(code)
-            covered_codes.add(code)
+        if code in covered_codes or _is_icd_subsumed_by_specific_code(code, covered_codes):
+            continue
+        raw.append(code)
+        covered_codes.add(code)
 
     return sorted(consolidate_diagnosis_labels(raw), key=str.casefold)
 

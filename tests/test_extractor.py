@@ -1,5 +1,6 @@
 """Unit tests for clinical entity extraction from discharge documents."""
 
+from app.prompts.clinical_prompts import build_gpt_clinical_prompt
 from app.services.extractor import (
     consolidate_diagnosis_labels,
     diagnoses_from_parsed_data,

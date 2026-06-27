@@ -107,8 +107,8 @@ def format_discharge_text_for_display(text: str) -> str:
     """Normalize legacy and freshly parsed discharge text for UI/PDF display."""
     if not text:
         return ""
-    cleaned = _clean_pipe_tables(text)
-    cleaned = _normalize_extracted_text(cleaned)
+    cleaned = _normalize_extracted_text(text)
+    cleaned = _clean_pipe_tables(cleaned)
     return _structure_discharge_text(cleaned)
 
 
