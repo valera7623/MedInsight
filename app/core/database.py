@@ -147,6 +147,8 @@ def _run_sqlite_migrations():
 
         if "documents" in tables:
             _add_column_if_missing(conn, "documents", "is_encrypted", "BOOLEAN", "0")
+            _add_column_if_missing(conn, "documents", "parsed_by_ai", "BOOLEAN", "0")
+            _add_column_if_missing(conn, "documents", "parse_confidence", "REAL")
 
         if "patients" in tables:
             _add_column_if_missing(conn, "patients", "department_id", "INTEGER")
@@ -218,6 +220,7 @@ def run_migrations():
             "027_migrate_appointments.py",
             "028_migrate_cache_versions.py",
             "029_migrate_cache_stats.py",
+            "030_migrate_ai_parser.py",
         ):
             migration_path = migrations_dir / migration_file
             spec = importlib.util.spec_from_file_location(migration_file.replace(".py", ""), migration_path)

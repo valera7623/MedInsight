@@ -22,7 +22,7 @@ from app.services.encryption import EncryptionError, decrypt_file, encrypt_bytes
 from app.services.extractor import extract_entities
 from app.services.parser import SUPPORTED_EXTENSIONS, SUPPORTED_MIMES, parse_document, parse_document_from_bytes
 from app.tasks.celery_app import redis_available
-from app.tasks.parse_task import parse_document_task
+from app.tasks.parse_task import parse_document_task, parse_document_with_ai
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 logger = logging.getLogger(__name__)
@@ -46,6 +46,8 @@ class DocumentResponse(BaseModel):
     status: str
     created_at: datetime
     parsed_at: datetime | None
+    parsed_by_ai: bool = False
+    parse_confidence: float | None = None
 
     model_config = {"from_attributes": True}
 
@@ -208,6 +210,82 @@ async def upload_document(
     )
 
     _enqueue_parse(doc, db, current_user.id)
+    db.refresh(doc)
+    return doc
+
+
+def _enqueue_ai_parse(doc: Document, db: Session) -> str | None:
+    if not settings.AI_PARSER_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI parser is disabled (AI_PARSER_ENABLED=false)",
+        )
+
+    if not redis_available():
+        logger.info("Redis unavailable — sync AI parse for document %s", doc.id)
+        from app.tasks.parse_task import parse_document_with_ai as ai_task
+
+        ai_task(document_id=doc.id)
+        db.refresh(doc)
+        return None
+
+    try:
+        doc.status = "processing"
+        doc.parsed_by_ai = False
+        db.commit()
+        task = parse_document_with_ai.delay(doc.id)
+        return str(task.id)
+    except Exception as exc:
+        logger.warning("Celery AI parse unavailable, sync fallback: %s", exc)
+        db.rollback()
+        from app.tasks.parse_task import parse_document_with_ai as ai_task
+
+        ai_task(document_id=doc.id)
+        db.refresh(doc)
+        return None
+
+
+@router.post("/parse-with-ai/{document_id}", response_model=DocumentResponse)
+def parse_document_with_ai_endpoint(
+    document_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Run hybrid AI parsing (classic text extraction + GPT structuring) for a document."""
+    doc = _get_document_or_404(db, document_id, current_user, request)
+    if not can_upload_document(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot parse documents")
+
+    if not Path(doc.file_path).exists():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Document file not found on server")
+
+    if not settings.OPENAI_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="OPENAI_API_KEY not configured — AI parser unavailable",
+        )
+
+    doc.parsed_data = None
+    doc.parsed_at = None
+    doc.parse_confidence = None
+    doc.parsed_by_ai = False
+    db.commit()
+
+    task_id = _enqueue_ai_parse(doc, db)
+
+    log_audit(
+        db,
+        user_id=current_user.id,
+        tenant_id=doc.tenant_id,
+        action="parse_ai",
+        resource_type="document",
+        resource_id=doc.id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        details={"celery_task_id": task_id, "async": task_id is not None},
+    )
+
     db.refresh(doc)
     return doc
 

@@ -52,6 +52,9 @@ def _is_retryable(exc: BaseException) -> bool:
 async def chat_completion_json(
     messages: list[dict[str, str]],
     model: str | None = None,
+    *,
+    max_tokens: int | None = None,
+    temperature: float = 0.2,
 ) -> dict[str, Any]:
     client = get_openai_client()
     if client is None:
@@ -71,7 +74,8 @@ async def chat_completion_json(
                 model=model_name,
                 messages=messages,
                 response_format={"type": "json_object"},
-                temperature=0.2,
+                temperature=temperature,
+                **({"max_tokens": max_tokens} if max_tokens else {}),
             )
         except APIStatusError as exc:
             if exc.status_code in (401, 404):

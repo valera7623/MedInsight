@@ -1,9 +1,12 @@
+import asyncio
 import logging
 from datetime import datetime
 
 from app.config import settings
 from app.database import SessionLocal
 from app.models import AnalysisJob, Document, Patient
+from app.services.ai_parser import AIParser
+from app.services.ai_parser_validator import AIParserValidator
 from app.services.encryption import decrypt_file
 from app.services.extractor import extract_entities
 from app.services.parser import parse_document, parse_document_from_bytes
@@ -11,6 +14,9 @@ from app.services.self_healing import with_self_healing
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+_ai_parser = AIParser()
+_ai_validator = AIParserValidator()
 
 
 def _telegram_analysis_completed(db, job: AnalysisJob, doc: Document, parsed: dict) -> None:
@@ -37,12 +43,16 @@ def _telegram_analysis_completed(db, job: AnalysisJob, doc: Document, parsed: di
         logger.warning("Telegram analysis notification failed for job %s: %s", job.id, exc)
 
 
-@with_self_healing("parser")
-def _parse_doc(doc: Document, *, document_id: int | None = None, tenant_id: int | None = None) -> str:
+def _extract_raw_text(doc: Document) -> str:
     if doc.is_encrypted or doc.file_path.endswith(".age"):
         content = decrypt_file(doc.file_path)
         return parse_document_from_bytes(content, doc.filename)
     return parse_document(doc.file_path)
+
+
+@with_self_healing("parser")
+def _parse_doc(doc: Document, *, document_id: int | None = None, tenant_id: int | None = None) -> str:
+    return _extract_raw_text(doc)
 
 
 @with_self_healing("extractor")
@@ -127,6 +137,85 @@ def parse_document_task(self, job_id: int, document_id: int) -> dict:
             job.completed_at = datetime.utcnow()
         db.commit()
         return {"status": "failed", "error": str(exc)}
+
+    finally:
+        db.close()
+
+
+@celery_app.task(bind=True, name="app.tasks.parse_task.parse_document_with_ai", max_retries=3)
+def parse_document_with_ai(self, document_id: int) -> dict:
+    """Hybrid parse: classic text extraction + GPT structuring."""
+    db = SessionLocal()
+    doc = None
+    try:
+        doc = db.query(Document).filter(Document.id == document_id).first()
+        if not doc:
+            logger.error("Document %s not found for AI parse", document_id)
+            return {"status": "error", "message": "Document not found"}
+
+        if not settings.AI_PARSER_ENABLED:
+            return {"status": "skipped", "message": "AI parser disabled"}
+
+        doc.status = "processing"
+        db.commit()
+
+        text = _extract_raw_text(doc)
+        ai_result = asyncio.run(_ai_parser.parse_text(text, doc.document_type or "discharge"))
+
+        if not _ai_validator.validate(ai_result):
+            _ai_validator.log_validation_errors(document_id, ai_result)
+            doc.status = "failed"
+            doc.parsed_data = {
+                "error": "AI parsing validation failed",
+                "full_text": text,
+                "parser": "ai",
+            }
+            db.commit()
+            return {"status": "error", "message": "AI parsing validation failed"}
+
+        confidence = float(ai_result.pop("_confidence", 0.0))
+        model = ai_result.pop("_model", None)
+        stored = _ai_validator.normalize_for_storage(ai_result)
+        if model:
+            stored["ai_model"] = model
+        stored["full_text"] = text
+
+        doc.parsed_data = stored
+        doc.parsed_by_ai = True
+        doc.parsed_at = datetime.utcnow()
+        doc.parse_confidence = confidence
+        doc.status = "parsed"
+        db.commit()
+
+        try:
+            from app.websocket.events import EVENT_DOCUMENT_PARSED, publish_event
+
+            publish_event(
+                EVENT_DOCUMENT_PARSED,
+                {
+                    "document_id": document_id,
+                    "patient_id": doc.patient_id,
+                    "status": "parsed",
+                    "parsed_by_ai": True,
+                    "diagnoses": stored.get("diagnoses", []),
+                    "medications": stored.get("medications", []),
+                },
+                user_id=doc.user_id,
+                tenant_id=doc.tenant_id,
+            )
+        except Exception as ws_exc:  # noqa: BLE001
+            logger.debug("WS document.parsed (AI) failed for %s: %s", document_id, ws_exc)
+
+        logger.info("Document %s parsed with AI (confidence=%.2f)", document_id, confidence)
+        return {"status": "success", "document_id": document_id, "parse_confidence": confidence}
+
+    except Exception as exc:
+        logger.exception("AI parse task failed for document %s: %s", document_id, exc)
+        if doc := db.query(Document).filter(Document.id == document_id).first():
+            doc.status = "failed"
+            doc.parsed_data = {"error": str(exc), "full_text": "", "parser": "ai"}
+            db.commit()
+        return {"status": "error", "message": str(exc)}
 
     finally:
         db.close()

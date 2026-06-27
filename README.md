@@ -196,10 +196,57 @@ OPENAI_MODEL=gpt-4o-mini
 | Метод | Путь | Описание |
 |-------|------|----------|
 | POST | `/api/documents/upload` | Загрузить DOCX/PDF (асинхронный парсинг) |
+| POST | `/api/documents/parse-with-ai/{document_id}` | Гибридный AI-парсинг (текст + GPT JSON) |
 | GET | `/api/documents/{id}` | Документ с parsed_data и статусом |
 | GET | `/api/documents/patient/{patient_id}` | Документы пациента |
 
-### Аналитика (JWT required)
+### AI Parser (гибридный парсинг документов)
+
+Классический парсер (`python-docx` / PyPDF2 / antiword) извлекает **сырой текст**;
+**GPT** структурирует данные в JSON: диагнозы (МКБ-10), лекарства, даты, врачи,
+рекомендации, факторы риска, лабораторные показатели.
+
+**Модули:**
+- `app/services/parser.py` — извлечение текста из DOC/DOCX/PDF
+- `app/services/ai_parser.py` — `AIParser` (GPT + JSON schema)
+- `app/services/ai_parser_validator.py` — валидация и confidence score
+- `app/prompts/medical_parser.py` — system prompt + few-shot
+- `app/tasks/parse_task.py` — Celery `parse_document_with_ai`
+
+**Пример `parsed_data` после AI-парсинга:**
+
+```json
+{
+  "diagnoses": [{"code": "I10", "name": "Гипертоническая болезнь", "type": "основной"}],
+  "medications": [{"name": "Эналаприл", "dosage": "10 мг", "frequency": "1 раз в день"}],
+  "dates": [{"type": "admission", "value": "2026-06-15"}],
+  "doctors": [{"name": "Иванов И.И.", "specialty": "кардиолог"}],
+  "summary": "Краткое изложение...",
+  "recommendations": ["Контроль давления"],
+  "risk_factors": [],
+  "lab_results": [],
+  "departments": ["Кардиология"],
+  "full_text": "...",
+  "parser": "ai",
+  "ai_model": "gpt-4o-mini"
+}
+```
+
+**Поля `Document`:** `parsed_by_ai`, `parse_confidence`, `parsed_at`.
+
+```env
+AI_PARSER_ENABLED=true
+AI_PARSER_MODEL=gpt-4o-mini
+AI_PARSER_CONFIDENCE_THRESHOLD=0.7
+AI_PARSER_MAX_TOKENS=4000
+OPENAI_API_KEY=...
+OPENAI_BASE_URL=https://api.proxyapi.ru/openai/v1
+```
+
+**Тест:** `python scripts/test_ai_parser.py`
+
+**Миграция БД:** `app/db/migrations/030_add_ai_parser_fields.sql` (PostgreSQL через `030_migrate_ai_parser.py`; SQLite — auto `_add_column_if_missing`).
+
 
 | Метод | Путь | Описание |
 |-------|------|----------|

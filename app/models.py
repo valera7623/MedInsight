@@ -152,6 +152,8 @@ class Document(Base):
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="uploaded")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     parsed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    parsed_by_ai: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    parse_confidence: Mapped[float | None] = mapped_column(nullable=True)
 
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="documents")
     patient: Mapped["Patient"] = relationship("Patient", back_populates="documents")

@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     OPENAI_BASE_URL: str = "https://api.proxyapi.ru/openai/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
 
+    # AI medical document parser (hybrid: classic text + GPT structure)
+    AI_PARSER_ENABLED: bool = True
+    AI_PARSER_MODEL: str = "gpt-4o-mini"
+    AI_PARSER_CONFIDENCE_THRESHOLD: float = 0.7
+    AI_PARSER_MAX_TOKENS: int = 4000
+
     TENANT_MODE: bool = True
     ENCRYPTION_ENABLED: bool = True
     ENCRYPTION_KEY: str = ""
