@@ -131,6 +131,11 @@ DIAGNOSIS_LINE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+DIAGNOSIS_SECTION_STOP = re.compile(
+    r"\.\s+(?:Рекоменд|Назнач|Телефон|Лечение|План\s+лечения|Консультация)\b",
+    re.IGNORECASE,
+)
+
 DIAGNOSIS_NOISE = re.compile(
     r"^(?:нет|не\s+выявлен|без\s+особенност|эхопатолог|противопоказан|"
     r"заключение\s*:|основной\s*:|мкб|мкб\s*[-–]\s*10|"
@@ -219,6 +224,7 @@ def _extract_dates_spacy(text: str, nlp) -> list[str]:
 
 def _normalize_diagnosis_phrase(phrase: str) -> str | None:
     phrase = re.sub(r"\s+", " ", phrase.strip(" \t-–—:;"))
+    phrase = phrase.rstrip(".")
     if len(phrase) < 3 or len(phrase) > 80:
         return None
     if re.fullmatch(r"[A-ZА-Я]\.?", phrase, re.IGNORECASE):
@@ -241,6 +247,15 @@ def _normalize_diagnosis_phrase(phrase: str) -> str | None:
     if len(phrase.split()) > 6:
         return None
     return phrase
+
+
+def _trim_diagnosis_section(section: str) -> str:
+    """Keep ICD dots (N97.0) but stop before recommendations on the same line."""
+    section = section.strip()
+    match = DIAGNOSIS_SECTION_STOP.search(section)
+    if match:
+        section = section[: match.start()].strip()
+    return section.rstrip(". ")
 
 
 def _split_diagnosis_clauses(section: str) -> list[str]:
@@ -330,7 +345,8 @@ def _extract_textual_diagnoses(text: str) -> list[str]:
     """Primary diagnosis from coded 'Диагноз:' lines only."""
     found: list[str] = []
     for match in DIAGNOSIS_LINE_PATTERN.finditer(text):
-        found.extend(_extract_coded_diagnosis_line(match.group(1)))
+        section = _trim_diagnosis_section(match.group(1))
+        found.extend(_extract_coded_diagnosis_line(section))
     return found
 
 
