@@ -39,6 +39,8 @@ class PatientCardExportRequest(BaseModel):
     sections: list[str] = Field(default_factory=lambda: list(DEFAULT_PATIENT_CARD_SECTIONS))
     async_export: bool = False
     watermark: str | None = None
+    fill_demo: bool | None = None
+    force_regenerate: bool = False
 
 
 class PatientCardAsyncResponse(BaseModel):
@@ -95,7 +97,13 @@ def export_patient_card_docx(
     options = {
         "sections": body.sections,
         "watermark": body.watermark or settings.DOCX_WATERMARK,
+        "fill_demo": body.fill_demo if body.fill_demo is not None else settings.DOCX_FILL_DEMO_WHEN_EMPTY,
     }
+
+    if body.force_regenerate:
+        from app.services.cache_invalidation import invalidate_patient_cache
+
+        invalidate_patient_cache(db, patient.id, patient.tenant_id)
 
     if body.async_export:
         if not redis_available():
@@ -121,7 +129,7 @@ def export_patient_card_docx(
 
     mgr = get_cache_manager(db)
     try:
-        cached_bytes, cache_source = mgr.get_docx_sync(patient.id, options)
+        cached_bytes, cache_source = (None, None) if body.force_regenerate else mgr.get_docx_sync(patient.id, options)
         from_cache = cached_bytes is not None
         if cached_bytes is None:
             generator = DocxGenerator(db)

@@ -1062,6 +1062,8 @@ async function exportPatientDocx(patientId, btn = null) {
         patient_id: patientId,
         format: 'docx',
         sections: PATIENT_CARD_DOCX_SECTIONS,
+        fill_demo: true,
+        force_regenerate: true,
       }),
     });
 

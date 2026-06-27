@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import random
 import re
 from datetime import date, datetime
 from io import BytesIO
@@ -50,8 +51,173 @@ _ICD_PREFIX = re.compile(r"^([A-ZА-Я]\d{2}(?:\.\d{1,2})?)\s*(?:\((.+)\))?$", r
 class DocxGenerator:
     """Build Word documents for patient cards and clinical summaries."""
 
+    LABORATORY_TESTS: dict[str, list[dict[str, Any]]] = {
+        "Общий анализ крови": [
+            {"name": "Гемоглобин (Hb)", "unit": "г/л", "reference": "130-160",
+             "values": {"male": (130, 160), "female": (120, 150)}},
+            {"name": "Эритроциты (RBC)", "unit": "×10¹²/л", "reference": "4.0-5.0",
+             "values": {"male": (4.0, 5.0), "female": (3.8, 4.8)}},
+            {"name": "Лейкоциты (WBC)", "unit": "×10⁹/л", "reference": "4.0-9.0",
+             "values": {"all": (4.0, 9.0)}},
+            {"name": "Тромбоциты (PLT)", "unit": "×10⁹/л", "reference": "180-320",
+             "values": {"all": (180, 320)}},
+            {"name": "СОЭ", "unit": "мм/ч", "reference": "2-15",
+             "values": {"male": (2, 15), "female": (2, 20)}},
+        ],
+        "Биохимический анализ крови": [
+            {"name": "Глюкоза", "unit": "ммоль/л", "reference": "3.5-6.1", "values": {"all": (3.5, 6.1)}},
+            {"name": "Холестерин общий", "unit": "ммоль/л", "reference": "3.0-5.2", "values": {"all": (3.0, 5.2)}},
+            {"name": "Билирубин общий", "unit": "мкмоль/л", "reference": "3.4-20.5", "values": {"all": (3.4, 20.5)}},
+            {"name": "Креатинин", "unit": "мкмоль/л", "reference": "44-97", "values": {"all": (44, 97)}},
+            {"name": "Мочевина", "unit": "ммоль/л", "reference": "2.5-8.3", "values": {"all": (2.5, 8.3)}},
+            {"name": "АЛТ", "unit": "Ед/л", "reference": "0-40", "values": {"all": (0, 40)}},
+            {"name": "АСТ", "unit": "Ед/л", "reference": "0-40", "values": {"all": (0, 40)}},
+        ],
+        "Общий анализ мочи": [
+            {"name": "Цвет", "unit": "", "reference": "жёлтый", "qualitative": True,
+             "normal": ["жёлтый", "соломенно-жёлтый"], "abnormal": ["тёмно-жёлтый", "красноватый"]},
+            {"name": "Прозрачность", "unit": "", "reference": "прозрачная", "qualitative": True,
+             "normal": ["прозрачная"], "abnormal": ["мутная"]},
+            {"name": "pH", "unit": "", "reference": "5.0-7.0", "values": {"all": (5.0, 7.0)}},
+            {"name": "Белок", "unit": "г/л", "reference": "0-0.033", "values": {"all": (0.0, 0.033)}},
+            {"name": "Глюкоза", "unit": "ммоль/л", "reference": "отсутствует", "qualitative": True,
+             "normal": ["отсутствует"], "abnormal": ["0.5", "1.2", "2.8"]},
+            {"name": "Лейкоциты", "unit": "в п/з", "reference": "0-5", "values": {"all": (0, 5)}},
+            {"name": "Эритроциты", "unit": "в п/з", "reference": "0-3", "values": {"all": (0, 3)}},
+        ],
+    }
+
+    DEMO_DIAGNOSES: list[dict[str, str]] = [
+        {"code": "I10", "name": "Гипертоническая болезнь", "type": "основной"},
+        {"code": "E11.9", "name": "Сахарный диабет 2 типа", "type": "сопутствующий"},
+        {"code": "J45.0", "name": "Бронхиальная астма", "type": "сопутствующий"},
+        {"code": "K29.5", "name": "Хронический гастрит", "type": "сопутствующий"},
+        {"code": "M81.9", "name": "Остеопороз", "type": "сопутствующий"},
+    ]
+
     def __init__(self, db: Session | None = None) -> None:
         self.db = db
+
+    @staticmethod
+    def _format_lab_value(value: float) -> str:
+        if value < 1:
+            return f"{value:.2f}"
+        if value < 100:
+            return f"{value:.1f}"
+        return str(int(round(value)))
+
+    @staticmethod
+    def _lab_status_symbol(status: str) -> str:
+        normalized = str(status).casefold()
+        if normalized in {"норма", "normal"}:
+            return "✅"
+        if normalized in {"повышено", "повышен", "high"}:
+            return "⬆"
+        if normalized in {"понижено", "понижен", "low"}:
+            return "⬇"
+        return "•"
+
+    @classmethod
+    def generate_demo_diagnoses(cls) -> list[dict[str, str]]:
+        pool = [dict(item) for item in cls.DEMO_DIAGNOSES]
+        selected = random.sample(pool, k=random.randint(1, 3))
+        for index, diag in enumerate(selected):
+            diag["type"] = "основной" if index == 0 else "сопутствующий"
+        return selected
+
+    @classmethod
+    def normalize_diagnoses(cls, diagnoses: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not diagnoses:
+            return []
+        normalized: list[dict[str, Any]] = []
+        for index, diag in enumerate(diagnoses):
+            item = dict(diag)
+            if not item.get("type"):
+                item["type"] = "основной" if index == 0 else "сопутствующий"
+            normalized.append(item)
+        return normalized
+
+    @classmethod
+    def generate_random_lab_results(cls, patient_gender: str = "male") -> list[dict[str, Any]]:
+        gender = "female" if str(patient_gender).casefold() in {"f", "female", "ж", "женский"} else "male"
+        results: list[dict[str, Any]] = []
+        for category, tests in cls.LABORATORY_TESTS.items():
+            for test in tests:
+                if test.get("qualitative"):
+                    if random.random() < 0.2:
+                        value = random.choice(test["abnormal"])
+                        status = "повышено"
+                    else:
+                        value = random.choice(test["normal"])
+                        status = "норма"
+                    results.append({
+                        "category": category, "name": test["name"], "value": value,
+                        "unit": test.get("unit", ""), "reference": test["reference"], "status": status,
+                    })
+                    continue
+                value_range = test["values"].get("all") or test["values"].get(gender, (0, 100))
+                low, high = value_range
+                if random.random() < 0.3:
+                    if random.random() < 0.5:
+                        value = high + random.uniform(0.1, max(high * 0.3, 0.5))
+                        status = "повышено"
+                    else:
+                        value = max(0.0, low - random.uniform(0.1, max(low * 0.3, 0.1)))
+                        status = "понижено"
+                else:
+                    value = random.uniform(low, high)
+                    status = "норма"
+                results.append({
+                    "category": category, "name": test["name"],
+                    "value": cls._format_lab_value(value), "unit": test.get("unit", ""),
+                    "reference": test["reference"], "status": status,
+                })
+        return results
+
+    @classmethod
+    def enrich_lab_results(cls, lab_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        enriched: list[dict[str, Any]] = []
+        for raw in lab_results:
+            item = dict(raw)
+            if not item.get("category"):
+                item["category"] = cls._infer_lab_category(str(item.get("name", "")))
+            if not item.get("status"):
+                item["status"] = _lab_status_label(item)
+            enriched.append(item)
+        return enriched
+
+    @classmethod
+    def _infer_lab_category(cls, name: str) -> str:
+        lowered = name.casefold()
+        for category, tests in cls.LABORATORY_TESTS.items():
+            for test in tests:
+                test_key = test["name"].casefold().split("(")[0].strip()
+                if lowered.startswith(test_key) or test_key in lowered:
+                    return category
+        return "Лабораторные показатели"
+
+    @classmethod
+    def add_diagnoses_section(cls, doc: DocxDocument, diagnoses: list[dict[str, Any]]) -> None:
+        for diag in diagnoses:
+            dtype = diag.get("type", "сопутствующий")
+            prefix = "🟢" if dtype == "основной" else "🔵"
+            code = diag.get("code", "")
+            name = diag.get("name", "")
+            cls.add_paragraph_with_style(doc, f"{prefix} {code} — {name} ({dtype})".strip(" —"))
+
+    @classmethod
+    def add_categorized_lab_results(cls, doc: DocxDocument, lab_results: list[dict[str, Any]]) -> None:
+        by_category: dict[str, list[dict[str, Any]]] = {}
+        for result in lab_results:
+            category = result.get("category") or "Лабораторные показатели"
+            by_category.setdefault(category, []).append(result)
+        for category in list(cls.LABORATORY_TESTS.keys()) + [c for c in by_category if c not in cls.LABORATORY_TESTS]:
+            items = by_category.get(category)
+            if not items:
+                continue
+            cls.add_paragraph_with_style(doc, f"{category}:", bold=True)
+            cls.add_lab_results_table(doc, items)
+            doc.add_paragraph("")
 
     # ------------------------------------------------------------------ helpers
 
@@ -162,18 +328,15 @@ class DocxGenerator:
 
     @classmethod
     def add_lab_results_table(cls, doc: DocxDocument, lab_results: list[dict[str, Any]]):
-        headers = TEMPLATE_LAB_REPORT["table_headers"]
+        headers = ["Показатель", "Результат", "Референс", "Статус"]
         rows: list[list[str]] = []
         for result in lab_results:
             status = result.get("status") or _lab_status_label(result)
-            rows.append(
-                [
-                    result.get("name", ""),
-                    result.get("value", ""),
-                    result.get("reference", ""),
-                    status,
-                ]
-            )
+            unit = result.get("unit", "")
+            value = result.get("value", "")
+            value_display = f"{value} {unit}".strip() if unit else str(value)
+            symbol = cls._lab_status_symbol(str(status))
+            rows.append([result.get("name", ""), value_display, result.get("reference", ""), f"{symbol} {status}"])
         return cls.add_table(doc, rows, headers)
 
     @classmethod
@@ -257,20 +420,20 @@ class DocxGenerator:
             doc.add_paragraph("")
             section_no += 1
 
-        if "diagnoses" in enabled and diagnoses:
+        if "diagnoses" in enabled:
             cls.add_heading(doc, f"{section_no}. ДИАГНОЗЫ", 1)
-            for diag in diagnoses:
-                code = diag.get("code", "")
-                name = diag.get("name", "")
-                line = f"{code} — {name}".strip(" —")
-                doc.add_paragraph(f"• {line}", style="List Bullet")
+            diag_items = diagnoses or cls.generate_demo_diagnoses()
+            cls.add_diagnoses_section(doc, cls.normalize_diagnoses(diag_items))
             doc.add_paragraph("")
             section_no += 1
 
-        if "lab" in enabled and lab_results:
+        if "lab" in enabled:
             cls.add_heading(doc, f"{section_no}. ЛАБОРАТОРНЫЕ АНАЛИЗЫ", 1)
-            cls.add_lab_results_table(doc, lab_results)
-            doc.add_paragraph("")
+            lab_items = lab_results
+            if not lab_items:
+                gender = patient_data.get("gender_raw", patient_data.get("gender", "m"))
+                lab_items = cls.generate_random_lab_results(str(gender))
+            cls.add_categorized_lab_results(doc, lab_items)
             section_no += 1
 
         if "medications" in enabled and medications:
@@ -480,10 +643,17 @@ def _patient_to_dict(patient: Patient, db: Session) -> dict[str, Any]:
         "full_name": " ".join(parts),
         "birth_date": _format_date(patient.birth_date),
         "gender": GENDER_LABELS.get(patient.gender, patient.gender),
+        "gender_raw": patient.gender or "m",
         "phone": patient.phone or "—",
         "email": patient.email or "—",
         "department": department_name,
     }
+
+
+def _fill_demo_enabled(options: dict[str, Any]) -> bool:
+    if options.get("fill_demo") is False:
+        return False
+    return bool(options.get("fill_demo", settings.DOCX_FILL_DEMO_WHEN_EMPTY))
 
 
 def _dicom_study_to_dict(study: DicomStudy) -> dict[str, Any]:
@@ -606,10 +776,18 @@ def collect_patient_docx_context(db: Session, patient_id: int, options: dict[str
     sections = options.get("sections") or DEFAULT_PATIENT_CARD_SECTIONS
     watermark = options.get("watermark") or settings.DOCX_WATERMARK
 
+    diagnoses = DocxGenerator.normalize_diagnoses(clinical["diagnoses"])
+    if not diagnoses and _fill_demo_enabled(options):
+        diagnoses = DocxGenerator.generate_demo_diagnoses()
+
+    lab_results = DocxGenerator.enrich_lab_results(clinical["lab_results"])
+    if not lab_results and _fill_demo_enabled(options):
+        lab_results = DocxGenerator.generate_random_lab_results(patient.gender or "m")
+
     return {
         "patient_data": _patient_to_dict(patient, db),
-        "lab_results": clinical["lab_results"],
-        "diagnoses": clinical["diagnoses"],
+        "lab_results": lab_results,
+        "diagnoses": diagnoses,
         "medications": clinical["medications"],
         "predictions": prediction_items,
         "dicom_studies": dicom_studies,

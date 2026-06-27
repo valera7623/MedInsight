@@ -277,6 +277,7 @@ class Settings(BaseSettings):
     DOCX_TEMPLATES_DIR: str = "./app/templates/docx"
     DOCX_REPORTS_DIR: str = "./storage/reports"
     DOCX_WATERMARK: str = "MedInsight"
+    DOCX_FILL_DEMO_WHEN_EMPTY: bool = True
 
     # Phase 16: Appointments calendar
     APPOINTMENTS_ENABLED: bool = True
