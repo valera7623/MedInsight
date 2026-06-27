@@ -16,6 +16,7 @@ from app.models import AnalysisJob, Document, Patient, User
 from app.services.access import can_delete_document, can_upload_document, can_view_patient, effective_tenant_id, is_super_admin
 from app.services.audit import log_audit
 from app.services.document_deletion import delete_document_with_dependencies
+from app.services.cache_invalidation import invalidate_dashboard_cache
 from app.services.list_queries import DOCUMENT_SEARCH_FIELDS, DOCUMENT_SORT, documents_scope
 from app.utils.pagination import PaginationParams, paginate
 from app.services.encryption import EncryptionError, decrypt_file, encrypt_bytes, ensure_encryption_key
@@ -87,6 +88,7 @@ def _process_document_sync(doc: Document, db: Session) -> None:
         doc.status = "failed"
         doc.parsed_data = {"error": str(exc), "full_text": ""}
     db.commit()
+    invalidate_dashboard_cache(db, doc.tenant_id)
 
 
 def _enqueue_parse(doc: Document, db: Session, user_id: int) -> str | None:
@@ -211,6 +213,7 @@ async def upload_document(
 
     _enqueue_parse(doc, db, current_user.id)
     db.refresh(doc)
+    invalidate_dashboard_cache(db, tenant_id)
     return doc
 
 
@@ -408,6 +411,7 @@ def reparse_document(
 
     _enqueue_parse(doc, db, current_user.id)
     db.refresh(doc)
+    invalidate_dashboard_cache(db, doc.tenant_id)
     return doc
 
 
@@ -427,6 +431,7 @@ def delete_document(
     tenant_id = doc.tenant_id
 
     delete_document_with_dependencies(db, doc)
+    invalidate_dashboard_cache(db, tenant_id)
 
     log_audit(
         db,

@@ -684,9 +684,17 @@ function currentDeptFilter() {
   return el && el.value ? `?department_id=${el.value}` : '';
 }
 
-async function loadDashboard() {
-  const q = currentDeptFilter();
-  const res = await apiFetch(`/api/analytics/dashboard${q}`);
+function dashboardUrl(cacheBust = false) {
+  const params = new URLSearchParams();
+  const dept = document.getElementById('dept-filter');
+  if (dept && dept.value) params.set('department_id', dept.value);
+  if (cacheBust) params.set('_', String(Date.now()));
+  const qs = params.toString();
+  return `/api/analytics/dashboard${qs ? `?${qs}` : ''}`;
+}
+
+async function loadDashboard({ cacheBust = false } = {}) {
+  const res = await apiFetch(dashboardUrl(cacheBust));
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || 'Ошибка загрузки дашборда');
 
@@ -1108,7 +1116,7 @@ function initDashboard() {
   setupLogout();
   setupModals();
   setupPatientForm(() => loadDashboard());
-  setupUploadForm(() => loadDashboard());
+  setupUploadForm(() => loadDashboard({ cacheBust: true }));
   setupWebhookForm();
 
   document.getElementById('new-patient-btn').addEventListener('click', () => {

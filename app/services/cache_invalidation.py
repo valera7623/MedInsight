@@ -60,13 +60,19 @@ class CacheInvalidationService:
         logger.info("Cache invalidated for patient %s", patient_id)
 
     def invalidate_for_tenant(self, tenant_id: int) -> None:
+        self.invalidate_dashboard(tenant_id)
         scope = self._scope_key("tenant", tenant_id)
         self.bump_version(scope)
         cache_service.invalidate_pattern_sync(f"patients:tenant:{tenant_id}:*")
-        cache_service.invalidate_pattern_sync(f"dashboard:tenant:{tenant_id}:*")
         cache_service.invalidate_pattern_sync(f"dicom:studies:tenant:{tenant_id}:*")
-        self._invalidate_http_api_cache("patients", "analytics/dashboard", "dicom/studies")
+        self._invalidate_http_api_cache("patients", "dicom/studies")
         logger.info("Cache invalidated for tenant %s", tenant_id)
+
+    def invalidate_dashboard(self, tenant_id: int) -> None:
+        cache_service.invalidate_pattern_sync(f"dashboard:tenant:{tenant_id}:*")
+        cache_service.invalidate_pattern_sync("dashboard:*")
+        self._invalidate_http_api_cache("analytics/dashboard")
+        logger.info("Dashboard cache invalidated for tenant %s", tenant_id)
 
     @staticmethod
     def _invalidate_http_api_cache(*path_prefixes: str) -> None:
@@ -101,6 +107,11 @@ def invalidate_patient_cache(db: Session, patient_id: int, tenant_id: int | None
 
 def invalidate_tenant_cache(db: Session, tenant_id: int) -> None:
     CacheInvalidationService(db).invalidate_for_tenant(tenant_id)
+
+
+def invalidate_dashboard_cache(db: Session, tenant_id: int) -> None:
+    """Drop dashboard route + HTTP middleware cache after document/analytics changes."""
+    CacheInvalidationService(db).invalidate_dashboard(tenant_id)
 
 
 def invalidate_dicom_patient_cache(db: Session, patient_id: int) -> None:

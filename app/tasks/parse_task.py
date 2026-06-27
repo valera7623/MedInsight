@@ -123,6 +123,10 @@ def parse_document_task(self, job_id: int, document_id: int) -> dict:
 
         _telegram_analysis_completed(db, job, doc, parsed)
 
+        from app.services.cache_invalidation import invalidate_dashboard_cache
+
+        invalidate_dashboard_cache(db, doc.tenant_id)
+
         logger.info("Document %s parsed successfully (job %s)", document_id, job_id)
         return {"status": "completed", "document_id": document_id}
 
@@ -186,6 +190,10 @@ def parse_document_with_ai(self, document_id: int) -> dict:
         doc.parse_confidence = confidence
         doc.status = "parsed"
         db.commit()
+
+        from app.services.cache_invalidation import invalidate_dashboard_cache
+
+        invalidate_dashboard_cache(db, doc.tenant_id)
 
         try:
             from app.websocket.events import EVENT_DOCUMENT_PARSED, publish_event
