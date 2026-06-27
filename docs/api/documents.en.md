@@ -2,11 +2,11 @@
 
 # Documents
 
-Auto-generated reference for **Documents** endpoints (7 operations).
+Auto-generated reference for **Documents** endpoints (8 operations).
 
 **OpenAPI tags:** documents
 
-**Endpoints:** 7
+**Endpoints:** 8
 
 ---
 
@@ -42,6 +42,34 @@ List Documents
 
 ```bash
 curl -X GET https://fileguardian.com.ru/api/documents \
+  -H "Authorization: Bearer $JWT"
+```
+
+## POST /api/documents/parse-with-ai/{document_id}
+
+Parse Document With Ai Endpoint
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| document_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"id": 0, "tenant_id": 0, "patient_id": 0, "user_id": 0, "filename": "string", "file_size": 0, "mime_type": "string",...` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/documents/parse-with-ai/{document_id} \
   -H "Authorization: Bearer $JWT"
 ```
 

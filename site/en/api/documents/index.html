@@ -1256,6 +1256,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#post-apidocumentsparse-with-aidocument_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/documents/parse-with-ai/{document_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#get-apidocumentspatientpatient_id" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1945,6 +1956,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#post-apidocumentsparse-with-aidocument_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/documents/parse-with-ai/{document_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#get-apidocumentspatientpatient_id" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2033,9 +2055,9 @@
 <!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
 <h1 id="documents">Documents<a class="headerlink" href="#documents" title="Permanent link">&para;</a></h1>
-<p>Auto-generated reference for <strong>Documents</strong> endpoints (7 operations).</p>
+<p>Auto-generated reference for <strong>Documents</strong> endpoints (8 operations).</p>
 <p><strong>OpenAPI tags:</strong> documents</p>
-<p><strong>Endpoints:</strong> 7</p>
+<p><strong>Endpoints:</strong> 8</p>
 <hr />
 <h2 id="get-apidocuments">GET /api/documents<a class="headerlink" href="#get-apidocuments" title="Permanent link">&para;</a></h2>
 <p>List Documents</p>
@@ -2134,6 +2156,56 @@
 </table>
 <p><strong>Example:</strong></p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/documents<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="post-apidocumentsparse-with-aidocument_id">POST /api/documents/parse-with-ai/{document_id}<a class="headerlink" href="#post-apidocumentsparse-with-aidocument_id" title="Permanent link">&para;</a></h2>
+<p>Parse Document With Ai Endpoint</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>document_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"id": 0, "tenant_id": 0, "patient_id": 0, "user_id": 0, "filename": "string", "file_size": 0, "mime_type": "string",...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/documents/parse-with-ai/<span class="o">{</span>document_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
 </code></pre></div>
 <h2 id="get-apidocumentspatientpatient_id">GET /api/documents/patient/{patient_id}<a class="headerlink" href="#get-apidocumentspatientpatient_id" title="Permanent link">&para;</a></h2>
