@@ -197,11 +197,16 @@ async function deletePatient(patientId, onSuccess) {
   try {
     const res = await apiFetch(`/api/patients/${patientId}`, { method: 'DELETE' });
     if (!res.ok) {
+      if (res.status === 404) {
+        // Stale list after a prior successful delete — refresh without alarming the user.
+        if (onSuccess) onSuccess(true);
+        return;
+      }
       const data = await parseApiResponse(res).catch(() => ({}));
       alert(formatApiError(data.detail) || 'Ошибка удаления');
       return;
     }
-    if (onSuccess) onSuccess();
+    if (onSuccess) onSuccess(true);
   } catch (err) {
     alert(err.message || 'Ошибка удаления');
   }
@@ -1130,9 +1135,10 @@ let patientsPage = 1;
 let patientsPageSize = 20;
 let patientsSearch = '';
 
-async function loadPatientsList(page = 1) {
+async function loadPatientsList(page = 1, { cacheBust = false } = {}) {
   const params = new URLSearchParams({ page, limit: patientsPageSize });
   if (patientsSearch) params.set('search', patientsSearch);
+  if (cacheBust) params.set('_', String(Date.now()));
   const res = await apiFetch(`/api/patients?${params.toString()}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || 'Ошибка загрузки');
@@ -1162,7 +1168,7 @@ async function loadPatientsList(page = 1) {
     tbody.appendChild(tr);
   });
 
-  bindPatientActionButtons(() => loadPatientsList(patientsPage));
+  bindPatientActionButtons(() => loadPatientsList(patientsPage, { cacheBust: true }));
 
   const totalPages = data.pages || 1;
   document.getElementById('page-info').textContent = `Страница ${patientsPage} из ${totalPages} (всего ${data.total})`;

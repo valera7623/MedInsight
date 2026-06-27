@@ -49,7 +49,8 @@ class CacheInvalidationService:
         self.bump_version(scope)
         cache_service.invalidate_pattern_sync(f"docx:{patient_id}:*")
         cache_service.invalidate_pattern_sync(f"dicom:studies:patient:{patient_id}*")
-        cache_service.invalidate_pattern_sync(f"patients:*")
+        cache_service.invalidate_pattern_sync("patients:*")
+        self._invalidate_http_api_cache("patients")
         if settings.STATIC_CACHE_ENABLED:
             from app.services.static_cache import StaticCache
 
@@ -64,7 +65,14 @@ class CacheInvalidationService:
         cache_service.invalidate_pattern_sync(f"patients:tenant:{tenant_id}:*")
         cache_service.invalidate_pattern_sync(f"dashboard:tenant:{tenant_id}:*")
         cache_service.invalidate_pattern_sync(f"dicom:studies:tenant:{tenant_id}:*")
+        self._invalidate_http_api_cache("patients", "analytics/dashboard", "dicom/studies")
         logger.info("Cache invalidated for tenant %s", tenant_id)
+
+    @staticmethod
+    def _invalidate_http_api_cache(*path_prefixes: str) -> None:
+        """Drop middleware GET cache entries for API list endpoints."""
+        for prefix in path_prefixes:
+            cache_service.invalidate_pattern_sync(f"http_cache:GET:/api/{prefix}*")
 
     def invalidate_for_user(self, user_id: int) -> None:
         scope = self._scope_key("user", user_id)
