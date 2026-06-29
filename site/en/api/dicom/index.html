@@ -1295,6 +1295,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#delete-apidicomstudiesby-idstudy_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DELETE /api/dicom/studies/by-id/{study_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#delete-apidicomstudiesstudy_uid" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2000,6 +2011,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#delete-apidicomstudiesby-idstudy_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DELETE /api/dicom/studies/by-id/{study_id}
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#delete-apidicomstudiesstudy_uid" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2121,9 +2143,9 @@
 <!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
 <h1 id="dicom">DICOM<a class="headerlink" href="#dicom" title="Permanent link">&para;</a></h1>
-<p>Auto-generated reference for <strong>DICOM</strong> endpoints (11 operations).</p>
+<p>Auto-generated reference for <strong>DICOM</strong> endpoints (12 operations).</p>
 <p><strong>OpenAPI tags:</strong> dicom</p>
-<p><strong>Endpoints:</strong> 11</p>
+<p><strong>Endpoints:</strong> 12</p>
 <hr />
 <h2 id="get-apidicomframesinstance_uid">GET /api/dicom/frames/{instance_uid}<a class="headerlink" href="#get-apidicomframesinstance_uid" title="Permanent link">&para;</a></h2>
 <p>Get Dicom Frame</p>
@@ -2300,6 +2322,56 @@
 </table>
 <p><strong>Example:</strong></p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/dicom/studies<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="delete-apidicomstudiesby-idstudy_id">DELETE /api/dicom/studies/by-id/{study_id}<a class="headerlink" href="#delete-apidicomstudiesby-idstudy_id" title="Permanent link">&para;</a></h2>
+<p>Delete Dicom Study By Id</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>study_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>204</td>
+<td>Successful Response</td>
+<td><code>{}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>DELETE<span class="w"> </span>https://fileguardian.com.ru/api/dicom/studies/by-id/<span class="o">{</span>study_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
 </code></pre></div>
 <h2 id="delete-apidicomstudiesstudy_uid">DELETE /api/dicom/studies/{study_uid}<a class="headerlink" href="#delete-apidicomstudiesstudy_uid" title="Permanent link">&para;</a></h2>

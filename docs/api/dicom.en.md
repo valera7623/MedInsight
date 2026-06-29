@@ -2,11 +2,11 @@
 
 # DICOM
 
-Auto-generated reference for **DICOM** endpoints (11 operations).
+Auto-generated reference for **DICOM** endpoints (12 operations).
 
 **OpenAPI tags:** dicom
 
-**Endpoints:** 11
+**Endpoints:** 12
 
 ---
 
@@ -74,6 +74,34 @@ List Dicom Studies
 
 ```bash
 curl -X GET https://fileguardian.com.ru/api/dicom/studies \
+  -H "Authorization: Bearer $JWT"
+```
+
+## DELETE /api/dicom/studies/by-id/{study_id}
+
+Delete Dicom Study By Id
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| study_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 204 | Successful Response | `{}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X DELETE https://fileguardian.com.ru/api/dicom/studies/by-id/{study_id} \
   -H "Authorization: Bearer $JWT"
 ```
 
