@@ -174,6 +174,39 @@ def _serialize_study(study: DicomStudy, viewer: DicomViewer | None = None, user:
     return data
 
 
+async def _save_upload_stream(upload_file: UploadFile, dest: Path, max_bytes: int) -> int:
+    """Stream multipart upload to disk with a size cap."""
+    size = 0
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with dest.open("wb") as out:
+            while True:
+                chunk = await upload_file.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > max_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"Файл превышает лимит {settings.DICOM_MAX_FILE_SIZE_MB} МБ",
+                    )
+                out.write(chunk)
+    except HTTPException:
+        dest.unlink(missing_ok=True)
+        raise
+    except Exception as exc:
+        dest.unlink(missing_ok=True)
+        logger.exception("DICOM upload stream failed")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Не удалось сохранить загруженный файл. Повторите попытку.",
+        ) from exc
+    if size == 0:
+        dest.unlink(missing_ok=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Файл пуст")
+    return size
+
+
 def _enqueue_dicom(study_id: int, temp_path: str) -> str | None:
     if not redis_available():
         logger.info("Redis unavailable — sync DICOM processing for study %s", study_id)
@@ -231,17 +264,10 @@ async def upload_dicom(
             detail=f"Unsupported MIME type: {file.content_type}",
         )
 
-    content = await file.read()
     max_bytes = settings.DICOM_MAX_FILE_SIZE_MB * 1024 * 1024
-    if len(content) > max_bytes:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File exceeds {settings.DICOM_MAX_FILE_SIZE_MB} MB limit",
-        )
-
     storage = DicomStorage()
     temp_path = storage.temp_upload_path(suffix=suffix or ".dcm")
-    temp_path.write_bytes(content)
+    await _save_upload_stream(file, temp_path, max_bytes)
 
     safe_name = Path(file.filename).name
     dicom_study_uid = read_study_uid_from_file(str(temp_path))

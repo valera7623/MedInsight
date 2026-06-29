@@ -93,13 +93,14 @@ function setupNav() {
 document.addEventListener('DOMContentLoaded', setupNav);
 
 function formatApiError(detail) {
+  if (detail == null || detail === '') return '';
   if (Array.isArray(detail)) {
     return detail.map((d) => d.msg || JSON.stringify(d)).join(', ');
   }
-  if (typeof detail === 'object' && detail !== null) {
+  if (typeof detail === 'object') {
     return detail.message || JSON.stringify(detail);
   }
-  return detail || 'Неизвестная ошибка';
+  return String(detail);
 }
 
 async function fetchCurrentUser() {
@@ -225,7 +226,13 @@ function setupModals() {
 }
 
 function openModal(id) {
-  document.getElementById(id).classList.remove('hidden');
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.querySelectorAll('.error-message').forEach(el => {
+    el.textContent = '';
+    el.classList.add('hidden');
+  });
 }
 
 function resetPatientForm() {
@@ -941,16 +948,32 @@ function renderBarChart(canvasId, dataObj, existingChart, setChart) {
 }
 
 async function loadPatientsForSelect(selectId) {
-  const res = await apiFetch('/api/patients?page=1&page_size=100');
-  const data = await res.json();
   const select = document.getElementById(selectId);
-  select.innerHTML = '<option value="">— Выберите пациента —</option>';
-  data.items.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = formatFullName(p);
-    select.appendChild(opt);
-  });
+  if (!select) return;
+  select.innerHTML = '<option value="">— Загрузка… —</option>';
+  try {
+    const res = await apiFetch('/api/patients?page=1&page_size=100');
+    const data = await parseApiResponse(res);
+    if (!res.ok) {
+      const msg = formatApiError(data.detail) || `Ошибка загрузки пациентов (${res.status})`;
+      select.innerHTML = `<option value="">${msg}</option>`;
+      return;
+    }
+    const items = data.items || [];
+    if (!items.length) {
+      select.innerHTML = '<option value="">— Нет доступных пациентов —</option>';
+      return;
+    }
+    select.innerHTML = '<option value="">— Выберите пациента —</option>';
+    items.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = formatFullName(p);
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    select.innerHTML = `<option value="">— ${err.message || 'Ошибка загрузки пациентов'} —</option>`;
+  }
 }
 
 function setupUploadForm(onSuccess) {

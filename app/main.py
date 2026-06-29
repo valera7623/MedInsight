@@ -8,8 +8,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
 from app.core.metrics import CONTENT_TYPE_LATEST, render_metrics
@@ -228,6 +230,40 @@ app = FastAPI(
     version=settings.APP_VERSION,
     lifespan=lifespan,
 )
+
+
+def _localize_http_detail(detail: object) -> object:
+    if detail == "There was an error parsing the body":
+        return "Не удалось принять файл. Проверьте соединение и повторите загрузку."
+    if detail == "Invalid HTTP request received.":
+        return "Некорректный HTTP-запрос. Повторите попытку."
+    return detail
+
+
+@app.exception_handler(StarletteHTTPException)
+async def starlette_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": _localize_http_detail(exc.detail)},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(request: Request, exc: RequestValidationError):
+    messages: list[str] = []
+    for err in exc.errors():
+        loc = [str(part) for part in err.get("loc", []) if part not in ("body",)]
+        if "patient_id" in loc:
+            messages.append("Выберите пациента")
+            continue
+        if "file" in loc:
+            messages.append("Выберите DICOM-файл")
+            continue
+        field = ".".join(loc) if loc else "запрос"
+        messages.append(f"{field}: {err.get('msg', 'ошибка валидации')}")
+    detail: str | list[str] = messages[0] if len(messages) == 1 else messages
+    return JSONResponse(status_code=422, content={"detail": detail})
+
 
 origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 register_append_only_listeners()

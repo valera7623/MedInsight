@@ -344,13 +344,25 @@ function setupDicomUploadForm(onSuccess) {
         body: formData,
         headers: {},
       });
-      const data = await res.json().catch(() => ({}));
+      let data = {};
+      try {
+        data = await parseApiResponse(res);
+      } catch (parseErr) {
+        if (!res.ok) {
+          throw new Error(parseErr.message || `Ошибка загрузки (HTTP ${res.status})`);
+        }
+        throw parseErr;
+      }
       if (!res.ok) {
         if (res.status === 409 && data.detail && typeof data.detail === 'object') {
           showUploadConflict(data.detail, doUpload);
           throw new Error('conflict');
         }
-        throw new Error(formatApiError(data.detail) || `Ошибка загрузки (${res.status})`);
+        const apiMsg = formatApiError(data.detail);
+        if (res.status === 400 && apiMsg.includes('parsing the body')) {
+          throw new Error('Не удалось принять файл. Проверьте соединение и повторите загрузку.');
+        }
+        throw new Error(apiMsg || `Ошибка загрузки (HTTP ${res.status})`);
       }
       document.getElementById('dicom-conflict-delete')?.remove();
       document.getElementById('dicom-upload-modal').classList.add('hidden');
@@ -369,7 +381,10 @@ function setupDicomUploadForm(onSuccess) {
     } catch (err) {
       progressEl.classList.add('hidden');
       if (err.message !== 'conflict') {
-        errEl.textContent = err.message || 'Ошибка загрузки';
+        const msg = err.message === 'Failed to fetch'
+          ? 'Сеть недоступна или соединение прервано. Повторите загрузку.'
+          : (err.message || 'Ошибка загрузки');
+        errEl.textContent = msg;
         errEl.classList.remove('hidden');
       }
     } finally {
