@@ -26,6 +26,7 @@ class DicomViewer:
         if not study:
             return None
         return {
+            "id": study.id,
             "study_uid": study.study_uid,
             "patient_id": study.patient_id,
             "tenant_id": study.tenant_id,

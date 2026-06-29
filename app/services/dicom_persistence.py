@@ -51,6 +51,7 @@ def handle_cross_patient_conflict(
                     "Удалите существующую запись или выберите того же пациента."
                 ),
                 "conflict_patient_id": cross_patient.patient_id,
+                "conflict_study_id": cross_patient.id,
                 "conflict_study_uid": cross_patient.study_uid,
                 "conflict_visible": can_view,
                 "can_delete": True,
@@ -73,6 +74,7 @@ def handle_cross_patient_conflict(
         detail={
             "message": message,
             "conflict_patient_id": cross_patient.patient_id,
+            "conflict_study_id": cross_patient.id,
             "conflict_study_uid": cross_patient.study_uid,
             "conflict_visible": can_view,
             "can_delete": False,

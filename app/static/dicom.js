@@ -82,13 +82,13 @@ async function resumeDicomProcessingPolls() {
   }
 }
 
-async function deleteDicomStudy(studyUid, label) {
-  const name = label || studyUid;
+async function deleteDicomStudy(studyId, label) {
+  const name = label || `исследование #${studyId}`;
   if (!confirm(`Удалить DICOM-исследование «${name}»? Файлы и кадры будут удалены безвозвратно.`)) {
     return;
   }
   try {
-    const res = await apiFetch(`/api/dicom/studies/${encodeURIComponent(studyUid)}`, {
+    const res = await apiFetch(`/api/dicom/studies/by-id/${studyId}`, {
       method: 'DELETE',
     });
     if (!res.ok) {
@@ -188,7 +188,7 @@ function renderDicomGrid(items) {
       ? `<a href="/dicom/viewer/${encodeURIComponent(study.study_uid)}" class="btn btn-primary btn-sm">Просмотр</a>`
       : '';
     const deleteBtn = study.can_delete
-      ? `<button type="button" class="btn btn-danger btn-sm" data-delete-uid="${study.study_uid}" data-delete-label="${(study.study_description || study.modality || 'DICOM').replace(/"/g, '&quot;')}">Удалить</button>`
+      ? `<button type="button" class="btn btn-danger btn-sm" data-delete-id="${study.id}" data-delete-label="${(study.study_description || study.modality || 'DICOM').replace(/"/g, '&quot;')}">Удалить</button>`
       : '';
     return `
       <article class="dicom-card">
@@ -219,8 +219,8 @@ function renderDicomGrid(items) {
   grid.querySelectorAll('[data-archive-uid]').forEach(btn => {
     btn.addEventListener('click', () => downloadDicomArchive(btn.dataset.archiveUid));
   });
-  grid.querySelectorAll('[data-delete-uid]').forEach(btn => {
-    btn.addEventListener('click', () => deleteDicomStudy(btn.dataset.deleteUid, btn.dataset.deleteLabel));
+  grid.querySelectorAll('[data-delete-id]').forEach(btn => {
+    btn.addEventListener('click', () => deleteDicomStudy(Number(btn.dataset.deleteId), btn.dataset.deleteLabel));
   });
 }
 
@@ -268,7 +268,7 @@ function showUploadConflict(detail, retryUpload) {
   const oldBtn = document.getElementById('dicom-conflict-delete');
   if (oldBtn) oldBtn.remove();
 
-  if (detail?.can_delete && detail?.conflict_study_uid) {
+  if (detail?.can_delete && (detail?.conflict_study_id || detail?.conflict_study_uid)) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.id = 'dicom-conflict-delete';
@@ -278,10 +278,10 @@ function showUploadConflict(detail, retryUpload) {
     btn.addEventListener('click', async () => {
       btn.disabled = true;
       try {
-        const del = await apiFetch(
-          `/api/dicom/studies/${encodeURIComponent(detail.conflict_study_uid)}`,
-          { method: 'DELETE' },
-        );
+        const deletePath = detail.conflict_study_id
+          ? `/api/dicom/studies/by-id/${detail.conflict_study_id}`
+          : `/api/dicom/studies/${encodeURIComponent(detail.conflict_study_uid)}`;
+        const del = await apiFetch(deletePath, { method: 'DELETE' });
         if (!del.ok) {
           const data = await del.json().catch(() => ({}));
           throw new Error(formatApiError(data.detail) || 'Не удалось удалить');

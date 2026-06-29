@@ -522,7 +522,7 @@ function renderPatientDicomItem(study) {
     ? `<a href="/dicom/viewer/${encodeURIComponent(study.study_uid)}" class="btn btn-primary btn-sm">Просмотр</a>`
     : '';
   const deleteBtn = study.can_delete
-    ? `<button type="button" class="btn btn-danger btn-sm patient-dicom-delete-btn" data-uid="${escapeHtml(study.study_uid)}" data-label="${title.replace(/"/g, '&quot;')}">Удалить</button>`
+    ? `<button type="button" class="btn btn-danger btn-sm patient-dicom-delete-btn" data-id="${study.id}" data-label="${title.replace(/"/g, '&quot;')}">Удалить</button>`
     : '';
   return `
     <li class="document-item">
@@ -591,7 +591,7 @@ function setupPatientDicomSection(patientId) {
       const deleteBtn = event.target.closest('.patient-dicom-delete-btn');
       if (!deleteBtn || typeof deleteDicomStudy !== 'function') return;
       event.preventDefault();
-      await deleteDicomStudy(deleteBtn.dataset.uid, deleteBtn.dataset.label);
+      await deleteDicomStudy(Number(deleteBtn.dataset.id), deleteBtn.dataset.label);
     });
   }
 

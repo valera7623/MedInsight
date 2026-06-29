@@ -86,9 +86,12 @@ class CacheInvalidationService:
         cache_service.invalidate_pattern_sync(f"dashboard:*:user:{user_id}*")
         logger.info("Cache invalidated for user %s", user_id)
 
-    def invalidate_dicom_for_patient(self, patient_id: int) -> None:
+    def invalidate_dicom_for_patient(self, patient_id: int, tenant_id: int | None = None) -> None:
         cache_service.invalidate_pattern_sync(f"dicom:studies:patient:{patient_id}*")
         cache_service.invalidate_pattern_sync(f"dicom:frame:*:patient:{patient_id}*")
+        if tenant_id is not None:
+            cache_service.invalidate_pattern_sync(f"dicom:studies:tenant:{tenant_id}:*")
+            self._invalidate_http_api_cache("dicom/studies")
         self.bump_version(self._scope_key("patient", patient_id))
 
     def invalidate_docx_template(self) -> None:
@@ -114,5 +117,5 @@ def invalidate_dashboard_cache(db: Session, tenant_id: int) -> None:
     CacheInvalidationService(db).invalidate_dashboard(tenant_id)
 
 
-def invalidate_dicom_patient_cache(db: Session, patient_id: int) -> None:
-    CacheInvalidationService(db).invalidate_dicom_for_patient(patient_id)
+def invalidate_dicom_patient_cache(db: Session, patient_id: int, tenant_id: int | None = None) -> None:
+    CacheInvalidationService(db).invalidate_dicom_for_patient(patient_id, tenant_id)

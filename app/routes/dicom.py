@@ -85,22 +85,81 @@ def _ensure_dicom_enabled() -> None:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="DICOM support is disabled")
 
 
+def _assert_study_visible(user: User, study: DicomStudy) -> None:
+    if study.patient is not None and not can_view_patient(user, study.patient):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DICOM study not found")
+
+
+def _tenant_scoped_study_query(
+    db: Session,
+    user: User,
+    request: Request | None = None,
+):
+    tid = effective_tenant_id(user, get_request_tenant_id(request) if request else None)
+    query = db.query(DicomStudy)
+    if tid is not None:
+        query = query.filter(DicomStudy.tenant_id == tid)
+    return query
+
+
 def _get_study_or_404(
     db: Session,
     study_uid: str,
     user: User,
     request: Request | None = None,
 ) -> DicomStudy:
-    tid = effective_tenant_id(user, get_request_tenant_id(request) if request else None)
-    query = db.query(DicomStudy).filter(DicomStudy.study_uid == study_uid)
-    if tid is not None:
-        query = query.filter(DicomStudy.tenant_id == tid)
-    study = query.first()
+    study = _tenant_scoped_study_query(db, user, request).filter(DicomStudy.study_uid == study_uid).first()
     if not study:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DICOM study not found")
-    if study.patient is not None and not can_view_patient(user, study.patient):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DICOM study not found")
+    _assert_study_visible(user, study)
     return study
+
+
+def _get_study_by_id_or_404(
+    db: Session,
+    study_id: int,
+    user: User,
+    request: Request | None = None,
+) -> DicomStudy:
+    study = _tenant_scoped_study_query(db, user, request).filter(DicomStudy.id == study_id).first()
+    if not study:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DICOM study not found")
+    _assert_study_visible(user, study)
+    return study
+
+
+def _perform_dicom_study_delete(
+    db: Session,
+    study: DicomStudy,
+    user: User,
+    request: Request,
+    *,
+    audit_study_uid: str | None = None,
+) -> Response:
+    if not can_delete_dicom_study(user, study):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete this DICOM study")
+
+    storage = DicomStorage()
+    study_id = study.id
+    tenant_id = study.tenant_id
+    patient_id = study.patient_id
+    study_uid = audit_study_uid or study.study_uid
+    delete_study_data(db, study, storage)
+    db.commit()
+    invalidate_dicom_patient_cache(db, patient_id, tenant_id)
+
+    log_audit(
+        db,
+        user_id=user.id,
+        tenant_id=tenant_id,
+        action="delete",
+        resource_type="dicom_study",
+        resource_id=study_id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        details={"study_uid": study_uid, "study_id": study_id},
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 def _serialize_study(study: DicomStudy, viewer: DicomViewer | None = None, user: User | None = None) -> dict:
@@ -277,7 +336,7 @@ async def upload_dicom(
 
     job_id = _enqueue_dicom(study.id, str(temp_path))
     db.refresh(study)
-    invalidate_dicom_patient_cache(db, patient_id)
+    invalidate_dicom_patient_cache(db, patient_id, patient.tenant_id)
 
     return DicomUploadResponse(
         study_uid=study.study_uid,
@@ -513,6 +572,19 @@ def get_dicom_frame(
     )
 
 
+@router.delete("/studies/by-id/{study_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_dicom_study_by_id(
+    study_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Delete DICOM study by stable database id (preferred for UI)."""
+    _ensure_dicom_enabled()
+    study = _get_study_by_id_or_404(db, study_id, current_user, request)
+    return _perform_dicom_study_delete(db, study, current_user, request)
+
+
 @router.delete("/studies/{study_uid}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_dicom_study(
     study_uid: str,
@@ -522,25 +594,4 @@ def delete_dicom_study(
 ):
     _ensure_dicom_enabled()
     study = _get_study_or_404(db, study_uid, current_user, request)
-    if not can_delete_dicom_study(current_user, study):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete this DICOM study")
-
-    storage = DicomStorage()
-    study_id = study.id
-    tenant_id = study.tenant_id
-    delete_study_data(db, study, storage)
-    db.commit()
-    invalidate_dicom_patient_cache(db, study.patient_id)
-
-    log_audit(
-        db,
-        user_id=current_user.id,
-        tenant_id=tenant_id,
-        action="delete",
-        resource_type="dicom_study",
-        resource_id=study_id,
-        ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-        details={"study_uid": study_uid},
-    )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return _perform_dicom_study_delete(db, study, current_user, request, audit_study_uid=study_uid)

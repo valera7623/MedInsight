@@ -318,7 +318,8 @@ async function initDicomViewer(studyUid) {
         if (!confirm(`Удалить DICOM-исследование «${label}»? Файлы и кадры будут удалены безвозвратно.`)) {
           return;
         }
-        const del = await apiFetch(`/api/dicom/studies/${encodeURIComponent(studyUid)}`, { method: 'DELETE' });
+        const studyId = viewerState.study.id;
+        const del = await apiFetch(`/api/dicom/studies/by-id/${studyId}`, { method: 'DELETE' });
         if (!del.ok) {
           const data = await del.json().catch(() => ({}));
           alert(formatApiError(data.detail) || 'Ошибка удаления');
