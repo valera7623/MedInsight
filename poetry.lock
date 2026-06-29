@@ -6025,6 +6025,7 @@ description = "A pure Python package for reading and writing DICOM data"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
+markers = "extra == \"dicom\""
 files = [
     {file = "pydicom-3.0.2-py3-none-any.whl", hash = "sha256:abf971a5440f84dbaf42c4b6758e30e62480902584f8b270b9a5d146e278a07b"},
     {file = "pydicom-3.0.2.tar.gz", hash = "sha256:5942bfc2d72c6fa4b3b5b62c527f54b7f2355f21d6f5d296df6bb30188df6a4f"},
@@ -8734,6 +8735,7 @@ requests = "*"
 urllib3 = "*"
 
 [extras]
+dicom = ["pillow", "pydicom"]
 docs = ["mkdocs", "mkdocs-material"]
 
 [metadata]
