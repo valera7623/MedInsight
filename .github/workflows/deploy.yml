@@ -37,7 +37,9 @@ jobs:
           poetry install --without dev,test,docs --no-interaction --no-ansi
 
       - name: Smoke test
-        run: poetry run python -c "from app.main import app; print('OK', app.title)"
+        run: |
+          poetry run python -c "from app.main import app; print('OK', app.title)"
+          poetry run python -c "import pydicom, numpy; from PIL import Image; print('DICOM deps OK', pydicom.__version__)"
 
   deploy:
     needs: test
