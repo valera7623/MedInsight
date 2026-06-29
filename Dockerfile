@@ -22,7 +22,7 @@ ENV POETRY_NO_INTERACTION=1 \
 
 RUN pip install --no-cache-dir poetry \
     && poetry config virtualenvs.create false \
-    && poetry install --without dev,test,docs --no-ansi --no-root \
+    && poetry install --without dev,test,docs --extras dicom --no-ansi --no-root \
     && poetry install --only nlp --no-ansi --no-root \
     && python -c "import pydicom, numpy; from PIL import Image; print('DICOM deps OK', pydicom.__version__)" \
     && if [ "$INSTALL_SPACY_MODEL" = "1" ]; then \

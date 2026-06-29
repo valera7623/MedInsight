@@ -34,7 +34,7 @@ jobs:
         run: |
           poetry config virtualenvs.create true
           poetry config virtualenvs.in-project true
-          poetry install --without dev,test,docs --no-interaction --no-ansi
+          poetry install --without dev,test,docs --extras dicom --no-interaction --no-ansi
 
       - name: Smoke test
         run: |
