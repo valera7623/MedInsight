@@ -35,7 +35,7 @@ jobs:
           poetry config virtualenvs.create true
           poetry config virtualenvs.in-project true
           poetry install --without dev,test,docs --no-interaction --no-ansi
-          pip install "pydicom>=2.4.0"
+          poetry run pip install "pydicom>=2.4.0"
 
       - name: Smoke test
         run: |
