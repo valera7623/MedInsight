@@ -1,4 +1,3 @@
-import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
@@ -28,6 +27,7 @@ from app.models import (
 from app.middleware.tenant import get_request_tenant_id
 from app.services.access import ROLES, is_super_admin
 from app.services.audit import log_audit
+from app.services.tenant_deletion import delete_tenant_with_dependencies
 from app.services.encryption import rotate_encryption_key
 from app.services.list_queries import (
     AUDIT_SORT,
@@ -255,17 +255,15 @@ def delete_tenant(
 
     tenant_name = tenant.name
     tenant_subdomain = tenant.subdomain
-    db.query(Prediction).filter(Prediction.tenant_id == tenant_id).delete()
-    db.query(Document).filter(Document.tenant_id == tenant_id).delete()
-    db.query(Patient).filter(Patient.tenant_id == tenant_id).delete()
-    db.query(User).filter(User.tenant_id == tenant_id).delete()
-    db.query(AuditLog).filter(AuditLog.tenant_id == tenant_id).delete()
-    db.delete(tenant)
-    db.commit()
-
-    enc_dir = Path(settings.STORAGE_PATH) / "encrypted" / f"tenant_{tenant_id}"
-    if enc_dir.exists():
-        shutil.rmtree(enc_dir, ignore_errors=True)
+    try:
+        delete_tenant_with_dependencies(db, tenant)
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Failed to delete tenant %s: %s", tenant_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Не удалось удалить клинику: есть связанные записи или ограничение базы данных.",
+        ) from exc
 
     from app.services.cache_invalidation import invalidate_tenant_cache
 
