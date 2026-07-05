@@ -37,6 +37,22 @@
       <div id="health-info">Загрузка...</div>
     </div>
 
+    <div class="section-card hidden" id="tenants-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;margin-bottom:1rem">
+        <div>
+          <h2 style="margin:0">Клиники</h2>
+          <p style="margin:0.35rem 0 0;color:#64748b;font-size:0.9rem">Создание и управление tenant'ами (клиниками) платформы</p>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="create-tenant-btn">+ Создать клинику</button>
+      </div>
+      <table class="data-table" id="tenants-table">
+        <thead>
+          <tr><th>ID</th><th>Название</th><th>Subdomain</th><th>Статус</th><th>Создана</th><th>Действия</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
     <div class="section-card">
       <h2>Отделения</h2>
       <form id="dept-form" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end">
@@ -79,10 +95,42 @@
     </div>
   </main>
 
+  <div class="modal hidden" id="tenant-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <h2 id="tenant-modal-title">Создать клинику</h2>
+      <form id="tenant-form">
+        <div class="form-group">
+          <label for="tenant-name">Название клиники</label>
+          <input type="text" id="tenant-name" required maxlength="255" placeholder="Клиника «Здоровье»">
+        </div>
+        <div class="form-group" id="tenant-subdomain-group">
+          <label for="tenant-subdomain">Subdomain (латиница, для входа)</label>
+          <input type="text" id="tenant-subdomain" pattern="[a-z0-9-]+" maxlength="100" placeholder="zdorovie">
+          <small style="color:#64748b">Только a-z, 0-9 и дефис. Используется при входе на странице логина.</small>
+        </div>
+        <div class="form-group hidden" id="tenant-active-group">
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+            <input type="checkbox" id="tenant-active" checked>
+            Клиника активна
+          </label>
+        </div>
+        <div id="tenant-form-error" class="error-message hidden"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-close">Отмена</button>
+          <button type="submit" class="btn btn-primary" id="tenant-form-submit">Создать</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="/static/dashboard.js"></script>
   <script>
     let currentAdmin = null;
     let selectedAdminTenantId = null;
+    let adminTenants = [];
+    let editingTenantId = null;
+    const DEFAULT_TENANT_SUBDOMAIN = 'default';
 
     function adminTenantQuery() {
       if (currentAdmin?.role === 'super_admin' && selectedAdminTenantId) {
@@ -91,36 +139,227 @@
       return '';
     }
 
-    async function setupAdminTenant() {
-      if (!currentAdmin || currentAdmin.role !== 'super_admin') return;
+    function slugifySubdomain(name) {
+      const map = {
+        а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y',
+        к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f',
+        х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+      };
+      const latin = String(name).trim().toLowerCase().split('').map(ch => map[ch] ?? ch).join('');
+      return latin.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 100) || '';
+    }
+
+    function populateTenantSelect(tenants) {
       const group = document.getElementById('dept-tenant-group');
       const sel = document.getElementById('dept-tenant');
-      if (!group || !sel) return;
-      const res = await apiFetch('/api/admin/tenants');
-      const tenants = await res.json();
-      if (!res.ok || !tenants.length) {
-        alert(formatApiError(tenants.detail) || 'Не удалось загрузить список клиник');
+      if (!group || !sel || currentAdmin?.role !== 'super_admin') return;
+      if (!tenants.length) {
+        group.classList.add('hidden');
         return;
       }
       group.classList.remove('hidden');
-      sel.innerHTML = tenants.map(t => `<option value="${t.id}">${t.name} (${t.subdomain})</option>`).join('');
+      sel.innerHTML = tenants.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${escapeHtml(t.subdomain)})</option>`).join('');
       const stored = getTenantId();
       if (stored && tenants.some(t => String(t.id) === stored)) {
         sel.value = stored;
+      } else if (tenants.length) {
+        sel.value = String(tenants[0].id);
       }
       selectedAdminTenantId = sel.value;
       localStorage.setItem('tenant_id', selectedAdminTenantId);
+    }
+
+    async function loadTenantsAdmin() {
+      const section = document.getElementById('tenants-section');
+      const tbody = document.querySelector('#tenants-table tbody');
+      if (!section || !tbody || currentAdmin?.role !== 'super_admin') return;
+
+      section.classList.remove('hidden');
+      const res = await apiFetch('/api/admin/tenants');
+      const tenants = await res.json();
+      if (!res.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#ef4444">${formatApiError(tenants.detail) || 'Ошибка загрузки клиник'}</td></tr>`;
+        return;
+      }
+
+      adminTenants = tenants;
+      populateTenantSelect(tenants);
+
+      if (!tenants.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#64748b">Клиник пока нет. Нажмите «+ Создать клинику».</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = tenants.map(t => {
+        const isDefault = t.subdomain === DEFAULT_TENANT_SUBDOMAIN;
+        const actions = isDefault
+          ? `<button type="button" class="btn btn-secondary btn-sm tenant-edit" data-id="${t.id}">Изменить</button> <span style="color:#94a3b8" title="Системная клиника">—</span>`
+          : `<button type="button" class="btn btn-secondary btn-sm tenant-edit" data-id="${t.id}">Изменить</button> <button type="button" class="btn btn-danger btn-sm tenant-del" data-id="${t.id}">Удалить</button>`;
+        return `
+          <tr>
+            <td>${t.id}</td>
+            <td>${escapeHtml(t.name)}</td>
+            <td><code>${escapeHtml(t.subdomain)}</code></td>
+            <td>${t.is_active ? 'активна' : 'отключена'}</td>
+            <td>${new Date(t.created_at).toLocaleDateString('ru-RU')}</td>
+            <td class="space-actions">${actions}</td>
+          </tr>`;
+      }).join('');
+
+      tbody.querySelectorAll('.tenant-edit').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tenant = adminTenants.find(item => String(item.id) === btn.dataset.id);
+          if (tenant) openTenantModal('edit', tenant);
+        });
+      });
+      tbody.querySelectorAll('.tenant-del').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tenant = adminTenants.find(item => String(item.id) === btn.dataset.id);
+          if (tenant) deleteTenantAdmin(tenant.id, tenant.name);
+        });
+      });
+    }
+
+    function openTenantModal(mode, tenant = null) {
+      editingTenantId = mode === 'edit' ? tenant.id : null;
+      const modal = document.getElementById('tenant-modal');
+      const title = document.getElementById('tenant-modal-title');
+      const subdomainGroup = document.getElementById('tenant-subdomain-group');
+      const activeGroup = document.getElementById('tenant-active-group');
+      const submitBtn = document.getElementById('tenant-form-submit');
+      const errEl = document.getElementById('tenant-form-error');
+      const nameInput = document.getElementById('tenant-name');
+      const subdomainInput = document.getElementById('tenant-subdomain');
+      const activeInput = document.getElementById('tenant-active');
+
+      errEl.classList.add('hidden');
+      title.textContent = mode === 'edit' ? 'Изменить клинику' : 'Создать клинику';
+      submitBtn.textContent = mode === 'edit' ? 'Сохранить' : 'Создать';
+      nameInput.value = tenant?.name || '';
+      subdomainInput.value = tenant?.subdomain || '';
+      activeInput.checked = tenant?.is_active ?? true;
+      subdomainGroup.classList.toggle('hidden', mode === 'edit');
+      activeGroup.classList.toggle('hidden', mode !== 'edit');
+      subdomainInput.required = mode !== 'edit';
+      modal.classList.remove('hidden');
+      nameInput.focus();
+    }
+
+    function closeTenantModal() {
+      document.getElementById('tenant-modal')?.classList.add('hidden');
+      editingTenantId = null;
+      document.getElementById('tenant-form')?.reset();
+    }
+
+    function setupTenantManagement() {
+      document.getElementById('create-tenant-btn')?.addEventListener('click', () => openTenantModal('create'));
+
+      document.getElementById('tenant-name')?.addEventListener('input', (e) => {
+        if (editingTenantId) return;
+        const subdomain = document.getElementById('tenant-subdomain');
+        if (!subdomain || subdomain.dataset.manual === '1') return;
+        subdomain.value = slugifySubdomain(e.target.value);
+      });
+      document.getElementById('tenant-subdomain')?.addEventListener('input', (e) => {
+        e.target.dataset.manual = e.target.value ? '1' : '';
+        e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+      });
+
+      document.getElementById('tenant-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('tenant-form-error');
+        const name = document.getElementById('tenant-name').value.trim();
+        const subdomain = document.getElementById('tenant-subdomain').value.trim();
+        const isActive = document.getElementById('tenant-active').checked;
+        errEl.classList.add('hidden');
+
+        if (!name) {
+          errEl.textContent = 'Укажите название клиники';
+          errEl.classList.remove('hidden');
+          return;
+        }
+
+        try {
+          if (editingTenantId) {
+            const res = await apiFetch(`/api/admin/tenants/${editingTenantId}`, {
+              method: 'PUT',
+              body: JSON.stringify({ name, is_active: isActive }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(formatApiError(data.detail) || 'Ошибка сохранения');
+          } else {
+            if (!subdomain || subdomain.length < 2) {
+              errEl.textContent = 'Subdomain: минимум 2 символа (латиница, цифры, дефис)';
+              errEl.classList.remove('hidden');
+              return;
+            }
+            const res = await apiFetch('/api/admin/tenants', {
+              method: 'POST',
+              body: JSON.stringify({ name, subdomain }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(formatApiError(data.detail) || 'Ошибка создания');
+            localStorage.setItem('tenant_id', String(data.id));
+            selectedAdminTenantId = String(data.id);
+          }
+          closeTenantModal();
+          await loadTenantsAdmin();
+          await loadDepartmentsAdmin();
+          await loadUsers();
+        } catch (err) {
+          errEl.textContent = err.message || 'Ошибка';
+          errEl.classList.remove('hidden');
+        }
+      });
+
+      document.querySelectorAll('#tenant-modal .modal-close, #tenant-modal .modal-backdrop').forEach(el => {
+        el.addEventListener('click', closeTenantModal);
+      });
+    }
+
+    async function deleteTenantAdmin(tenantId, name) {
+      if (!confirm(`Удалить клинику «${name}»? Все пациенты, документы и пользователи клиники будут удалены.`)) return;
+      const res = await apiFetch(`/api/admin/tenants/${tenantId}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 204) {
+        const d = await res.json().catch(() => ({}));
+        alert(formatApiError(d.detail) || 'Ошибка удаления');
+        return;
+      }
+      if (String(selectedAdminTenantId) === String(tenantId)) {
+        localStorage.removeItem('tenant_id');
+        selectedAdminTenantId = null;
+      }
+      await loadTenantsAdmin();
+      await loadDepartmentsAdmin();
+      await loadUsers();
+    }
+
+    async function setupAdminTenant() {
+      if (!currentAdmin || currentAdmin.role !== 'super_admin') return;
+      const sel = document.getElementById('dept-tenant');
+      if (!sel || sel.dataset.bound === '1') return;
+      sel.dataset.bound = '1';
       sel.addEventListener('change', async () => {
         selectedAdminTenantId = sel.value;
         localStorage.setItem('tenant_id', selectedAdminTenantId);
         await loadDepartmentsAdmin();
+        await loadUsers();
+        await loadAuditAdmin();
       });
     }
 
     async function loadUsers() {
-      const users = await apiFetch('/api/admin/users');
-      const udata = await users.json();
+      const res = await apiFetch(`/api/admin/users${adminTenantQuery()}`);
+      const udata = await res.json();
       const utbody = document.querySelector('#users-table tbody');
+      if (!res.ok || !Array.isArray(udata)) {
+        utbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ef4444">${formatApiError(udata.detail) || 'Ошибка загрузки пользователей'}</td></tr>`;
+        return;
+      }
+      if (!udata.length) {
+        utbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b">Пользователей нет</td></tr>';
+        return;
+      }
       utbody.innerHTML = udata.map(u => {
         const isSuper = u.role === 'super_admin';
         const isSelf = currentAdmin && u.id === currentAdmin.id;
@@ -226,6 +465,31 @@
       });
     }
 
+    async function loadAuditAdmin() {
+      const atbody = document.querySelector('#audit-table tbody');
+      if (!atbody) return;
+      const params = new URLSearchParams({ limit: '50' });
+      if (currentAdmin?.role === 'super_admin' && selectedAdminTenantId) {
+        params.set('tenant_id', selectedAdminTenantId);
+      }
+      const audit = await apiFetch(`/api/admin/audit?${params.toString()}`);
+      const adata = await audit.json();
+      if (!audit.ok) {
+        atbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#ef4444">${formatApiError(adata.detail) || 'Ошибка загрузки аудита'}</td></tr>`;
+        return;
+      }
+      atbody.innerHTML = adata.length
+        ? adata.map(a => `
+        <tr>
+          <td>${new Date(a.created_at).toLocaleString('ru-RU')}</td>
+          <td>${escapeHtml(a.action)}</td>
+          <td>${escapeHtml(a.resource_type || '—')} ${a.resource_id || ''}</td>
+          <td>${escapeHtml(a.ip_address || '—')}</td>
+        </tr>
+      `).join('')
+        : '<tr><td colspan="4" style="text-align:center;color:#64748b">Записей нет</td></tr>';
+    }
+
     async function loadAdmin() {
       if (!requireAuth()) return;
       setupLogout();
@@ -247,21 +511,12 @@
       `;
 
       setupDeptForm();
+      setupTenantManagement();
+      await loadTenantsAdmin();
       await setupAdminTenant();
       await loadDepartmentsAdmin();
       await loadUsers();
-
-      const audit = await apiFetch('/api/admin/audit?limit=50');
-      const adata = await audit.json();
-      const atbody = document.querySelector('#audit-table tbody');
-      atbody.innerHTML = adata.map(a => `
-        <tr>
-          <td>${new Date(a.created_at).toLocaleString('ru-RU')}</td>
-          <td>${a.action}</td>
-          <td>${a.resource_type || '—'} ${a.resource_id || ''}</td>
-          <td>${a.ip_address || '—'}</td>
-        </tr>
-      `).join('');
+      await loadAuditAdmin();
     }
 
     document.addEventListener('DOMContentLoaded', loadAdmin);

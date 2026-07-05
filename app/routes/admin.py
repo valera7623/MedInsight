@@ -162,6 +162,19 @@ def create_tenant(
     db.add(tenant)
     db.commit()
     db.refresh(tenant)
+
+    from app.services.cache_invalidation import invalidate_tenant_cache
+
+    invalidate_tenant_cache(db, tenant.id)
+    log_audit(
+        db,
+        user_id=current_user.id,
+        tenant_id=tenant.id,
+        action="tenant_created",
+        resource_type="tenant",
+        resource_id=tenant.id,
+        details={"name": tenant.name, "subdomain": tenant.subdomain},
+    )
     return tenant
 
 
@@ -209,6 +222,19 @@ def update_tenant(
         setattr(tenant, field, value)
     db.commit()
     db.refresh(tenant)
+
+    from app.services.cache_invalidation import invalidate_tenant_cache
+
+    invalidate_tenant_cache(db, tenant.id)
+    log_audit(
+        db,
+        user_id=current_user.id,
+        tenant_id=tenant.id,
+        action="tenant_updated",
+        resource_type="tenant",
+        resource_id=tenant.id,
+        details=data.model_dump(exclude_unset=True),
+    )
     return tenant
 
 
@@ -221,7 +247,14 @@ def delete_tenant(
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     if not tenant:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+    if tenant.subdomain == settings.DEFAULT_TENANT_SUBDOMAIN:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete the default clinic",
+        )
 
+    tenant_name = tenant.name
+    tenant_subdomain = tenant.subdomain
     db.query(Prediction).filter(Prediction.tenant_id == tenant_id).delete()
     db.query(Document).filter(Document.tenant_id == tenant_id).delete()
     db.query(Patient).filter(Patient.tenant_id == tenant_id).delete()
@@ -233,6 +266,19 @@ def delete_tenant(
     enc_dir = Path(settings.STORAGE_PATH) / "encrypted" / f"tenant_{tenant_id}"
     if enc_dir.exists():
         shutil.rmtree(enc_dir, ignore_errors=True)
+
+    from app.services.cache_invalidation import invalidate_tenant_cache
+
+    invalidate_tenant_cache(db, tenant_id)
+    log_audit(
+        db,
+        user_id=current_user.id,
+        tenant_id=None,
+        action="tenant_deleted",
+        resource_type="tenant",
+        resource_id=tenant_id,
+        details={"name": tenant_name, "subdomain": tenant_subdomain},
+    )
 
 
 @router.post("/users", response_model=UserAdminResponse, status_code=status.HTTP_201_CREATED)
