@@ -2,450 +2,450 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
     <url>
         <loc>https://fileguardian.com.ru/help/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/admin-guide/backup/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/admin-guide/backup/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/admin-guide/backup/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/admin-guide/configuration/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/admin-guide/configuration/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/admin-guide/configuration/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/admin-guide/deployment/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/admin-guide/deployment/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/admin-guide/deployment/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/admin-guide/monitoring/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/admin-guide/monitoring/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/admin-guide/monitoring/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/api/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/api/analytics/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/analytics/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/analytics/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/api/auth/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/auth/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/auth/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/api/dicom/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/dicom/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/dicom/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/api/documents/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/documents/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/documents/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/api/patients/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/patients/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/patients/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/api/predictions/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/predictions/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/predictions/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/deployment/ci-cd/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/deployment/ci-cd/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/deployment/ci-cd/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/deployment/docker/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/deployment/docker/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/deployment/docker/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/deployment/environment-variables/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/deployment/environment-variables/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/deployment/environment-variables/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/deployment/vps/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/deployment/vps/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/deployment/vps/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/developer-guide/agents/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/developer-guide/agents/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/developer-guide/agents/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/developer-guide/architecture/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/developer-guide/architecture/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/developer-guide/architecture/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/developer-guide/database-schema/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/developer-guide/database-schema/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/developer-guide/database-schema/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/developer-guide/self-healing/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/developer-guide/self-healing/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/developer-guide/self-healing/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/misc/changelog/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/misc/changelog/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/misc/changelog/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/misc/faq/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/misc/faq/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/misc/faq/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/misc/glossary/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/misc/glossary/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/misc/glossary/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/misc/roadmap/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/misc/roadmap/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/misc/roadmap/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/user-guide/analytics/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/user-guide/analytics/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/user-guide/analytics/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/user-guide/dicom/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/user-guide/dicom/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/user-guide/dicom/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/user-guide/documents/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/user-guide/documents/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/user-guide/documents/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/user-guide/getting-started/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/user-guide/getting-started/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/user-guide/getting-started/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/user-guide/patients/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/user-guide/patients/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/user-guide/patients/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/user-guide/predictions/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/user-guide/predictions/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/user-guide/predictions/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/admin-guide/backup/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/admin-guide/backup/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/admin-guide/backup/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/admin-guide/configuration/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/admin-guide/configuration/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/admin-guide/configuration/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/admin-guide/deployment/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/admin-guide/deployment/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/admin-guide/deployment/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/admin-guide/monitoring/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/admin-guide/monitoring/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/admin-guide/monitoring/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/api/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/api/admin/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/admin/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/api/analytics/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/analytics/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/analytics/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/api/auth/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/auth/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/auth/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/api/dicom/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/dicom/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/dicom/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/api/documents/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/documents/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/documents/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/api/exports/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/exports/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/api/patients/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/patients/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/patients/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/api/payments/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/payments/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/api/predictions/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/predictions/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/api/predictions/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/api/webhooks/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/webhooks/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/api/websocket/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/api/websocket/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/deployment/ci-cd/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/deployment/ci-cd/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/deployment/ci-cd/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/deployment/docker/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/deployment/docker/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/deployment/docker/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/deployment/environment-variables/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/deployment/environment-variables/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/deployment/environment-variables/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/deployment/vps/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/deployment/vps/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/deployment/vps/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/developer-guide/agents/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/developer-guide/agents/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/developer-guide/agents/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/developer-guide/architecture/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/developer-guide/architecture/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/developer-guide/architecture/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/developer-guide/database-schema/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/developer-guide/database-schema/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/developer-guide/database-schema/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/developer-guide/self-healing/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/developer-guide/self-healing/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/developer-guide/self-healing/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/misc/changelog/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/misc/changelog/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/misc/changelog/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/misc/faq/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/misc/faq/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/misc/faq/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/misc/glossary/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/misc/glossary/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/misc/glossary/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/misc/roadmap/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/misc/roadmap/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/misc/roadmap/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/user-guide/analytics/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/user-guide/analytics/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/user-guide/analytics/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/user-guide/dicom/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/user-guide/dicom/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/user-guide/dicom/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/user-guide/documents/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/user-guide/documents/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/user-guide/documents/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/user-guide/getting-started/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/user-guide/getting-started/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/user-guide/getting-started/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/user-guide/patients/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/user-guide/patients/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/user-guide/patients/"/>
     </url>
     <url>
         <loc>https://fileguardian.com.ru/help/en/user-guide/predictions/</loc>
-        <lastmod>2026-07-05</lastmod>
+        <lastmod>2026-07-10</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://fileguardian.com.ru/help/en/user-guide/predictions/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://fileguardian.com.ru/help/user-guide/predictions/"/>

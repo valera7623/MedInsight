@@ -60,7 +60,7 @@ Login
 
 | Status | Description | Example |
 |--------|-------------|---------|
-| 200 | Successful Response | `{"access_token": "string", "token_type": "bearer", "tenant_id": 0, "role": "string"}` |
+| 200 | Successful Response | `{"access_token": "string", "token_type": "bearer", "tenant_id": 0, "role": "string", "demo_mode": false}` |
 | 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
 
 **Example:**
