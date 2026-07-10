@@ -112,6 +112,10 @@ async function fetchCurrentUser() {
     localStorage.setItem('tenant_id', String(data.tenant_id));
   }
   localStorage.setItem('role', data.role);
+  if (data.demo_mode) {
+    localStorage.setItem('demo_mode', 'true');
+    if (window.MedInsightDemo) window.MedInsightDemo.apply();
+  }
   renderUserSessionInfo(currentUser);
   return currentUser;
 }

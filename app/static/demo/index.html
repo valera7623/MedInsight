@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — Демо-версия</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", "PT Sans", system-ui, sans-serif;
+      background: #0b1220;
+      color: #e8eef7;
+      line-height: 1.6;
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 4rem 0;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(37, 99, 235, 0.25), transparent 50%),
+        radial-gradient(ellipse at 80% 0%, rgba(14, 165, 233, 0.15), transparent 45%),
+        linear-gradient(160deg, #0b1220 0%, #152238 100%);
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 3rem;
+      align-items: center;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.9rem;
+      border-radius: 999px;
+      border: 1px solid rgba(96, 165, 250, 0.35);
+      background: rgba(37, 99, 235, 0.15);
+      color: #93c5fd;
+      font-size: 0.8rem;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+    .subtitle { color: #94a3b8; font-size: 1.1rem; margin-bottom: 1.75rem; max-width: 36rem; }
+    .btn-primary {
+      display: inline-block;
+      padding: 0.85rem 1.6rem;
+      background: #2563eb;
+      color: #fff;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 650;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .creds {
+      margin-top: 1.25rem;
+      padding: 1rem 1.1rem;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid #334155;
+      color: #94a3b8;
+      font-size: 0.95rem;
+    }
+    .creds code {
+      color: #93c5fd;
+      background: #0f172a;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+    .panel {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 2rem;
+      text-align: center;
+    }
+    .panel-icon { font-size: 3.5rem; margin-bottom: 0.75rem; }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 1rem; }
+    .chip {
+      background: #0f172a;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      border-radius: 999px;
+      padding: 0.25rem 0.7rem;
+      font-size: 0.8rem;
+    }
+    .features { padding: 4rem 0; background: #111827; }
+    .features h2 { text-align: center; font-size: 2rem; margin-bottom: 2rem; }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+    .feature-card {
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      padding: 1.4rem;
+    }
+    .feature-card h3 { margin: 0.4rem 0; font-size: 1.05rem; }
+    .feature-card p { color: #94a3b8; font-size: 0.9rem; }
+    .stats { padding: 3rem 0; background: #0b1220; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      text-align: center;
+    }
+    .stat-number { display: block; font-size: 2.4rem; font-weight: 800; color: #60a5fa; }
+    .stat-label { color: #94a3b8; font-size: 0.95rem; }
+    .cta {
+      padding: 4rem 0;
+      text-align: center;
+      background: linear-gradient(160deg, #152238, #0b1220);
+    }
+    .cta h2 { font-size: 2rem; margin-bottom: 0.75rem; }
+    .cta p { color: #94a3b8; margin-bottom: 1.25rem; }
+    footer {
+      padding: 1.5rem 0;
+      border-top: 1px solid #1f2937;
+      text-align: center;
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+    @media (max-width: 860px) {
+      .hero-grid, .features-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <div class="badge">Демо для ознакомления</div>
+        <h1>MedInsight</h1>
+        <p class="subtitle">
+          Платформа клинической аналитики с ИИ: документы, сущности, прогнозы рисков и DICOM —
+          в безопасном режиме только для просмотра.
+        </p>
+        <a class="btn-primary" href="/demo/login">Открыть демо</a>
+        <div class="creds">
+          <div><code>demo@medinsight.com</code> · <code>demo123</code></div>
+          <div style="margin-top:0.35rem;font-size:0.8rem">Клиника: clinic-1 · только просмотр</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-icon">MedInsight</div>
+        <p style="color:#94a3b8">Клиническая аналитика с ИИ</p>
+        <div class="chips">
+          <span class="chip">AI-парсинг</span>
+          <span class="chip">DICOM</span>
+          <span class="chip">Прогнозы</span>
+          <span class="chip">Мультитенантность</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="container">
+      <h2>Ключевые возможности</h2>
+      <div class="features-grid">
+        <div class="feature-card"><h3>Дашборды</h3><p>Статистика клиники, диагнозы и лекарства</p></div>
+        <div class="feature-card"><h3>AI-парсинг документов</h3><p>Извлечение диагнозов и лекарств из выписок</p></div>
+        <div class="feature-card"><h3>DICOM-вьюер</h3><p>CT, MRI, X-ray демо-снимки</p></div>
+        <div class="feature-card"><h3>Прогнозы рисков</h3><p>Реадмиссия и осложнения</p></div>
+        <div class="feature-card"><h3>Мультитенантность</h3><p>Изоляция клиник и ролей</p></div>
+        <div class="feature-card"><h3>Экспорт</h3><p>PDF / DOCX с водяным знаком DEMO</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="container stats-grid">
+      <div><span class="stat-number">15</span><span class="stat-label">Пациентов</span></div>
+      <div><span class="stat-number">30</span><span class="stat-label">Документов</span></div>
+      <div><span class="stat-number">10</span><span class="stat-label">DICOM</span></div>
+      <div><span class="stat-number">20</span><span class="stat-label">AI-прогнозов</span></div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="container">
+      <h2>Готовы посмотреть?</h2>
+      <p>Демо-версия доступна сразу — без установки</p>
+      <a class="btn-primary" href="/demo/login">Открыть демо</a>
+      <div class="creds" style="max-width:420px;margin:1.25rem auto 0">
+        <code>demo@medinsight.com</code> · <code>demo123</code>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>© 2026 MedInsight. Демо-версия для ознакомления.</p>
+    </div>
+  </footer>
+</body>
+</html>

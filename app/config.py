@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     ENCRYPTION_KEY: str = ""
     ENCRYPTION_KEY_PATH: str = "secrets/encryption_key.txt"
 
+    # Public demo stack (read-only presentation for buyers)
+    DEMO_MODE: bool = False
+    DEMO_WATERMARK: str = "DEMO"
+
     SUPER_ADMIN_EMAIL: str = "admin@medinsight.com"
     SUPER_ADMIN_PASSWORD: str = "change_me_super_admin"
     DEFAULT_TENANT_NAME: str = "Default Clinic"
@@ -295,6 +299,11 @@ class Settings(BaseSettings):
     SHAP_SYNC_ON_PREDICT: bool = True
     SHAP_SUMMARY_SAMPLE_SIZE: int = 200
     ML_MODEL_PATH: str = "./storage/models"
+
+    def model_post_init(self, __context) -> None:  # noqa: ANN001
+        if self.DEMO_MODE:
+            object.__setattr__(self, "DOCX_WATERMARK", self.DEMO_WATERMARK)
+            object.__setattr__(self, "DOCX_FILL_DEMO_WHEN_EMPTY", True)
 
 
 settings = Settings()

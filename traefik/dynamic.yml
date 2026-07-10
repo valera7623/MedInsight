@@ -20,11 +20,33 @@ http:
       middlewares:
         - redirect-https
 
+    medinsight-demo:
+      rule: "Host(`demo.fileguardian.com.ru`)"
+      entryPoints:
+        - websecure
+      service: medinsight-demo
+      tls:
+        certResolver: letsencrypt
+
+    medinsight-demo-http:
+      rule: "Host(`demo.fileguardian.com.ru`)"
+      entryPoints:
+        - web
+      service: medinsight-demo
+      middlewares:
+        - redirect-https
+
   services:
     medinsight:
       loadBalancer:
         servers:
           - url: "http://app:8000"
+
+    medinsight-demo:
+      loadBalancer:
+        servers:
+          # container_name from docker-compose.demo.yml (shared traefik-net)
+          - url: "http://medinsight-demo-app:8000"
 
   middlewares:
     redirect-https:

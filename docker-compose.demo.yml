@@ -1,0 +1,143 @@
+# Standalone demo stack (separate DB/Redis/volumes from production).
+# Usage:
+#   COMPOSE_PROJECT_NAME=medinsight-demo docker compose -f docker-compose.demo.yml up -d
+# Requires Traefik from the production stack (shared network) for HTTPS.
+
+x-app-build: &app-build
+  context: .
+  network: host
+  args:
+    INSTALL_SPACY_MODEL: "0"
+    BUILD_DOCS: "0"
+
+x-app-image: &app-image medinsight-app:latest
+
+services:
+  demo_postgres:
+    image: postgres:15-alpine
+    container_name: medinsight-demo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DEMO_POSTGRES_USER:-medinsight}
+      POSTGRES_PASSWORD: ${DEMO_POSTGRES_PASSWORD:-demo_secure_password}
+      POSTGRES_DB: ${DEMO_POSTGRES_DB:-medinsight_demo}
+    volumes:
+      - medinsight-demo-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DEMO_POSTGRES_USER:-medinsight} -d ${DEMO_POSTGRES_DB:-medinsight_demo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - demo-net
+
+  demo_redis:
+    image: redis:7-alpine
+    container_name: medinsight-demo-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - demo-net
+
+  demo_app:
+    build:
+      <<: *app-build
+    image: *app-image
+    container_name: medinsight-demo-app
+    restart: unless-stopped
+    env_file:
+      - ${DEMO_ENV_FILE:-.env.demo}
+    environment:
+      DEMO_MODE: "true"
+      DEMO_WATERMARK: DEMO
+      DOCX_WATERMARK: DEMO
+      DOCX_FILL_DEMO_WHEN_EMPTY: "true"
+      DATABASE_URL: postgresql://${DEMO_POSTGRES_USER:-medinsight}:${DEMO_POSTGRES_PASSWORD:-demo_secure_password}@demo_postgres:5432/${DEMO_POSTGRES_DB:-medinsight_demo}
+      REDIS_URL: redis://demo_redis:6379/0
+      CELERY_RESULT_BACKEND: redis://demo_redis:6379/1
+      ENCRYPTION_KEY_PATH: /app/secrets/encryption_key.txt
+      STORAGE_PATH: /app/storage
+      DICOM_STORAGE_PATH: /app/storage/dicom
+      CHROMA_PERSIST_DIR: /app/chroma_data
+      FRONTEND_URL: ${DEMO_FRONTEND_URL:-https://demo.fileguardian.com.ru}
+      CORS_ORIGINS: ${DEMO_CORS_ORIGINS:-https://demo.fileguardian.com.ru,http://localhost:8001}
+      POSTGRES_HOST: demo_postgres
+      POSTGRES_PORT: "5432"
+      TELEGRAM_BOT_ENABLED: "false"
+      BILLING_ENABLED: "false"
+    ports:
+      - "${DEMO_APP_PORT:-8001}:8000"
+    volumes:
+      - ./demo_storage:/app/storage
+      - ./secrets:/app/secrets:ro
+      - ./demo_data:/app/demo_data:ro
+      - medinsight-demo-data:/app/data
+      - medinsight-demo-chroma:/app/chroma_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    depends_on:
+      demo_postgres:
+        condition: service_healthy
+      demo_redis:
+        condition: service_healthy
+    networks:
+      - demo-net
+      - traefik-net
+
+  demo_celery:
+    image: *app-image
+    container_name: medinsight-demo-celery
+    restart: unless-stopped
+    env_file:
+      - ${DEMO_ENV_FILE:-.env.demo}
+    environment:
+      DEMO_MODE: "true"
+      DATABASE_URL: postgresql://${DEMO_POSTGRES_USER:-medinsight}:${DEMO_POSTGRES_PASSWORD:-demo_secure_password}@demo_postgres:5432/${DEMO_POSTGRES_DB:-medinsight_demo}
+      REDIS_URL: redis://demo_redis:6379/0
+      CELERY_RESULT_BACKEND: redis://demo_redis:6379/1
+      ENCRYPTION_KEY_PATH: /app/secrets/encryption_key.txt
+      STORAGE_PATH: /app/storage
+      DICOM_STORAGE_PATH: /app/storage/dicom
+      CHROMA_PERSIST_DIR: /app/chroma_data
+      POSTGRES_HOST: demo_postgres
+      POSTGRES_PORT: "5432"
+      TELEGRAM_BOT_ENABLED: "false"
+    command: ["bash", "scripts/start_celery_worker.sh"]
+    volumes:
+      - ./demo_storage:/app/storage
+      - ./secrets:/app/secrets:ro
+      - ./demo_data:/app/demo_data:ro
+      - medinsight-demo-data:/app/data
+      - medinsight-demo-chroma:/app/chroma_data
+    depends_on:
+      demo_postgres:
+        condition: service_healthy
+      demo_redis:
+        condition: service_healthy
+      demo_app:
+        condition: service_healthy
+    networks:
+      - demo-net
+
+volumes:
+  medinsight-demo-postgres:
+  medinsight-demo-data:
+  medinsight-demo-chroma:
+
+networks:
+  demo-net:
+    driver: bridge
+  # Shared with production Traefik (COMPOSE_PROJECT_NAME=medinsight).
+  traefik-net:
+    external: true
+    name: medinsight_medinsight-net

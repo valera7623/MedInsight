@@ -174,3 +174,27 @@ DATABASE_URL=sqlite:///./medinsight.db uvicorn app.main:app --reload
 ```
 
 SQLite остаётся для разработки и CI smoke-тестов; production использует только PostgreSQL.
+
+## 10. Демо-стенд (demo.fileguardian.com.ru)
+
+Отдельный Docker-стек (`medinsight-demo`) с собственной БД/Redis и `DEMO_MODE=true` (read-only API).
+
+**DNS (ручной шаг):** A-запись `demo.fileguardian.com.ru` → `186.246.3.65`.
+
+**Деплой:** после production CI вызывает `./deploy.sh demo`. Вручную:
+
+```bash
+./deploy.sh production   # нужен Traefik + сеть medinsight_medinsight-net
+./deploy.sh demo
+```
+
+**Проверка:**
+
+```bash
+curl -sI https://demo.fileguardian.com.ru/demo
+curl -s http://localhost:8001/health/ready
+# Логин: demo@medinsight.com / demo123, subdomain clinic-1
+```
+
+Файлы: `docker-compose.demo.yml`, `.env.demo.example`, `scripts/seed_demo.py`, `demo_data/dicom/`.
+

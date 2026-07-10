@@ -1,0 +1,5 @@
+modality=MR
+description=Spine MRI
+study_uid=1.2.826.0.1.3680043.8.498.demo.5.1
+series_uid=1.2.826.0.1.3680043.8.498.demo.5.2
+sop_uid=1.2.826.0.1.3680043.8.498.demo.5.3

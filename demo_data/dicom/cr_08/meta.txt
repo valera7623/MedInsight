@@ -1,0 +1,5 @@
+modality=CR
+description=Hand X-ray
+study_uid=1.2.826.0.1.3680043.8.498.demo.8.1
+series_uid=1.2.826.0.1.3680043.8.498.demo.8.2
+sop_uid=1.2.826.0.1.3680043.8.498.demo.8.3

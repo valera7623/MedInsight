@@ -10,7 +10,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
@@ -25,6 +25,7 @@ from app.middleware.audit_append_only import register_append_only_listeners
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
 from app.middleware.cache_middleware import CacheMiddleware
+from app.middleware.demo_readonly import DemoReadOnlyMiddleware
 from app.routes import admin, admin_backup, analytics, appointments, audit_export, cache_admin, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, docx_export, documents, export, export_async, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, reports, telegram, templates, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
@@ -267,6 +268,8 @@ async def request_validation_exception_handler(request: Request, exc: RequestVal
 
 origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 register_append_only_listeners()
+if settings.DEMO_MODE:
+    app.add_middleware(DemoReadOnlyMiddleware)
 if settings.AUDIT_SIGNING_ENABLED or settings.SIEM_EXPORT_ENABLED:
     app.add_middleware(AuditCollectorMiddleware)
 else:
@@ -376,6 +379,17 @@ def metrics():
 @app.get("/login")
 def login_page():
     return FileResponse(static_dir / "login.html")
+
+
+@app.get("/demo")
+@app.get("/demo/")
+def demo_landing_page():
+    return FileResponse(static_dir / "demo" / "index.html")
+
+
+@app.get("/demo/login")
+def demo_login_redirect():
+    return RedirectResponse(url="/login?demo=1", status_code=302)
 
 
 @app.get("/verify-email")

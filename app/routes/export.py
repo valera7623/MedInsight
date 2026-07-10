@@ -15,11 +15,13 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.config import settings
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
 from app.models import Document, Patient, User
 from app.services.access import can_export, effective_tenant_id
 from app.services.export_report import collect_patient_export_clinical_data, MAX_DISCHARGE_CHARS
+from app.services.pdf_generator import PdfGenerator
 
 router = APIRouter(prefix="/export", tags=["export"])
 
@@ -161,10 +163,13 @@ def export_patient_pdf(
 
     doc_pdf.build(elements)
     buffer.seek(0)
+    pdf_bytes = buffer.getvalue()
+    if settings.DEMO_MODE:
+        pdf_bytes = PdfGenerator.add_watermark(pdf_bytes, settings.DEMO_WATERMARK)
 
     filename = f"patient_{patient_id}_report.pdf"
     return StreamingResponse(
-        buffer,
+        io.BytesIO(pdf_bytes),
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

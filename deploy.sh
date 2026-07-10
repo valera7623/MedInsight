@@ -8,8 +8,19 @@ cd "$SCRIPT_DIR"
 export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-medinsight}"
 
 remove_stale_medinsight_containers() {
+  # Only remove production-named containers — never touch medinsight-demo-*.
   local ids
-  ids="$(docker ps -aq --filter "name=^medinsight-" 2>/dev/null || true)"
+  ids="$(
+    docker ps -aq --filter "name=^medinsight-" 2>/dev/null \
+      | while read -r id; do
+          [ -z "$id" ] && continue
+          name="$(docker inspect -f '{{.Name}}' "$id" 2>/dev/null | sed 's#^/##')"
+          case "$name" in
+            medinsight-demo-*) ;;
+            *) echo "$id" ;;
+          esac
+        done
+  )"
   if [ -n "$ids" ]; then
     echo "Removing stale medinsight containers from a previous deploy..."
     # shellcheck disable=SC2086
@@ -21,6 +32,94 @@ compose() {
   docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" "$@"
 }
 
+MODE="${1:-dev}"
+
+# ---------------------------------------------------------------------------
+# Demo stack (separate project + DB; shares Traefik network with production)
+# ---------------------------------------------------------------------------
+if [ "$MODE" = "demo" ]; then
+  export COMPOSE_PROJECT_NAME=medinsight-demo
+  COMPOSE_FILES=(-f docker-compose.demo.yml)
+  PROFILE_ARGS=()
+
+  if [ -d .git ]; then
+    echo "Pulling latest code from origin/main..."
+    if ! git fetch origin main; then
+      echo "WARNING: git fetch failed (DNS?) — continuing with current checkout" >&2
+    elif ! git merge --ff-only origin/main; then
+      echo "WARNING: fast-forward failed — run 'git pull --rebase origin main' manually" >&2
+    fi
+  fi
+
+  if [ ! -f .env.demo ]; then
+    echo "Creating .env.demo from .env.demo.example..."
+    cp .env.demo.example .env.demo
+  fi
+  # Prefer a real SECRET_KEY from production .env when present.
+  if [ -f .env ] && grep -q '^SECRET_KEY=' .env; then
+    _sk="$(grep '^SECRET_KEY=' .env | head -1 | cut -d= -f2-)"
+    if [ -n "$_sk" ] && [ "$_sk" != "change-me-demo-secret-key" ]; then
+      if grep -q '^SECRET_KEY=' .env.demo; then
+        sed -i "s|^SECRET_KEY=.*|SECRET_KEY=${_sk}|" .env.demo
+      else
+        echo "SECRET_KEY=${_sk}" >> .env.demo
+      fi
+    fi
+  fi
+  mkdir -p demo_storage secrets demo_data/dicom
+  if [ ! -f secrets/encryption_key.txt ]; then
+    echo "NOTE: secrets/encryption_key.txt missing — bootstrap will create one on first run"
+  fi
+
+  # Ensure Traefik shared network exists (created by production stack).
+  if ! docker network inspect medinsight_medinsight-net >/dev/null 2>&1; then
+    echo "ERROR: network medinsight_medinsight-net not found."
+    echo "Start production first (./deploy.sh production) so Traefik can route demo.fileguardian.com.ru"
+    exit 1
+  fi
+
+  echo "Generating demo DICOM sample pack if needed..."
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHONPATH=. python3 -m scripts.generate_demo_dicom || true
+  fi
+
+  echo "Starting MedInsight DEMO (PostgreSQL + DEMO_MODE=true)..."
+  BUILD_ARGS=(--build-arg INSTALL_SPACY_MODEL=0 --build-arg BUILD_DOCS=0)
+  if ! docker image inspect medinsight-app:latest >/dev/null 2>&1; then
+    echo "Building app image for demo..."
+    compose build "${BUILD_ARGS[@]}" demo_app
+  fi
+  compose up -d --build
+
+  echo "Waiting for demo app startup..."
+  sleep 10
+
+  echo "Initializing demo database schema..."
+  compose exec -T demo_app bash -c '
+    python -c "
+from app.core.database import Base, bootstrap_system, engine, run_migrations
+Base.metadata.create_all(bind=engine)
+run_migrations()
+bootstrap_system()
+print(\"Tables OK\")
+"
+  ' || true
+
+  echo "Seeding demo data..."
+  compose exec -T demo_app bash -c 'PYTHONPATH=/app python -m scripts.seed_demo' || true
+
+  echo ""
+  echo "MedInsight DEMO is running."
+  echo "  Local:       http://localhost:${DEMO_APP_PORT:-8001}/"
+  echo "  Public:      https://demo.fileguardian.com.ru/demo"
+  echo "  Login:       https://demo.fileguardian.com.ru/demo/login"
+  echo "  Credentials: demo@medinsight.com / demo123 (clinic-1)"
+  echo ""
+  echo "DNS: ensure A-record demo.fileguardian.com.ru → VPS IP"
+  echo "Logs: docker compose -f docker-compose.demo.yml -p medinsight-demo logs -f demo_app"
+  exit 0
+fi
+
 if [ ! -f .env ]; then
   echo "Creating .env from .env.example..."
   cp .env.example .env
@@ -29,7 +128,6 @@ fi
 
 mkdir -p storage secrets
 
-MODE="${1:-dev}"
 COMPOSE_FILES=(-f docker-compose.yml)
 PROFILE_ARGS=()
 

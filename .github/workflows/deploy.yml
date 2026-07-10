@@ -108,3 +108,8 @@ jobs:
             ./deploy.sh production
 
             docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+
+            # Demo stack (separate DB; shares Traefik). Requires DNS:
+            # A-record demo.fileguardian.com.ru → this VPS.
+            ./deploy.sh demo
+            docker compose -f docker-compose.demo.yml -p medinsight-demo ps

@@ -95,7 +95,10 @@ def generate_report(
     db.commit()
     db.refresh(report)
 
-    payload = {"study_uid": body.study_uid, "watermark": body.watermark}
+    payload = {
+        "study_uid": body.study_uid,
+        "watermark": settings.DEMO_WATERMARK if settings.DEMO_MODE else body.watermark,
+    }
     task_result = generate_report_from_template(report.id, payload)
 
     return {

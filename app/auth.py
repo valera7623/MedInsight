@@ -51,6 +51,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     tenant_id: int | None = None
     role: str
+    demo_mode: bool = False
 
 
 class UserResponse(BaseModel):
@@ -63,6 +64,7 @@ class UserResponse(BaseModel):
     department_name: str | None = None
     email_verified: bool = True
     created_at: datetime
+    demo_mode: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -86,6 +88,7 @@ def user_to_response(user: User, db: Session) -> UserResponse:
         department_name=dept_name,
         email_verified=bool(getattr(user, "email_verified", True)),
         created_at=user.created_at,
+        demo_mode=bool(settings.DEMO_MODE),
     )
 
 
@@ -369,6 +372,7 @@ def login(data: UserLogin, request: Request, db: Annotated[Session, Depends(get_
         access_token=create_access_token(user),
         tenant_id=user.tenant_id,
         role=user.role,
+        demo_mode=bool(settings.DEMO_MODE),
     )
 
 

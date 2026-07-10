@@ -3,8 +3,11 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.demo
 *.db
 storage/*
+demo_storage/*
+!demo_storage/.gitkeep
 !storage/.gitkeep
 !storage/exports/
 storage/exports/*

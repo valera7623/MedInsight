@@ -1,0 +1,5 @@
+modality=CT
+description=Chest CT
+study_uid=1.2.826.0.1.3680043.8.498.demo.1.1
+series_uid=1.2.826.0.1.3680043.8.498.demo.1.2
+sop_uid=1.2.826.0.1.3680043.8.498.demo.1.3

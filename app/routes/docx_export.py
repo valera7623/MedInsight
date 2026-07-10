@@ -96,8 +96,10 @@ def export_patient_card_docx(
 
     options = {
         "sections": body.sections,
-        "watermark": body.watermark or settings.DOCX_WATERMARK,
-        "fill_demo": body.fill_demo if body.fill_demo is not None else settings.DOCX_FILL_DEMO_WHEN_EMPTY,
+        "watermark": settings.DEMO_WATERMARK if settings.DEMO_MODE else (body.watermark or settings.DOCX_WATERMARK),
+        "fill_demo": True if settings.DEMO_MODE else (
+            body.fill_demo if body.fill_demo is not None else settings.DOCX_FILL_DEMO_WHEN_EMPTY
+        ),
     }
 
     if body.force_regenerate:

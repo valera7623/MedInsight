@@ -954,3 +954,44 @@ select.btn {
     overflow-y: auto;
   }
 }
+
+/* Demo mode banner */
+.demo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  background: linear-gradient(90deg, #1e3a5f, #0f2744);
+  border-bottom: 1px solid rgba(96, 165, 250, 0.35);
+  color: #e2e8f0;
+  padding: 0.55rem 1rem;
+}
+.demo-banner-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+.demo-badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.25);
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  color: #93c5fd;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+.demo-text { color: #cbd5e1; }
+.demo-disabled,
+.demo-disabled:hover {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+body.has-demo-banner .navbar {
+  top: auto;
+}
