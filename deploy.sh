@@ -89,10 +89,27 @@ if [ "$MODE" = "demo" ]; then
     echo "Building app image for demo..."
     compose build "${BUILD_ARGS[@]}" demo_app
   fi
-  compose up -d --build
+  # Recreate app if a previous attempt left it unhealthy / half-migrated.
+  compose up -d --build --force-recreate demo_postgres demo_redis demo_app || {
+    echo "ERROR: demo_app failed to start. Recent logs:" >&2
+    compose logs --tail 80 demo_app || true
+    exit 1
+  }
+  compose up -d demo_celery || true
 
-  echo "Waiting for demo app startup..."
-  sleep 10
+  echo "Waiting for demo app to become healthy..."
+  for i in $(seq 1 40); do
+    if compose exec -T demo_app curl -sf http://localhost:8000/health/live >/dev/null 2>&1; then
+      echo "Demo app is healthy."
+      break
+    fi
+    if [ "$i" -eq 40 ]; then
+      echo "ERROR: demo_app health check timed out. Logs:" >&2
+      compose logs --tail 100 demo_app || true
+      exit 1
+    fi
+    sleep 3
+  done
 
   echo "Initializing demo database schema..."
   compose exec -T demo_app bash -c '
@@ -103,10 +120,10 @@ run_migrations()
 bootstrap_system()
 print(\"Tables OK\")
 "
-  ' || true
+  '
 
   echo "Seeding demo data..."
-  compose exec -T demo_app bash -c 'PYTHONPATH=/app python -m scripts.seed_demo' || true
+  compose exec -T demo_app bash -c 'PYTHONPATH=/app python -m scripts.seed_demo'
 
   echo ""
   echo "MedInsight DEMO is running."
