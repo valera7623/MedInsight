@@ -190,10 +190,10 @@
     const startLocal = document.getElementById('appt-start').value;
     const typeId = parseInt(document.getElementById('appt-type').value, 10);
 
-    if (!patientId) { alert('Выберите пациента'); return; }
-    if (!doctorId) { alert('Выберите врача'); return; }
-    if (!startLocal) { alert('Укажите дату и время'); return; }
-    if (!typeId) { alert('Выберите тип приёма'); return; }
+    if (!patientId) { notifyError('Выберите пациента'); return; }
+    if (!doctorId) { notifyError('Выберите врача'); return; }
+    if (!startLocal) { notifyError('Укажите дату и время'); return; }
+    if (!typeId) { notifyError('Выберите тип приёма'); return; }
 
     const type = types.find((t) => t.id === typeId);
     const payload = {
@@ -212,7 +212,7 @@
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      alert(formatApiError(err));
+      notifyError(formatApiError(err));
       return;
     }
     closeModal();
@@ -229,7 +229,7 @@
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      alert(formatApiError(err));
+      notifyError(formatApiError(err));
       return;
     }
     calendar?.refetchEvents();
@@ -248,7 +248,7 @@
     const body = action === 'complete' ? JSON.stringify({ notes: '' }) : undefined;
     const res = await apiFetch(path, { method: 'POST', body });
     if (!res.ok) {
-      alert('Ошибка операции');
+      notifyError('Ошибка операции');
       return;
     }
     closeModal();
@@ -365,7 +365,7 @@
     document.getElementById('schedule-date').addEventListener('change', loadSchedule);
     document.getElementById('export-ics-btn').addEventListener('click', async () => {
       const res = await apiFetch('/api/appointments/export/ics');
-      if (!res.ok) { alert('Ошибка экспорта'); return; }
+      if (!res.ok) { notifyError('Ошибка экспорта'); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

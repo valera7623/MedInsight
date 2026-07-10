@@ -50,7 +50,7 @@ function startDicomStatusPoll(studyId) {
         sessionStorage.removeItem(DICOM_POLL_KEY);
         if (panel) panel.classList.add('hidden');
         if (data.status === 'failed') {
-          alert(data.error_message || 'Ошибка обработки DICOM');
+          notifyError(data.error_message || 'Ошибка обработки DICOM');
         }
         refreshDicomList();
       }
@@ -97,7 +97,7 @@ async function deleteDicomStudy(studyId, label) {
     }
     refreshDicomList();
   } catch (err) {
-    alert(err.message || 'Ошибка удаления');
+    notifyError(err.message || 'Ошибка удаления');
   }
 }
 
@@ -116,7 +116,7 @@ async function downloadDicomArchive(studyUid, filename) {
     a.click();
     URL.revokeObjectURL(url);
   } catch (err) {
-    alert(err.message || 'Ошибка скачивания');
+    notifyError(err.message || 'Ошибка скачивания');
   }
 }
 
@@ -288,7 +288,7 @@ function showUploadConflict(detail, retryUpload) {
         }
         await retryUpload();
       } catch (err) {
-        alert(err.message || 'Ошибка удаления');
+        notifyError(err.message || 'Ошибка удаления');
         btn.disabled = false;
       }
     });

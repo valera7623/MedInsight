@@ -49,7 +49,41 @@ _SECRET_HINTS = ("KEY", "PASSWORD", "SECRET", "TOKEN")
 
 
 def _now() -> datetime:
-    return datetime.utcnow()
+    from app.models._time import utc_now
+    return utc_now()
+
+
+def _upload_backup_to_s3(local_path: Path, backup_id: str, backup_type: str) -> str | None:
+    """Upload backup file to S3 when BACKUP_S3_ENABLED. Returns s3 URI or None."""
+    if not settings.BACKUP_S3_ENABLED or not settings.BACKUP_S3_BUCKET:
+        return None
+    try:
+        import boto3
+    except ImportError:
+        logger.warning("boto3 not installed — skipping S3 backup upload")
+        return None
+
+    key_prefix = settings.BACKUP_S3_PREFIX.strip("/")
+    key = f"{key_prefix}/{backup_type}/{local_path.name}" if key_prefix else f"{backup_type}/{local_path.name}"
+    client_kwargs: dict[str, Any] = {}
+    if settings.BACKUP_S3_REGION:
+        client_kwargs["region_name"] = settings.BACKUP_S3_REGION
+    if settings.BACKUP_S3_ENDPOINT_URL:
+        client_kwargs["endpoint_url"] = settings.BACKUP_S3_ENDPOINT_URL
+    if settings.BACKUP_S3_ACCESS_KEY and settings.BACKUP_S3_SECRET_KEY:
+        client_kwargs["aws_access_key_id"] = settings.BACKUP_S3_ACCESS_KEY
+        client_kwargs["aws_secret_access_key"] = settings.BACKUP_S3_SECRET_KEY
+
+    try:
+        s3 = boto3.client("s3", **client_kwargs)
+        s3.upload_file(str(local_path), settings.BACKUP_S3_BUCKET, key)
+        uri = f"s3://{settings.BACKUP_S3_BUCKET}/{key}"
+        logger.info("Backup %s uploaded to %s", backup_id, uri)
+        return uri
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("S3 upload failed for %s: %s", backup_id, exc)
+        send_alert(f"S3 backup upload failed for {backup_id}: {exc}")
+        return None
 
 
 def _sha256_file(path: Path) -> str:
@@ -231,6 +265,7 @@ class BackupService:
                 contains_storage=False, contains_config=False, created_at=ts, completed_at=_now(),
             )
             logger.info("DB backup created: %s (%.1f KB)", final, size / 1024)
+            _upload_backup_to_s3(final, backup_id, "db")
             return str(final)
         except Exception as exc:  # noqa: BLE001
             backup_status_total.labels(type="db", result="failure").inc()
@@ -261,6 +296,7 @@ class BackupService:
                 contains_storage=True, contains_config=False, created_at=ts, completed_at=_now(),
             )
             logger.info("Storage backup created: %s (%.1f MB)", final, size / 1e6)
+            _upload_backup_to_s3(final, backup_id, "storage")
             return str(final)
         except Exception as exc:  # noqa: BLE001
             backup_status_total.labels(type="storage", result="failure").inc()
@@ -335,9 +371,13 @@ class BackupService:
                 contains_storage=True, contains_config=bool(env_text), created_at=ts, completed_at=_now(),
             )
             logger.info("Full backup created: %s (%.1f MB, %.1fs)", final, size / 1e6, duration)
-            return {"backup_id": backup_id, "db_path": str(final), "storage_path": str(final),
+            s3_uri = _upload_backup_to_s3(final, backup_id, "full")
+            result = {"backup_id": backup_id, "db_path": str(final), "storage_path": str(final),
                     "path": str(final), "size": size, "duration": round(duration, 2),
                     "metadata": str(meta_path)}
+            if s3_uri:
+                result["s3_uri"] = s3_uri
+            return result
         except Exception as exc:  # noqa: BLE001
             backup_status_total.labels(type="full", result="failure").inc()
             self._record(backup_id=backup_id, type="full", status="failed", error_message=str(exc), created_at=ts)

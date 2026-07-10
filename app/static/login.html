@@ -35,6 +35,10 @@
         <input type="password" id="password" name="password" required placeholder="••••••••">
       </div>
       <div id="login-error" class="error-message hidden"></div>
+      <div id="totp-group" class="form-group hidden">
+        <label for="totp-code">Код 2FA</label>
+        <input type="text" id="totp-code" inputmode="numeric" autocomplete="one-time-code" placeholder="000000" maxlength="8">
+      </div>
       <button type="submit" class="btn btn-primary btn-block">Войти</button>
       <p style="margin-top:0.75rem;text-align:center;font-size:0.9rem">
         <a href="#" id="show-forgot">Забыли пароль?</a>
@@ -127,6 +131,12 @@
     const demoParams = new URLSearchParams(window.location.search);
     const isDemoLogin = demoParams.get('demo') === '1' || window.location.hostname.startsWith('demo.');
 
+    fetch(`${API}/api/auth/capabilities`).then(r => r.json()).then(cap => {
+      if (!cap.password_reset_available) {
+        document.getElementById('show-forgot')?.classList.add('hidden');
+      }
+    }).catch(() => {});
+
     loadTenants().then((tenants) => {
       if (!isDemoLogin) return;
       localStorage.setItem('demo_mode', 'true');
@@ -202,6 +212,9 @@
       const tenantOpt = document.getElementById('subdomain').selectedOptions[0];
 
       try {
+        const totpEl = document.getElementById('totp-code');
+        const totpCode = totpEl && !document.getElementById('totp-group').classList.contains('hidden')
+          ? totpEl.value.trim() : null;
         const res = await fetch(`${API}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -209,10 +222,18 @@
             email: document.getElementById('email').value,
             password: document.getElementById('password').value,
             subdomain,
+            totp_code: totpCode || undefined,
           }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Ошибка входа');
+        if (data.totp_required) {
+          document.getElementById('totp-group').classList.remove('hidden');
+          totpEl?.focus();
+          errEl.textContent = 'Введите код двухфакторной аутентификации';
+          errEl.classList.remove('hidden');
+          return;
+        }
         localStorage.setItem('token', data.access_token);
         if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
         localStorage.setItem('tenant_id', String(data.tenant_id || tenantOpt.dataset.id));
@@ -277,6 +298,7 @@
         });
         const loginData = await loginRes.json();
         localStorage.setItem('token', loginData.access_token);
+        if (loginData.refresh_token) localStorage.setItem('refresh_token', loginData.refresh_token);
         localStorage.setItem('tenant_id', String(loginData.tenant_id || tenantOpt.dataset.id));
         localStorage.setItem('role', loginData.role);
         window.location.href = '/';

@@ -31,13 +31,20 @@ def _authenticate(token: str | None) -> tuple[int, int | None, int | None] | Non
         return None
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("type") != "access":
+            return None
         user_id = int(payload["sub"])
+        token_ver = int(payload.get("token_version", 0))
     except (JWTError, KeyError, ValueError, TypeError):
         return None
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.id == user_id).first()
         if not user or user.is_blocked:
+            return None
+        from app.auth import user_token_version
+
+        if token_ver != user_token_version(user):
             return None
         return user.id, user.tenant_id, user.department_id
     finally:

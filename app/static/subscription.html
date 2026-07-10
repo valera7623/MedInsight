@@ -54,8 +54,41 @@
       <div id="plans-list" class="plans-grid"></div>
       <p id="subscription-msg" class="text-muted" style="font-size:0.85rem;margin-top:0.75rem"></p>
     </section>
+
+    <section class="recent-section" id="integrations-section">
+      <h2>Интеграции и безопасность</h2>
+      <div class="section-card" id="telegram-section" style="margin-bottom:1rem">
+        <h3>Telegram-уведомления</h3>
+        <p id="telegram-status" class="text-muted">Загрузка…</p>
+        <div class="section-actions" style="margin-top:0.75rem">
+          <input type="text" id="telegram-link-code" placeholder="6-значный код из бота" maxlength="6" style="max-width:160px">
+          <button type="button" class="btn btn-primary btn-sm" id="telegram-link-btn">Привязать</button>
+          <button type="button" class="btn btn-secondary btn-sm hidden" id="telegram-unlink-btn">Отвязать</button>
+        </div>
+        <p class="text-muted" style="font-size:0.82rem;margin-top:0.5rem">
+          Отправьте /start боту <a id="telegram-bot-link" class="hidden" href="#" target="_blank" rel="noopener"></a>, чтобы получить код.
+        </p>
+      </div>
+      <div class="section-card" id="totp-section">
+        <h3>Двухфакторная аутентификация (2FA)</h3>
+        <p id="totp-status-text" class="text-muted">Загрузка…</p>
+        <div id="totp-setup-panel" class="hidden" style="margin-top:0.75rem">
+          <p style="font-size:0.85rem">Сканируйте URI в приложении-аутентификаторе:</p>
+          <code id="totp-uri" style="word-break:break-all;font-size:0.75rem"></code>
+          <p id="totp-backup-codes" style="font-size:0.82rem;margin-top:0.5rem"></p>
+          <input type="text" id="totp-enable-code" placeholder="Код из приложения" maxlength="8" style="max-width:160px;margin-top:0.5rem">
+          <button type="button" class="btn btn-primary btn-sm" id="totp-enable-btn">Включить 2FA</button>
+        </div>
+        <div class="section-actions" style="margin-top:0.75rem">
+          <button type="button" class="btn btn-secondary btn-sm" id="totp-setup-btn">Настроить 2FA</button>
+          <button type="button" class="btn btn-danger btn-sm hidden" id="totp-disable-btn">Отключить 2FA</button>
+        </div>
+      </div>
+    </section>
   </main>
 
+  <script src="/static/js/auth.js"></script>
+  <script src="/static/js/toast.js"></script>
   <script src="/static/dashboard.js"></script>
   <script src="/static/subscription.js"></script>
   <script>

@@ -5,7 +5,7 @@
 ## Стек
 
 - **Backend:** FastAPI, SQLAlchemy, SQLite (dev) / PostgreSQL (production)
-- **Auth:** JWT (7 дней)
+- **Auth:** JWT access 1h + refresh 7d (silent refresh on client)
 - **NLP:** spaCy `ru_core_news_lg`
 - **Parsing:** python-docx, PyPDF2
 - **Export:** PDF (ReportLab), DOCX (python-docx), Excel (openpyxl)

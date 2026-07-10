@@ -8,7 +8,9 @@
 |------------|--------------|----------|
 | `SECRET_KEY` | — | Секрет JWT (≥32 символа). **Обязательно** |
 | `ALGORITHM` | `HS256` | Алгоритм JWT |
-| `ACCESS_TOKEN_EXPIRE_DAYS` | `7` | Срок жизни токена |
+| `ACCESS_TOKEN_EXPIRE_HOURS` | `1` | Срок жизни access JWT (часы) |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | Срок жизни refresh JWT (дни) |
+| `ACCESS_TOKEN_EXPIRE_DAYS` | `7` | Legacy alias (deprecated) |
 
 ## База данных и хранилище
 

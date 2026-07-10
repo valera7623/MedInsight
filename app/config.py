@@ -137,12 +137,21 @@ class Settings(BaseSettings):
     BACKUP_ENCRYPTION_ENABLED: bool = False
     BACKUP_ENCRYPTION_KEY: str = ""
     BACKUP_ALERT_MAX_AGE_HOURS: int = 48
+    # Optional S3 upload after local backup (requires boto3)
+    BACKUP_S3_ENABLED: bool = False
+    BACKUP_S3_BUCKET: str = ""
+    BACKUP_S3_PREFIX: str = "medinsight/backups"
+    BACKUP_S3_REGION: str = ""
+    BACKUP_S3_ENDPOINT_URL: str = ""
+    BACKUP_S3_ACCESS_KEY: str = ""
+    BACKUP_S3_SECRET_KEY: str = ""
     # Optional Telegram alerting for backup health (same bot token as notifications)
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_CHAT_ID: str = ""
 
     # Phase 10: Telegram bot (user notifications)
     TELEGRAM_BOT_ENABLED: bool = False
+    TELEGRAM_BOT_USERNAME: str = ""
     TELEGRAM_BOT_WEBHOOK_URL: str = ""
     TELEGRAM_BOT_WEBHOOK_SECRET: str = ""
     TELEGRAM_BOT_COMMAND_RATE_LIMIT: int = 30  # commands per minute per Telegram user
@@ -216,7 +225,11 @@ class Settings(BaseSettings):
     GRACEFUL_SHUTDOWN_TIMEOUT: int = 30
 
     # Phase 5: App version (exposed via /health)
-    APP_VERSION: str = "1.0.0"
+    # Phase 21: Alembic-managed schema (deploy-only migrations when enabled)
+    ALEMBIC_ENABLED: bool = False
+    SCHEMA_INIT_ON_STARTUP: bool = True
+
+    APP_NAME: str = "MedInsight"
 
     # Phase 6: Email (SMTP or HTTP API — many VPS block outbound SMTP ports)
     EMAIL_BACKEND: str = "smtp"  # smtp | resend

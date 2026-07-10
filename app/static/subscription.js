@@ -73,7 +73,107 @@ function initSubscriptionPage() {
   fetchCurrentUser()
     .then(() => {
       showAdminNav();
-      return loadSubscription();
+      return Promise.all([loadSubscription(), loadIntegrations()]);
     })
     .catch(err => console.error(err));
+}
+
+async function loadIntegrations() {
+  const capRes = await apiFetch('/api/auth/capabilities');
+  const cap = await capRes.json().catch(() => ({}));
+  if (!cap.telegram_bot_enabled) {
+    document.getElementById('telegram-section')?.classList.add('hidden');
+  } else {
+    await loadTelegramStatus(cap);
+    document.getElementById('telegram-link-btn')?.addEventListener('click', linkTelegram);
+    document.getElementById('telegram-unlink-btn')?.addEventListener('click', unlinkTelegram);
+  }
+  await loadTotpStatus();
+  document.getElementById('totp-setup-btn')?.addEventListener('click', setupTotp);
+  document.getElementById('totp-enable-btn')?.addEventListener('click', enableTotp);
+  document.getElementById('totp-disable-btn')?.addEventListener('click', disableTotp);
+}
+
+async function loadTelegramStatus(cap = {}) {
+  const el = document.getElementById('telegram-status');
+  const linkEl = document.getElementById('telegram-bot-link');
+  const res = await apiFetch('/api/telegram/status');
+  const data = await res.json();
+  if (!res.ok) { if (el) el.textContent = 'Ошибка загрузки'; return; }
+  const botUser = cap.telegram_bot_username;
+  if (linkEl && botUser) {
+    linkEl.href = `https://t.me/${botUser}`;
+    linkEl.textContent = `@${botUser}`;
+    linkEl.classList.remove('hidden');
+  }
+  if (data.linked) {
+    el.textContent = `Привязан: @${data.telegram_username || data.telegram_user_id}`;
+    document.getElementById('telegram-unlink-btn')?.classList.remove('hidden');
+  } else {
+    el.textContent = botUser
+      ? `Telegram не привязан. Откройте бота @${botUser} и отправьте /start для кода.`
+      : 'Telegram не привязан';
+    document.getElementById('telegram-unlink-btn')?.classList.add('hidden');
+  }
+}
+
+async function linkTelegram() {
+  const code = document.getElementById('telegram-link-code')?.value?.trim();
+  if (!code) return notifyError('Введите код');
+  const res = await apiFetch('/api/telegram/link', { method: 'POST', body: JSON.stringify({ code }) });
+  const data = await res.json();
+  if (!res.ok) return notifyError(formatApiError(data.detail) || 'Ошибка');
+  notifySuccess('Telegram привязан');
+  loadTelegramStatus();
+}
+
+async function unlinkTelegram() {
+  const res = await apiFetch('/api/telegram/link', { method: 'DELETE' });
+  if (!res.ok) return notifyError('Не удалось отвязать');
+  notifySuccess('Telegram отвязан');
+  loadTelegramStatus();
+}
+
+async function loadTotpStatus() {
+  const el = document.getElementById('totp-status-text');
+  const res = await apiFetch('/api/auth/totp/status');
+  const data = await res.json();
+  if (!res.ok) { if (el) el.textContent = '—'; return; }
+  el.textContent = data.enabled ? '2FA включена' : '2FA не настроена';
+  document.getElementById('totp-disable-btn')?.classList.toggle('hidden', !data.enabled);
+  document.getElementById('totp-setup-btn')?.classList.toggle('hidden', data.enabled);
+}
+
+async function setupTotp() {
+  const res = await apiFetch('/api/auth/totp/setup');
+  const data = await res.json();
+  if (!res.ok) return notifyError(formatApiError(data.detail) || 'Ошибка');
+  document.getElementById('totp-setup-panel')?.classList.remove('hidden');
+  document.getElementById('totp-uri').textContent = data.provisioning_uri;
+  document.getElementById('totp-backup-codes').textContent = 'Backup codes: ' + data.backup_codes.join(', ');
+}
+
+async function enableTotp() {
+  const code = document.getElementById('totp-enable-code')?.value?.trim();
+  const res = await apiFetch('/api/auth/totp/enable', { method: 'POST', body: JSON.stringify({ code }) });
+  const data = await res.json();
+  if (!res.ok) return notifyError(formatApiError(data.detail) || 'Неверный код');
+  notifySuccess('2FA включена');
+  document.getElementById('totp-setup-panel')?.classList.add('hidden');
+  loadTotpStatus();
+}
+
+async function disableTotp() {
+  const password = prompt('Введите пароль для отключения 2FA:');
+  if (!password) return;
+  const code = prompt('Введите код 2FA или backup code:');
+  if (!code) return;
+  const res = await apiFetch('/api/auth/totp/disable', {
+    method: 'POST',
+    body: JSON.stringify({ password, code }),
+  });
+  const data = await res.json();
+  if (!res.ok) return notifyError(formatApiError(data.detail) || 'Ошибка');
+  notifySuccess('2FA отключена');
+  loadTotpStatus();
 }

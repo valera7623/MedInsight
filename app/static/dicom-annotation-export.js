@@ -14,7 +14,7 @@ const AnnotationExport = {
     const res = await apiFetch(path);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      alert(formatApiError(err.detail) || 'Export failed');
+      notifyError(formatApiError(err.detail) || 'Export failed');
       return;
     }
     const blob = await res.blob();
@@ -53,7 +53,7 @@ const AnnotationExport = {
       body: JSON.stringify({ frame_ids: frameIds, format, zip: true }),
     });
     if (!res.ok) {
-      alert('Batch export failed');
+      notifyError('Batch export failed');
       return;
     }
     const blob = await res.blob();

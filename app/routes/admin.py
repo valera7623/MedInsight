@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, hash_password, require_admin, require_super_admin
+from app.auth import bump_token_version, get_current_user, hash_password, require_admin, require_super_admin
 from app.config import settings
 from app.database import get_db
 from app.middleware.rate_limit import rate_limit
@@ -76,6 +76,10 @@ class UserCreate(BaseModel):
     tenant_id: int | None = None
     department_id: int | None = None
     can_see_all_patients: bool = False
+
+
+class AdminPasswordReset(BaseModel):
+    password: str = Field(min_length=8)
 
 
 class UserAdminResponse(BaseModel):
@@ -385,6 +389,24 @@ def update_user_role(
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.put("/users/{user_id}/password")
+def reset_user_password(
+    user_id: int,
+    data: AdminPasswordReset,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(require_admin)],
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if not is_super_admin(current_user) and user.tenant_id != current_user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    user.password_hash = hash_password(data.password)
+    bump_token_version(user)
+    db.commit()
+    return {"detail": "Password updated"}
 
 
 @router.post("/users/{user_id}/block", response_model=UserAdminResponse)

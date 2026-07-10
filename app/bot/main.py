@@ -13,7 +13,7 @@ from aiogram.enums import ParseMode
 from app.bot.handlers import setup_routers
 from app.bot.middleware.rate_limit import BotRateLimitMiddleware
 from app.config import settings
-from app.database import Base, bootstrap_system, engine, run_migrations
+from app.database import bootstrap_system
 from app.utils.logging import configure_logging
 
 configure_logging()
@@ -54,9 +54,8 @@ async def main() -> None:
         logger.error("TELEGRAM_BOT_TOKEN is not set — bot cannot start")
         sys.exit(1)
 
-    Base.metadata.create_all(bind=engine)
-    run_migrations()
-    bootstrap_system()
+    if settings.SCHEMA_INIT_ON_STARTUP and not settings.ALEMBIC_ENABLED:
+        bootstrap_system()
 
     bot = Bot(
         token=settings.TELEGRAM_BOT_TOKEN,

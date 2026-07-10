@@ -1,6 +1,6 @@
-# Database Schema
+# Database schema
 
-## ER diagram (main entities)
+## ER diagram (core entities)
 
 ```mermaid
 erDiagram
@@ -40,7 +40,7 @@ erDiagram
 | email | VARCHAR UNIQUE | |
 | role | ENUM | RBAC role |
 | department_id | FK nullable | Department |
-| hashed_password | VARCHAR | bcrypt |
+| `password_hash` | VARCHAR | bcrypt hash |
 
 ### patients
 
@@ -78,20 +78,24 @@ DICOM hierarchy: Study → Series → Frame (PNG preview).
 
 ## Migrations
 
-SQL files in `app/db/migrations/` (001–014+).
+**Legacy:** SQL/Python files in `app/db/migrations/` (001–031) — frozen; applied via `run_migrations()` after `create_all` when `ALEMBIC_ENABLED=false`.
 
-Applied on deploy:
+**Alembic (recommended for prod):** `alembic/` directory, baseline `001_baseline`. Set `ALEMBIC_ENABLED=true` — then `deploy.sh` runs `alembic upgrade head` (with `pg_advisory_lock` on PostgreSQL) instead of `create_all`.
 
 ```bash
-python -m app.db.migrate
+# Local / in container
+docker compose exec app alembic upgrade head
+
+# Or via deploy helper
+python scripts/run_alembic_migrate.py
 ```
 
 ## Schema generation
 
-Alembic (if configured) or inspect models:
+Inspect models (`app/models/` package):
 
 ```bash
-grep "^class " app/models.py
+grep "^class " app/models/*.py
 ```
 
 ## Indexes

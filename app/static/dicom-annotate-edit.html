@@ -38,6 +38,8 @@
     </aside>
   </div>
 
+  <script src="/static/js/auth.js"></script>
+  <script src="/static/js/toast.js"></script>
   <script src="/static/dashboard.js"></script>
   <script src="/static/dicom-annotations.js"></script>
   <script src="/static/dicom-annotation-editor.js"></script>
@@ -204,7 +206,7 @@
 
       const studyRes = await apiFetch(`/api/dicom/studies/${encodeURIComponent(annotateState.studyUid)}`);
       if (!studyRes.ok) {
-        alert('Исследование не найдено');
+        notifyError('Исследование не найдено');
         window.location.href = '/dicom';
         return;
       }
@@ -215,7 +217,7 @@
         annotateState.frameInstanceUid
       );
       if (!annotateState.frame) {
-        alert('Кадр не найден');
+        notifyError('Кадр не найден');
         window.location.href = `/dicom/viewer/${encodeURIComponent(annotateState.studyUid)}`;
         return;
       }

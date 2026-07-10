@@ -297,7 +297,7 @@ async function initDicomViewer(studyUid) {
 
   const res = await apiFetch(`/api/dicom/studies/${encodeURIComponent(studyUid)}`);
   if (!res.ok) {
-    alert('Исследование не найдено');
+    notifyError('Исследование не найдено');
     window.location.href = '/dicom';
     return;
   }
@@ -322,7 +322,7 @@ async function initDicomViewer(studyUid) {
         const del = await apiFetch(`/api/dicom/studies/by-id/${studyId}`, { method: 'DELETE' });
         if (!del.ok) {
           const data = await del.json().catch(() => ({}));
-          alert(formatApiError(data.detail) || 'Ошибка удаления');
+          notifyError(formatApiError(data.detail) || 'Ошибка удаления');
           return;
         }
         window.location.href = '/dicom';

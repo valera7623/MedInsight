@@ -8,7 +8,9 @@ Full reference from `.env.example`.
 |----------|---------|-------------|
 | `SECRET_KEY` | — | JWT secret (≥32 characters). **Required** |
 | `ALGORITHM` | `HS256` | JWT algorithm |
-| `ACCESS_TOKEN_EXPIRE_DAYS` | `7` | Token lifetime |
+| `ACCESS_TOKEN_EXPIRE_HOURS` | `1` | Access JWT lifetime (hours) |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | Refresh JWT lifetime (days) |
+| `ACCESS_TOKEN_EXPIRE_DAYS` | `7` | Legacy name; use `ACCESS_TOKEN_EXPIRE_HOURS` |
 
 ## Database and storage
 

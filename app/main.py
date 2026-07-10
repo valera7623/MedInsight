@@ -26,7 +26,7 @@ from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
 from app.middleware.cache_middleware import CacheMiddleware
 from app.middleware.demo_readonly import DemoReadOnlyMiddleware
-from app.routes import admin, admin_backup, analytics, appointments, audit_export, cache_admin, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, docx_export, documents, export, export_async, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, reports, telegram, templates, users, webhooks
+from app.routes import admin, admin_backup, analytics, appointments, audit_export, cache_admin, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, docx_export, documents, export, export_async, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, reports, telegram, templates, totp, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
@@ -179,8 +179,9 @@ async def lifespan(app: FastAPI):
     if settings.BACKUP_ENABLED:
         Path(settings.BACKUP_DIR).mkdir(parents=True, exist_ok=True)
     Path(settings.ENCRYPTION_KEY_PATH).parent.mkdir(parents=True, exist_ok=True)
-    Base.metadata.create_all(bind=engine)
-    run_migrations()
+    if settings.SCHEMA_INIT_ON_STARTUP and not settings.ALEMBIC_ENABLED:
+        Base.metadata.create_all(bind=engine)
+        run_migrations()
     bootstrap_system()
 
     executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="medinsight")
@@ -311,6 +312,7 @@ app.add_middleware(LoggingMiddleware)
 
 app.include_router(health.router)
 app.include_router(auth_router, prefix="/api")
+app.include_router(totp.router, prefix="/api")
 app.include_router(patients.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
 app.include_router(dicom.router, prefix="/api")

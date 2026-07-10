@@ -1,5 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Callable
+
+from app.models._time import utc_now
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -38,6 +40,16 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
     subdomain: str | None = None
+    totp_code: str | None = None
+
+
+class AuthCapabilities(BaseModel):
+    password_reset_available: bool
+    fhir_enabled: bool
+    siem_export_enabled: bool
+    telegram_bot_enabled: bool
+    telegram_bot_username: str | None = None
+    totp_available: bool = True
 
 
 class TokenResponse(BaseModel):
@@ -47,6 +59,7 @@ class TokenResponse(BaseModel):
     tenant_id: int | None = None
     role: str
     demo_mode: bool = False
+    totp_required: bool = False
 
 
 class RefreshTokenRequest(BaseModel):
@@ -119,25 +132,35 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
+def user_token_version(user: User) -> int:
+    return int(getattr(user, "token_version", 0) or 0)
+
+
+def bump_token_version(user: User) -> None:
+    user.token_version = user_token_version(user) + 1
+
+
 def create_access_token(user: User) -> str:
-    expire = datetime.utcnow() + timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS)
+    expire = utc_now() + timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS)
     payload = {
         "sub": str(user.id),
         "tenant_id": user.tenant_id,
         "role": user.role,
         "type": "access",
+        "token_version": user_token_version(user),
         "exp": expire,
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
 def create_refresh_token(user: User) -> str:
-    expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = utc_now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     payload = {
         "sub": str(user.id),
         "tenant_id": user.tenant_id,
         "role": user.role,
         "type": "refresh",
+        "token_version": user_token_version(user),
         "exp": expire,
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
@@ -145,7 +168,7 @@ def create_refresh_token(user: User) -> str:
 
 def create_email_token(email: str, purpose: str, expire_hours: int, *, tenant_id: int | None = None) -> str:
     """Signed, short-lived token for email verification / password reset links."""
-    expire = datetime.utcnow() + timedelta(hours=expire_hours)
+    expire = utc_now() + timedelta(hours=expire_hours)
     payload: dict = {"sub": email, "type": purpose, "exp": expire}
     if tenant_id is not None:
         payload["tenant_id"] = tenant_id
@@ -199,6 +222,8 @@ def get_current_user(
     token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("type") != "access":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
         user_id = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
@@ -210,6 +235,9 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     if user.is_blocked:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is blocked")
+    token_ver = payload.get("token_version", 0)
+    if int(token_ver) != user_token_version(user):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token revoked")
 
     request.state.user = user
     return user
@@ -231,6 +259,18 @@ def require_admin(current_user: Annotated[User, Depends(get_current_user)]) -> U
 def require_super_admin(current_user: Annotated[User, Depends(get_current_user)]) -> User:
     require_role(current_user, "super_admin")
     return current_user
+
+
+@router.get("/capabilities", response_model=AuthCapabilities)
+def auth_capabilities():
+    email_ok = get_email_service().is_configured
+    return AuthCapabilities(
+        password_reset_available=bool(email_ok),
+        fhir_enabled=bool(settings.FHIR_ENABLED),
+        siem_export_enabled=bool(settings.SIEM_EXPORT_ENABLED),
+        telegram_bot_enabled=bool(settings.TELEGRAM_BOT_ENABLED),
+        telegram_bot_username=settings.TELEGRAM_BOT_USERNAME or None,
+    )
 
 
 @router.get("/tenants", response_model=list[TenantPublic])
@@ -327,7 +367,7 @@ def register(
         full_name=data.full_name,
         role=data.role,
         email_verified=not needs_verification,
-        email_verified_at=datetime.utcnow() if not needs_verification else None,
+        email_verified_at=utc_now() if not needs_verification else None,
     )
     db.add(user)
     db.commit()
@@ -370,6 +410,15 @@ def login(data: UserLogin, request: Request, db: Annotated[Session, Depends(get_
     if user.is_blocked:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is blocked")
     if (
+        settings.ENVIRONMENT == "production"
+        and user.role == "super_admin"
+        and not user.totp_enabled
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="2FA is required for super admin in production. Enable TOTP in account settings.",
+        )
+    if (
         email_verification_required()
         and user.role != "super_admin"
         and not getattr(user, "email_verified", True)
@@ -378,6 +427,27 @@ def login(data: UserLogin, request: Request, db: Annotated[Session, Depends(get_
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Подтвердите email. Проверьте почту или запросите повторную отправку письма.",
         )
+
+    if user.totp_enabled:
+        from app.services.totp import consume_backup_code, verify_totp
+
+        if not data.totp_code:
+            return TokenResponse(
+                access_token="",
+                refresh_token=None,
+                tenant_id=user.tenant_id,
+                role=user.role,
+                demo_mode=bool(settings.DEMO_MODE),
+                totp_required=True,
+            )
+        code_ok = verify_totp(user.totp_secret or "", data.totp_code)
+        if not code_ok:
+            used, remaining = consume_backup_code(user.totp_backup_codes, data.totp_code)
+            if used:
+                user.totp_backup_codes = remaining
+                db.commit()
+            else:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid 2FA code")
 
     log_audit(
         db,
@@ -418,6 +488,9 @@ def refresh_token(data: RefreshTokenRequest, db: Annotated[Session, Depends(get_
     user = db.query(User).filter(User.id == int(user_id)).first()
     if not user or user.is_blocked:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or blocked")
+    token_ver = payload.get("token_version", 0)
+    if int(token_ver) != user_token_version(user):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token revoked")
     return TokenResponse(
         access_token=create_access_token(user),
         refresh_token=create_refresh_token(user),
@@ -489,6 +562,7 @@ def reset_password(
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
     user.password_hash = hash_password(data.new_password)
+    bump_token_version(user)
     db.commit()
     log_audit(
         db,
@@ -520,7 +594,7 @@ def verify_email(
         return MessageResponse(detail="Email already verified", email_verified=True)
 
     user.email_verified = True
-    user.email_verified_at = datetime.utcnow()
+    user.email_verified_at = utc_now()
     db.commit()
     log_audit(
         db,

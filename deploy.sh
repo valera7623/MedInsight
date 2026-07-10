@@ -221,8 +221,8 @@ sleep 8
 echo "Initializing database schema..."
 compose exec -T app bash -c '
   python -c "
-from app.core.database import Base, bootstrap_system, engine, is_postgresql, is_sqlite, run_migrations, sqlite_db_path
 from app.config import settings
+from app.core.database import Base, bootstrap_system, engine, is_postgresql, is_sqlite, run_migrations, sqlite_db_path
 if is_sqlite():
     import os
     os.makedirs(\"/app/data\", exist_ok=True)
@@ -233,8 +233,14 @@ if is_sqlite():
     print(\"DB:\", sqlite_db_path(settings.DATABASE_URL))
 elif is_postgresql():
     print(\"DB: PostgreSQL\", settings.DATABASE_URL.split(\"@\")[-1])
-Base.metadata.create_all(bind=engine)
-run_migrations()
+if settings.ALEMBIC_ENABLED:
+    import subprocess
+    rc = subprocess.call([\"python\", \"scripts/run_alembic_migrate.py\"])
+    if rc != 0:
+        raise SystemExit(rc)
+else:
+    Base.metadata.create_all(bind=engine)
+    run_migrations()
 bootstrap_system()
 print(\"Tables OK\")
 "

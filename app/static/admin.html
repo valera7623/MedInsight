@@ -86,6 +86,28 @@
       </table>
     </div>
 
+    <div class="section-card" id="siem-section">
+      <h2>SIEM — экспорт аудита</h2>
+      <p id="siem-status" class="text-muted">Загрузка…</p>
+      <div class="section-actions" style="margin-top:0.75rem">
+        <button type="button" class="btn btn-secondary btn-sm" id="siem-test-btn">Тест соединения</button>
+        <button type="button" class="btn btn-primary btn-sm" id="siem-retry-btn">Экспорт pending</button>
+      </div>
+    </div>
+
+    <div class="section-card hidden" id="fhir-batch-section">
+      <h2>FHIR — пакетный экспорт</h2>
+      <div class="form-group">
+        <label>С даты</label>
+        <input type="date" id="fhir-from-date">
+      </div>
+      <div class="form-group">
+        <label>По дату</label>
+        <input type="date" id="fhir-to-date">
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="fhir-batch-btn">Экспорт batch</button>
+    </div>
+
     <div class="section-card">
       <h2>Аудит (последние 50)</h2>
       <table class="data-table" id="audit-table">
@@ -126,6 +148,8 @@
     </div>
   </div>
 
+  <script src="/static/js/auth.js"></script>
+  <script src="/static/js/toast.js"></script>
   <script src="/static/dashboard.js"></script>
   <script>
     let currentAdmin = null;
@@ -324,7 +348,7 @@
       const res = await apiFetch(`/api/admin/tenants/${tenantId}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) {
         const d = await res.json().catch(() => ({}));
-        alert(formatApiError(d.detail) || 'Ошибка удаления');
+        notifyError(formatApiError(d.detail) || 'Ошибка удаления');
         return;
       }
       if (String(selectedAdminTenantId) === String(tenantId)) {
@@ -412,7 +436,7 @@
         }
         await loadUsers();
       } catch (err) {
-        alert(err.message || 'Ошибка');
+        notifyError(err.message || 'Ошибка');
       }
     }
 
@@ -442,7 +466,7 @@
       const res = await apiFetch(`/api/admin/departments/${id}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) {
         const d = await res.json().catch(() => ({}));
-        alert(d.detail || 'Ошибка удаления');
+        notifyError(d.detail || 'Ошибка удаления');
         return;
       }
       await loadDepartmentsAdmin();
@@ -461,7 +485,7 @@
         }
         const res = await apiFetch('/api/admin/departments', { method: 'POST', body: JSON.stringify(body) });
         const d = await res.json().catch(() => ({}));
-        if (!res.ok) { alert(formatApiError(d.detail) || 'Ошибка создания'); return; }
+        if (!res.ok) { notifyError(formatApiError(d.detail) || 'Ошибка создания'); return; }
         form.reset();
         await loadDepartmentsAdmin();
       });
@@ -498,7 +522,7 @@
       const me = await fetchCurrentUser();
       currentAdmin = me;
       if (me.role !== 'admin' && me.role !== 'super_admin') {
-        alert('Доступ запрещён');
+        showToast('Доступ запрещён', 'error');
         window.location.href = '/';
         return;
       }
@@ -519,6 +543,80 @@
       await loadDepartmentsAdmin();
       await loadUsers();
       await loadAuditAdmin();
+      await loadIntegrationsAdmin();
+    }
+
+    async function loadIntegrationsAdmin() {
+      const capRes = await apiFetch('/api/auth/capabilities');
+      const cap = await capRes.json().catch(() => ({}));
+      const showSiem = cap.siem_export_enabled || currentAdmin?.role === 'super_admin';
+      document.getElementById('siem-section')?.classList.toggle('hidden', !showSiem);
+      if (showSiem) {
+        await loadSiemAdmin();
+        document.getElementById('siem-test-btn')?.addEventListener('click', testSiemConnection);
+        document.getElementById('siem-retry-btn')?.addEventListener('click', retrySiemExport);
+      }
+      if (cap.fhir_enabled) {
+        document.getElementById('fhir-batch-section')?.classList.remove('hidden');
+        document.getElementById('fhir-batch-btn')?.addEventListener('click', runFhirBatchExport);
+      }
+    }
+
+    async function loadSiemAdmin() {
+      const el = document.getElementById('siem-status');
+      const [statusRes, statsRes] = await Promise.all([
+        apiFetch('/api/admin/audit/export/status'),
+        apiFetch('/api/admin/audit/export/stats'),
+      ]);
+      const status = await statusRes.json().catch(() => ({}));
+      const stats = await statsRes.json().catch(() => ({}));
+      if (!statusRes.ok) {
+        if (el) el.textContent = formatApiError(status.detail) || 'Ошибка загрузки SIEM';
+        return;
+      }
+      const target = status.default_target?.name || status.protocol || '—';
+      const last = stats.last_export_at ? new Date(stats.last_export_at).toLocaleString('ru-RU') : '—';
+      if (el) {
+        el.innerHTML = `
+          <p>SIEM: <strong>${status.enabled ? 'вкл' : 'выкл'}</strong> · протокол: ${escapeHtml(status.protocol || '—')}</p>
+          <p>Target: ${escapeHtml(String(target))} · Redis: ${status.redis_available ? 'OK' : 'нет'}</p>
+          <p>Последний экспорт: ${escapeHtml(last)}</p>`;
+      }
+    }
+
+    async function testSiemConnection() {
+      const res = await apiFetch('/api/admin/audit/export/test', { method: 'POST', body: '{}' });
+      const data = await res.json();
+      if (!res.ok) return showToast(formatApiError(data.detail) || 'Ошибка теста SIEM', 'error');
+      showToast(data.export_ok ? 'SIEM: тестовое событие отправлено' : 'SIEM: соединение есть, экспорт не удался', data.export_ok ? 'success' : 'warning');
+      loadSiemAdmin();
+    }
+
+    async function retrySiemExport() {
+      const res = await apiFetch('/api/admin/audit/export/retry', { method: 'POST', body: '{}' });
+      const data = await res.json();
+      if (!res.ok) return showToast(formatApiError(data.detail) || 'Ошибка экспорта', 'error');
+      showToast(`Экспорт: ${data.status}, записей: ${data.count ?? '—'}`, 'success');
+      loadSiemAdmin();
+    }
+
+    async function runFhirBatchExport() {
+      const fromDate = document.getElementById('fhir-from-date')?.value;
+      const toDate = document.getElementById('fhir-to-date')?.value;
+      if (!fromDate || !toDate) return showToast('Укажите диапазон дат', 'warning');
+      const body = { from_date: fromDate, to_date: toDate };
+      if (currentAdmin?.role === 'super_admin' && selectedAdminTenantId) {
+        body.tenant_id = selectedAdminTenantId;
+      }
+      const res = await apiFetch('/api/fhir/export/batch', { method: 'POST', body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) return showToast(formatApiError(data.detail) || 'Ошибка FHIR batch', 'error');
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `fhir-batch-${fromDate}-${toDate}.json`;
+      a.click();
+      showToast('FHIR batch экспортирован', 'success');
     }
 
     document.addEventListener('DOMContentLoaded', loadAdmin);

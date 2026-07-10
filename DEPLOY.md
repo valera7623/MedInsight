@@ -198,3 +198,16 @@ curl -s http://localhost:8001/health/ready
 
 Файлы: `docker-compose.demo.yml`, `.env.demo.example`, `scripts/seed_demo.py`, `demo_data/dicom/`.
 
+## 11. Масштабирование Celery (production)
+
+В `docker-compose.prod.yml` сервис `celery_worker` можно масштабировать без изменения образа:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile production \
+  up -d --scale celery_worker=3
+```
+
+Каждая реплика использует `scripts/start_celery_worker.sh` (без `create_all` — схема только при деплое app).
+
+Starter Helm chart: `deploy/helm/medinsight/` (`helm install medinsight ./deploy/helm/medinsight`).
+

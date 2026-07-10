@@ -55,7 +55,7 @@
           (e) => {
             e.preventDefault();
             e.stopPropagation();
-            alert('В демо-версии изменение данных недоступно');
+            notifyError('В демо-версии изменение данных недоступно');
           },
           true
         );

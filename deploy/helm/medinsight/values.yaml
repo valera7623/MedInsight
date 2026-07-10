@@ -1,0 +1,45 @@
+# Starter values — adjust for your cluster (not full production HA).
+
+image:
+  repository: medinsight-app
+  tag: latest
+  pullPolicy: IfNotPresent
+
+app:
+  replicas: 1
+  port: 8000
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+
+celery:
+  enabled: true
+  replicas: 1
+  command: ["celery", "-A", "app.tasks.celery_app", "worker", "--loglevel=info"]
+
+redis:
+  enabled: true
+  image: redis:7-alpine
+  port: 6379
+
+postgres:
+  enabled: true
+  image: postgres:16-alpine
+  database: medinsight
+  user: medinsight
+  password: change-me
+  storage: 10Gi
+
+env:
+  ENVIRONMENT: production
+  DATABASE_URL: postgresql://medinsight:change-me@medinsight-postgres:5432/medinsight
+  REDIS_URL: redis://medinsight-redis:6379/0
+  ALEMBIC_ENABLED: "false"
+
+ingress:
+  enabled: false
+  host: medinsight.example.com

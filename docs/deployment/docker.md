@@ -80,8 +80,9 @@ docker compose build app
 # Shell в контейнере
 docker compose exec app bash
 
-# Миграции
-docker compose exec app python -m app.db.migrate
+# Миграции (legacy или Alembic)
+docker compose exec app bash -c 'python scripts/run_alembic_migrate.py'  # если ALEMBIC_ENABLED=true
+# иначе deploy.sh / lifespan применяют create_all + app/db/migrations
 
 # Очистка (без volumes)
 ./scripts/docker_cleanup.sh deploy

@@ -40,7 +40,7 @@ erDiagram
 | email | VARCHAR UNIQUE | |
 | role | ENUM | RBAC-роль |
 | department_id | FK nullable | Отделение |
-| hashed_password | VARCHAR | bcrypt |
+| `password_hash` | VARCHAR | bcrypt hash |
 
 ### patients
 
@@ -78,20 +78,24 @@ erDiagram
 
 ## Миграции
 
-SQL-файлы в `app/db/migrations/` (001–014+).
+**Legacy:** SQL/Python-файлы в `app/db/migrations/` (001–031) — заморожены; применяются через `run_migrations()` после `create_all` при `ALEMBIC_ENABLED=false`.
 
-Применение при деплое:
+**Alembic (рекомендуется для prod):** каталог `alembic/`, baseline `001_baseline`. Включите `ALEMBIC_ENABLED=true` — тогда `deploy.sh` выполняет `alembic upgrade head` (с `pg_advisory_lock` на PostgreSQL) вместо `create_all`.
 
 ```bash
-python -m app.db.migrate
+# Локально / в контейнере
+docker compose exec app alembic upgrade head
+
+# Или через deploy helper
+python scripts/run_alembic_migrate.py
 ```
 
 ## Генерация схемы
 
-Alembic (если настроен) или просмотр моделей:
+Просмотр моделей (пакет `app/models/`):
 
 ```bash
-grep "^class " app/models.py
+grep "^class " app/models/*.py
 ```
 
 ## Индексы

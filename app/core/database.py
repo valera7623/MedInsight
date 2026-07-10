@@ -144,6 +144,10 @@ def _run_sqlite_migrations():
             _add_column_if_missing(conn, "users", "can_see_all_patients", "BOOLEAN", "0")
             _add_column_if_missing(conn, "users", "email_verified", "BOOLEAN", "1")
             _add_column_if_missing(conn, "users", "email_verified_at", "DATETIME")
+            _add_column_if_missing(conn, "users", "token_version", "INTEGER", "0")
+            _add_column_if_missing(conn, "users", "totp_secret", "VARCHAR(255)")
+            _add_column_if_missing(conn, "users", "totp_enabled", "BOOLEAN", "0")
+            _add_column_if_missing(conn, "users", "totp_backup_codes", "VARCHAR(1024)")
 
         if "documents" in tables:
             _add_column_if_missing(conn, "documents", "is_encrypted", "BOOLEAN", "0")
@@ -221,6 +225,7 @@ def run_migrations():
             "028_migrate_cache_versions.py",
             "029_migrate_cache_stats.py",
             "030_migrate_ai_parser.py",
+            "031_migrate_auth_tokens.py",
         ):
             migration_path = migrations_dir / migration_file
             spec = importlib.util.spec_from_file_location(migration_file.replace(".py", ""), migration_path)

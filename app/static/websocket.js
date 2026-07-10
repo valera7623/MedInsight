@@ -102,7 +102,13 @@
       if (!this.shouldReconnect) return;
       this.reconnectAttempts += 1;
       const delay = Math.min(this.maxReconnectDelay, 1000 * 2 ** Math.min(this.reconnectAttempts, 5));
-      setTimeout(() => this.connect(), delay);
+      const attempt = this.reconnectAttempts;
+      setTimeout(async () => {
+        if (attempt === 1 && typeof refreshAccessToken === 'function') {
+          await refreshAccessToken();
+        }
+        this.connect();
+      }, delay);
     }
 
     _setStatus(connected) {

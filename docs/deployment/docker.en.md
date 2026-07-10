@@ -81,7 +81,8 @@ docker compose build app
 docker compose exec app bash
 
 # Migrations
-docker compose exec app python -m app.db.migrate
+docker compose exec app alembic upgrade head
+# or legacy (ALEMBIC_ENABLED=false): schema init runs in deploy.sh
 
 # Cleanup (without volumes)
 ./scripts/docker_cleanup.sh deploy

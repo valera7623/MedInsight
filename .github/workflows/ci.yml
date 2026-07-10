@@ -43,3 +43,54 @@ jobs:
 
       - name: Run tests
         run: poetry run pytest tests/ -q --tb=short
+
+  test-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: medinsight
+          POSTGRES_PASSWORD: secure_password
+          POSTGRES_DB: medinsight
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U medinsight"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://medinsight:secure_password@localhost:5432/medinsight
+      ENVIRONMENT: development
+      RATE_LIMIT_ENABLED: "false"
+      REDIS_CACHE_ENABLED: "false"
+      FHIR_ENABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+          poetry install --with test --no-interaction --no-ansi
+
+      - name: Run PostgreSQL smoke tests
+        run: |
+          poetry run python -c "
+from sqlalchemy import create_engine, text
+from app.core.database import Base
+engine = create_engine('$DATABASE_URL')
+with engine.connect() as c:
+    c.execute(text('SELECT 1'))
+Base.metadata.create_all(bind=engine)
+print('PostgreSQL schema OK')
+"
+          poetry run pytest tests/test_auth_register.py tests/test_auth_refresh.py tests/test_rbac.py -q --tb=short

@@ -41,3 +41,15 @@ def test_fhir_viewer_can_read_but_not_create(client, db_session):
         },
     )
     assert create_res.status_code == 403
+
+
+def test_fhir_export_patient_bundle(client, db_session):
+    tenant = create_tenant(db_session, name="FHIR Export", subdomain="fhir-export")
+    user = create_user(db_session, tenant=tenant, email="export@example.com", role="doctor")
+    patient = create_patient(db_session, tenant=tenant, user=user)
+    commit(db_session)
+
+    res = client.get(f"/api/fhir/export/patient/{patient.id}", headers=auth_header(user))
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data.get("resourceType") == "Bundle"
