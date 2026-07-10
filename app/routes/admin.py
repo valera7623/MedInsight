@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user, hash_password, require_admin, require_super_admin
 from app.config import settings
 from app.database import get_db
+from app.middleware.rate_limit import rate_limit
 from app.models import (
     AnalysisJob,
     AuditLog,
@@ -145,6 +146,11 @@ class RotateKeyRequest(BaseModel):
 
 
 @router.post("/tenants", response_model=TenantResponse, status_code=status.HTTP_201_CREATED)
+@rate_limit(
+    limit=settings.RATE_LIMIT_ADMIN_PER_MINUTE,
+    period=60,
+    name="admin_create_tenant",
+)
 def create_tenant(
     data: TenantCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -280,6 +286,11 @@ def delete_tenant(
 
 
 @router.post("/users", response_model=UserAdminResponse, status_code=status.HTTP_201_CREATED)
+@rate_limit(
+    limit=settings.RATE_LIMIT_ADMIN_PER_MINUTE,
+    period=60,
+    name="admin_create_user",
+)
 def create_user(
     data: UserCreate,
     db: Annotated[Session, Depends(get_db)],

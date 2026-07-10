@@ -7,29 +7,37 @@
 ### Документация и DX
 - [x] MkDocs-сайт документации
 - [ ] Английская версия user-guide
-- [ ] Автогенерация API markdown из OpenAPI
+- [x] Автогенерация API markdown из OpenAPI
 
 ### DICOM
-- [ ] Поддержка DICOM ZIP (многофайловые исследования)
-- [ ] Аннотации на снимках
-- [ ] Интеграция DICOM metadata в GPT-прогнозы
+- [x] Поддержка DICOM ZIP (многофайловые исследования)
+- [x] Аннотации на снимках
+- [x] Интеграция DICOM metadata в GPT-прогнозы
 
-### Безопность
+### Безопасность
+- [x] Ограничение self-registration (без admin/head_of_department)
+- [x] Password reset end-to-end (API + UI)
+- [x] FHIR API: JWT + tenant scoping
+- [x] Tenant spoofing fix в usage_limit/cache middleware
+- [x] XSS hardening в AI/prediction HTML
+- [x] Fail-fast на default secrets в production
+- [x] JWT refresh tokens (access 1h + refresh 7d)
+- [x] Rate limits на upload/predict/admin
 - [ ] 2FA (TOTP)
-- [ ] Audit export в SIEM
-- [ ] PostgreSQL как рекомендуемая БД для prod
+- [x] Audit export в SIEM (Phase 13, feature flag)
+- [x] PostgreSQL как рекомендуемая БД для prod
 
 ## Q4 2026
 
 ### Клинические функции
-- [ ] HL7 FHIR import/export
-- [ ] Шаблоны отчётов PDF
-- [ ] Календарь приёмов
+- [x] HL7 FHIR import/export (Phase 14)
+- [x] Шаблоны отчётов PDF (Phase 15)
+- [x] Календарь приёмов (Phase 16)
 
 ### AI
 - [ ] Fine-tuned модели на анонимизированных данных
-- [ ] Объяснимость прогнозов (SHAP-like)
-- [ ] RAG по клиническим guidelines
+- [x] Объяснимость прогнозов (SHAP, Phase 17)
+- [x] RAG по клиническим guidelines (self-healing)
 
 ### Инфраструктура
 - [ ] Kubernetes Helm chart

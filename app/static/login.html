@@ -36,6 +36,24 @@
       </div>
       <div id="login-error" class="error-message hidden"></div>
       <button type="submit" class="btn btn-primary btn-block">Войти</button>
+      <p style="margin-top:0.75rem;text-align:center;font-size:0.9rem">
+        <a href="#" id="show-forgot">Забыли пароль?</a>
+      </p>
+    </form>
+
+    <form id="forgot-form" class="hidden">
+      <div class="form-group">
+        <label for="forgot-subdomain">Клиника</label>
+        <select id="forgot-subdomain" required></select>
+      </div>
+      <div class="form-group">
+        <label for="forgot-email">Email</label>
+        <input type="email" id="forgot-email" required>
+      </div>
+      <div id="forgot-error" class="error-message hidden"></div>
+      <div id="forgot-success" class="hidden" style="margin:0.75rem 0;padding:0.75rem;border-radius:8px;background:var(--bg-hover);color:var(--text-secondary);font-size:0.9rem"></div>
+      <button type="submit" class="btn btn-primary btn-block">Отправить ссылку</button>
+      <button type="button" class="btn btn-secondary btn-block" id="forgot-back">Назад к входу</button>
     </form>
 
     <div class="auth-footer">
@@ -58,15 +76,13 @@
       </div>
       <div class="form-group">
         <label for="reg-password">Пароль</label>
-        <input type="password" id="reg-password" required minlength="6">
+        <input type="password" id="reg-password" required minlength="8">
       </div>
       <div class="form-group">
         <label for="reg-role">Роль</label>
         <select id="reg-role">
           <option value="doctor">Врач</option>
           <option value="nurse">Медсестра</option>
-          <option value="head_of_department">Зав. отделением</option>
-          <option value="admin">Администратор клиники</option>
           <option value="researcher">Исследователь</option>
           <option value="viewer">Наблюдатель</option>
         </select>
@@ -93,8 +109,9 @@
     async function loadTenants() {
       const res = await fetch(`${API}/api/auth/tenants`);
       const tenants = await res.json();
-      ['subdomain', 'reg-subdomain'].forEach(id => {
+      ['subdomain', 'reg-subdomain', 'forgot-subdomain'].forEach(id => {
         const sel = document.getElementById(id);
+        if (!sel) return;
         sel.innerHTML = '';
         tenants.forEach(t => {
           const opt = document.createElement('option');
@@ -129,15 +146,13 @@
     });
 
     const ROLE_HINTS = {
-      doctor: 'Работа с пациентами: создание карточек, документы, прогнозы. Видит своих пациентов и пациентов своего отделения (если указано).',
-      nurse: 'Просмотр пациентов своего отделения, экспорт отчётов. Без создания и редактирования карточек.',
-      head_of_department: 'Полное управление пациентами своего отделения: создание, документы, прогнозы.',
-      admin: 'Полный доступ в клинике: пользователи, отделения, аудит, удаление данных.',
-      researcher: 'Доступ ко всей клинике для анализа, но данные пациентов анонимизированы (без ФИО и контактов). Только чтение.',
-      viewer: 'Просмотр всех пациентов клиники с полными данными (ФИО, контакты) и экспорт. Без создания и изменений.',
+      doctor: 'Работа с пациентами: создание карточек, документы, прогнозы.',
+      nurse: 'Просмотр пациентов своего отделения, экспорт отчётов.',
+      researcher: 'Доступ ко всей клинике для анализа. Только чтение.',
+      viewer: 'Просмотр всех пациентов клиники. Без создания и изменений.',
     };
-    const ROLES_NEED_DEPT = new Set(['doctor', 'nurse', 'head_of_department']);
-    const ROLES_DEPT_REQUIRED = new Set(['nurse', 'head_of_department']);
+    const ROLES_NEED_DEPT = new Set(['doctor', 'nurse']);
+    const ROLES_DEPT_REQUIRED = new Set(['nurse']);
 
     function updateRoleHint() {
       const role = document.getElementById('reg-role').value;
@@ -199,6 +214,7 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Ошибка входа');
         localStorage.setItem('token', data.access_token);
+        if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
         localStorage.setItem('tenant_id', String(data.tenant_id || tenantOpt.dataset.id));
         localStorage.setItem('role', data.role);
         if (data.demo_mode || isDemoLogin) localStorage.setItem('demo_mode', 'true');
@@ -273,6 +289,7 @@
     document.getElementById('show-register').addEventListener('click', (e) => {
       e.preventDefault();
       document.getElementById('login-form').classList.add('hidden');
+      document.getElementById('forgot-form').classList.add('hidden');
       document.getElementById('register-form').classList.remove('hidden');
       document.querySelector('.auth-footer').classList.add('hidden');
       const sub = document.getElementById('reg-subdomain').value;
@@ -282,8 +299,47 @@
 
     document.getElementById('show-login').addEventListener('click', () => {
       document.getElementById('register-form').classList.add('hidden');
+      document.getElementById('forgot-form').classList.add('hidden');
       document.getElementById('login-form').classList.remove('hidden');
       document.querySelector('.auth-footer').classList.remove('hidden');
+    });
+
+    document.getElementById('show-forgot').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('login-form').classList.add('hidden');
+      document.getElementById('forgot-form').classList.remove('hidden');
+      document.querySelector('.auth-footer').classList.add('hidden');
+    });
+
+    document.getElementById('forgot-back').addEventListener('click', () => {
+      document.getElementById('forgot-form').classList.add('hidden');
+      document.getElementById('login-form').classList.remove('hidden');
+      document.querySelector('.auth-footer').classList.remove('hidden');
+    });
+
+    document.getElementById('forgot-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('forgot-error');
+      const okEl = document.getElementById('forgot-success');
+      errEl.classList.add('hidden');
+      okEl.classList.add('hidden');
+      try {
+        const res = await fetch(`${API}/api/auth/request-reset`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('forgot-email').value,
+            subdomain: document.getElementById('forgot-subdomain').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Ошибка запроса');
+        okEl.textContent = 'Если аккаунт существует, инструкции отправлены на email.';
+        okEl.classList.remove('hidden');
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
     });
   </script>
 </body>

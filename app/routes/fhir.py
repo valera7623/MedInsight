@@ -7,12 +7,14 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.config import settings
 from app.database import get_db
-from app.models import Document, FhirMapping, Patient as PatientModel
+from app.models import Document, FhirMapping, Patient as PatientModel, User
+from app.services.access import WRITE_ROLES, effective_tenant_id, require_role
 from app.services.fhir.exporter import FhirExporter, _patient_dict
 from app.services.fhir.fhir_models import Bundle, CapabilityStatement, Patient, fhir_dump
 from app.services.fhir.importer import FhirImporter
@@ -22,22 +24,47 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["fhir"])
 
+FHIR_READ_ROLES = frozenset({"super_admin", "admin", "head_of_department", "doctor", "nurse", "researcher", "viewer"})
 
-def _resolve_patient(db: Session, fhir_id: str) -> PatientModel | None:
+
+def _require_fhir_read(user: Annotated[User, Depends(get_current_user)]) -> User:
+    require_role(user, *FHIR_READ_ROLES)
+    return user
+
+
+def _require_fhir_write(user: Annotated[User, Depends(get_current_user)]) -> User:
+    require_role(user, *WRITE_ROLES)
+    return user
+
+
+def _tenant_id(user: User) -> int:
+    tid = effective_tenant_id(user, None)
+    if tid is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant context required")
+    return tid
+
+
+def _resolve_patient(db: Session, fhir_id: str, tenant_id: int) -> PatientModel | None:
     try:
         uid = uuid.UUID(fhir_id)
-        row = db.query(PatientModel).filter(PatientModel.public_id == uid).first()
+        row = db.query(PatientModel).filter(PatientModel.public_id == uid, PatientModel.tenant_id == tenant_id).first()
         if row:
             return row
     except ValueError:
         pass
     mapping = (
-        db.query(FhirMapping).filter(FhirMapping.resource_type == "Patient", FhirMapping.fhir_id == fhir_id).first()
+        db.query(FhirMapping)
+        .filter(FhirMapping.resource_type == "Patient", FhirMapping.fhir_id == fhir_id)
+        .first()
     )
     if mapping:
-        return db.get(PatientModel, mapping.medinsight_id)
+        row = db.get(PatientModel, mapping.medinsight_id)
+        if row and row.tenant_id == tenant_id:
+            return row
     if fhir_id.isdigit():
-        return db.get(PatientModel, int(fhir_id))
+        row = db.get(PatientModel, int(fhir_id))
+        if row and row.tenant_id == tenant_id:
+            return row
     return None
 
 
@@ -79,8 +106,13 @@ def capability_statement() -> dict:
 
 
 @router.get("/Patient/{patient_id}")
-def read_patient(patient_id: str, db: Annotated[Session, Depends(get_db)]) -> dict:
-    row = _resolve_patient(db, patient_id)
+def read_patient(
+    patient_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_read)],
+) -> dict:
+    tid = _tenant_id(user)
+    row = _resolve_patient(db, patient_id, tid)
     if not row:
         raise HTTPException(status_code=404, detail="Patient not found")
     return _json_response(FhirMapper.to_fhir_patient(_patient_dict(row)))
@@ -89,11 +121,13 @@ def read_patient(patient_id: str, db: Annotated[Session, Depends(get_db)]) -> di
 @router.get("/Patient")
 def search_patient(
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_read)],
     family: str | None = Query(None),
     given: str | None = Query(None),
     identifier: str | None = Query(None),
 ) -> dict:
-    query = db.query(PatientModel)
+    tid = _tenant_id(user)
+    query = db.query(PatientModel).filter(PatientModel.tenant_id == tid)
     if family:
         query = query.filter(PatientModel.last_name.ilike(f"%{family}%"))
     if given:
@@ -101,7 +135,10 @@ def search_patient(
     if identifier:
         mapping = (
             db.query(FhirMapping)
-            .filter(FhirMapping.resource_type == "Patient", FhirMapping.fhir_id == identifier)
+            .filter(
+                FhirMapping.resource_type == "Patient",
+                FhirMapping.fhir_id == identifier,
+            )
             .first()
         )
         if mapping:
@@ -117,17 +154,28 @@ def search_patient(
 
 
 @router.post("/Patient", status_code=status.HTTP_201_CREATED)
-def create_patient(resource: dict[str, Any], db: Annotated[Session, Depends(get_db)]) -> dict:
+def create_patient(
+    resource: dict[str, Any],
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_write)],
+) -> dict:
+    tid = _tenant_id(user)
     patient = Patient(**resource)
     importer = FhirImporter(db)
-    result = importer.import_patient(patient, tenant_id=1, user_id=1)
+    result = importer.import_patient(patient, tenant_id=tid, user_id=user.id)
     patient.id = result["fhir_id"]
     return _json_response(patient)
 
 
 @router.put("/Patient/{patient_id}")
-def update_patient(patient_id: str, resource: dict[str, Any], db: Annotated[Session, Depends(get_db)]) -> dict:
-    row = _resolve_patient(db, patient_id)
+def update_patient(
+    patient_id: str,
+    resource: dict[str, Any],
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_write)],
+) -> dict:
+    tid = _tenant_id(user)
+    row = _resolve_patient(db, patient_id, tid)
     if not row:
         raise HTTPException(status_code=404, detail="Patient not found")
     patient = Patient(**resource)
@@ -145,8 +193,13 @@ def update_patient(patient_id: str, resource: dict[str, Any], db: Annotated[Sess
 
 
 @router.delete("/Patient/{patient_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_patient(patient_id: str, db: Annotated[Session, Depends(get_db)]) -> Response:
-    row = _resolve_patient(db, patient_id)
+def delete_patient(
+    patient_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_write)],
+) -> Response:
+    tid = _tenant_id(user)
+    row = _resolve_patient(db, patient_id, tid)
     if not row:
         raise HTTPException(status_code=404, detail="Patient not found")
     db.delete(row)
@@ -155,11 +208,25 @@ def delete_patient(patient_id: str, db: Annotated[Session, Depends(get_db)]) -> 
 
 
 @router.get("/Encounter/{encounter_id}")
-def read_encounter(encounter_id: str, db: Annotated[Session, Depends(get_db)]) -> dict:
-    mapping = db.query(FhirMapping).filter(FhirMapping.resource_type == "Encounter", FhirMapping.fhir_id == encounter_id).first()
+def read_encounter(
+    encounter_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_read)],
+) -> dict:
+    tid = _tenant_id(user)
+    mapping = (
+        db.query(FhirMapping)
+        .filter(
+            FhirMapping.resource_type == "Encounter",
+            FhirMapping.fhir_id == encounter_id,
+        )
+        .first()
+    )
     if not mapping:
         raise HTTPException(status_code=404, detail="Encounter not found")
     doc = db.get(Document, mapping.medinsight_id)
+    if not doc or doc.tenant_id != tid:
+        raise HTTPException(status_code=404, detail="Encounter not found")
     patient = db.get(PatientModel, doc.patient_id)
     enc = FhirMapper.to_fhir_encounter(
         {
@@ -174,11 +241,16 @@ def read_encounter(encounter_id: str, db: Annotated[Session, Depends(get_db)]) -
 
 
 @router.get("/Encounter")
-def search_encounter(db: Annotated[Session, Depends(get_db)], patient: str | None = Query(None)) -> dict:
-    query = db.query(Document).filter(Document.mime_type == "application/fhir+json")
+def search_encounter(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_read)],
+    patient: str | None = Query(None),
+) -> dict:
+    tid = _tenant_id(user)
+    query = db.query(Document).filter(Document.mime_type == "application/fhir+json", Document.tenant_id == tid)
     pid = _patient_ref_id(patient)
     if pid:
-        prow = _resolve_patient(db, pid)
+        prow = _resolve_patient(db, pid, tid)
         if prow:
             query = query.filter(Document.patient_id == prow.id)
     resources = []
@@ -198,14 +270,28 @@ def search_encounter(db: Annotated[Session, Depends(get_db)], patient: str | Non
 
 
 @router.get("/Observation/{observation_id}")
-def read_observation(observation_id: str, db: Annotated[Session, Depends(get_db)]) -> dict:
+def read_observation(
+    observation_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_read)],
+) -> dict:
     from app.models import Prediction
 
+    tid = _tenant_id(user)
     mapping = (
-        db.query(FhirMapping).filter(FhirMapping.resource_type == "Observation", FhirMapping.fhir_id == observation_id).first()
+        db.query(FhirMapping)
+        .filter(
+            FhirMapping.resource_type == "Observation",
+            FhirMapping.fhir_id == observation_id,
+        )
+        .first()
     )
-    pred = db.get(Prediction, mapping.medinsight_id) if mapping else db.get(Prediction, int(observation_id)) if observation_id.isdigit() else None
-    if not pred:
+    pred = None
+    if mapping:
+        pred = db.get(Prediction, mapping.medinsight_id)
+    elif observation_id.isdigit():
+        pred = db.get(Prediction, int(observation_id))
+    if not pred or pred.tenant_id != tid:
         raise HTTPException(status_code=404, detail="Observation not found")
     patient = db.get(PatientModel, pred.patient_id)
     obs = FhirMapper.to_fhir_observation(
@@ -221,13 +307,18 @@ def read_observation(observation_id: str, db: Annotated[Session, Depends(get_db)
 
 
 @router.get("/Observation")
-def search_observation(db: Annotated[Session, Depends(get_db)], patient: str | None = Query(None)) -> dict:
+def search_observation(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_read)],
+    patient: str | None = Query(None),
+) -> dict:
     from app.models import Prediction
 
-    query = db.query(Prediction)
+    tid = _tenant_id(user)
+    query = db.query(Prediction).filter(Prediction.tenant_id == tid)
     pid = _patient_ref_id(patient)
     if pid:
-        prow = _resolve_patient(db, pid)
+        prow = _resolve_patient(db, pid, tid)
         if prow:
             query = query.filter(Prediction.patient_id == prow.id)
     resources = []
@@ -248,13 +339,20 @@ def search_observation(db: Annotated[Session, Depends(get_db)], patient: str | N
 
 
 @router.get("/DiagnosticReport/{report_id}")
-def read_diagnostic_report(report_id: str, db: Annotated[Session, Depends(get_db)]) -> dict:
+def read_diagnostic_report(
+    report_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_read)],
+) -> dict:
+    tid = _tenant_id(user)
     doc = None
     try:
-        doc = db.query(Document).filter(Document.public_id == uuid.UUID(report_id)).first()
+        doc = db.query(Document).filter(Document.public_id == uuid.UUID(report_id), Document.tenant_id == tid).first()
     except ValueError:
         if report_id.isdigit():
             doc = db.get(Document, int(report_id))
+            if doc and doc.tenant_id != tid:
+                doc = None
     if not doc:
         raise HTTPException(status_code=404, detail="DiagnosticReport not found")
     patient = db.get(PatientModel, doc.patient_id)
@@ -274,11 +372,16 @@ def read_diagnostic_report(report_id: str, db: Annotated[Session, Depends(get_db
 
 
 @router.get("/DiagnosticReport")
-def search_diagnostic_report(db: Annotated[Session, Depends(get_db)], patient: str | None = Query(None)) -> dict:
-    query = db.query(Document)
+def search_diagnostic_report(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_read)],
+    patient: str | None = Query(None),
+) -> dict:
+    tid = _tenant_id(user)
+    query = db.query(Document).filter(Document.tenant_id == tid)
     pid = _patient_ref_id(patient)
     if pid:
-        prow = _resolve_patient(db, pid)
+        prow = _resolve_patient(db, pid, tid)
         if prow:
             query = query.filter(Document.patient_id == prow.id)
     resources = []
@@ -302,22 +405,34 @@ def search_diagnostic_report(db: Annotated[Session, Depends(get_db)], patient: s
 
 
 @router.get("/ImagingStudy/{study_id}")
-def read_imaging_study(study_id: str, db: Annotated[Session, Depends(get_db)]) -> dict:
+def read_imaging_study(
+    study_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_read)],
+) -> dict:
+    from app.models import DicomStudy
+
+    tid = _tenant_id(user)
+    study = db.query(DicomStudy).filter(DicomStudy.study_uid == study_id, DicomStudy.tenant_id == tid).first()
+    if not study:
+        raise HTTPException(status_code=404, detail="ImagingStudy not found")
     exporter = FhirExporter(db)
-    try:
-        return _json_response(exporter.export_dicom_study(study_id))
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _json_response(exporter.export_dicom_study(study_id))
 
 
 @router.get("/ImagingStudy")
-def search_imaging_study(db: Annotated[Session, Depends(get_db)], patient: str | None = Query(None)) -> dict:
+def search_imaging_study(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_read)],
+    patient: str | None = Query(None),
+) -> dict:
     from app.models import DicomStudy
 
-    query = db.query(DicomStudy)
+    tid = _tenant_id(user)
+    query = db.query(DicomStudy).filter(DicomStudy.tenant_id == tid)
     pid = _patient_ref_id(patient)
     if pid:
-        prow = _resolve_patient(db, pid)
+        prow = _resolve_patient(db, pid, tid)
         if prow:
             query = query.filter(DicomStudy.patient_id == prow.id)
     exporter = FhirExporter(db)
@@ -326,10 +441,15 @@ def search_imaging_study(db: Annotated[Session, Depends(get_db)], patient: str |
 
 
 @router.post("/Bundle")
-def import_bundle(payload: dict[str, Any], db: Annotated[Session, Depends(get_db)]) -> dict:
+def import_bundle(
+    payload: dict[str, Any],
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(_require_fhir_write)],
+) -> dict:
+    tid = _tenant_id(user)
     bundle = Bundle(**payload)
     importer = FhirImporter(db)
     try:
-        return importer.import_bundle(bundle, tenant_id=1, user_id=1)
+        return importer.import_bundle(bundle, tenant_id=tid, user_id=user.id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

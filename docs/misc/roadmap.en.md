@@ -7,29 +7,37 @@ MedInsight development plans.
 ### Documentation and DX
 - [x] MkDocs documentation site
 - [ ] English user-guide version
-- [ ] Auto-generate API markdown from OpenAPI
+- [x] Auto-generate API markdown from OpenAPI
 
 ### DICOM
-- [ ] DICOM ZIP support (multi-file studies)
-- [ ] Image annotations
-- [ ] DICOM metadata integration in GPT predictions
+- [x] DICOM ZIP support (multi-file studies)
+- [x] Image annotations
+- [x] DICOM metadata integration in GPT predictions
 
 ### Security
+- [x] Restrict self-registration (no admin/head_of_department)
+- [x] Password reset end-to-end (API + UI)
+- [x] FHIR API: JWT + tenant scoping
+- [x] Tenant spoofing fix in usage_limit/cache middleware
+- [x] XSS hardening in AI/prediction HTML
+- [x] Fail-fast on default secrets in production
+- [x] JWT refresh tokens (1h access + 7d refresh)
+- [x] Rate limits on upload/predict/admin
 - [ ] 2FA (TOTP)
-- [ ] Audit export to SIEM
-- [ ] PostgreSQL as recommended prod DB
+- [x] Audit export to SIEM (Phase 13, feature flag)
+- [x] PostgreSQL as recommended production DB
 
 ## Q4 2026
 
 ### Clinical features
-- [ ] HL7 FHIR import/export
-- [ ] PDF report templates
-- [ ] Appointment calendar
+- [x] HL7 FHIR import/export (Phase 14)
+- [x] PDF report templates (Phase 15)
+- [x] Appointments calendar (Phase 16)
 
 ### AI
 - [ ] Fine-tuned models on anonymized data
-- [ ] Prediction explainability (SHAP-like)
-- [ ] RAG over clinical guidelines
+- [x] Prediction explainability (SHAP, Phase 17)
+- [x] RAG on clinical guidelines (self-healing)
 
 ### Infrastructure
 - [ ] Kubernetes Helm chart
@@ -39,15 +47,15 @@ MedInsight development plans.
 ## 2027+
 
 - Mobile app (React Native)
-- Integration with EGISZ (Russia)
-- Offline-first for field studies
+- EGISZ integration (Russia)
+- Offline-first for field research
 - Medical device certification (if required)
 
 ## How to suggest a feature
 
 1. Open an issue on [GitHub](https://github.com/valera7623/MedInsight/issues)
 2. Describe the use case and user role
-3. Priority is set by clinic requests and security needs
+3. Priority is driven by clinic demand and security
 
 ## Principles
 

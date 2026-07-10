@@ -13,10 +13,10 @@ def _seed_user_and_patient(db):
     db.flush()
     user = User(
         email="dicom-del@example.com",
-        hashed_password=hash_password("secret"),
+        password_hash=hash_password("secret"),
         role="admin",
         tenant_id=tenant.id,
-        is_active=True,
+        full_name="DICOM Admin",
     )
     db.add(user)
     db.flush()
@@ -26,7 +26,7 @@ def _seed_user_and_patient(db):
         first_name="Test",
         last_name="Patient",
         birth_date=datetime(1990, 1, 1).date(),
-        gender="male",
+        gender="M",
     )
     db.add(patient)
     db.commit()

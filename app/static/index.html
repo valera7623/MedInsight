@@ -25,6 +25,7 @@
       <a href="/docs" target="_blank" rel="noopener">API</a>
     </div>
     <div class="nav-actions">
+      <span id="ws-status" class="text-muted" style="font-size:0.75rem;margin-right:0.5rem" title="Real-time статус">—</span>
       <div data-theme-toggle></div>
       <button class="btn btn-secondary btn-sm" id="logout-btn">Выйти</button>
     </div>
@@ -38,8 +39,8 @@
       </div>
       <div class="header-actions">
         <select id="dept-filter" class="btn btn-secondary btn-sm" title="Фильтр по отделению"></select>
-        <button class="btn btn-primary" id="new-patient-btn">+ Новый пациент</button>
-        <button class="btn btn-secondary" id="upload-doc-btn">Загрузить документ</button>
+        <button class="btn btn-primary" id="new-patient-btn" data-write-only>+ Новый пациент</button>
+        <button class="btn btn-secondary" id="upload-doc-btn" data-write-only>Загрузить документ</button>
       </div>
     </header>
 
@@ -228,6 +229,7 @@
     </div>
   </div>
 
+  <script src="/static/websocket.js"></script>
   <script src="/static/dashboard.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {

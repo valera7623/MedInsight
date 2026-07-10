@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.middleware.rate_limit import rate_limit
 from app.config import settings
 from app.database import get_db
 from app.middleware.tenant import get_request_tenant_id
@@ -123,6 +124,11 @@ def _enqueue_parse(doc: Document, db: Session, user_id: int) -> str | None:
 
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+@rate_limit(
+    limit=settings.RATE_LIMIT_UPLOAD_PER_MINUTE,
+    period=60,
+    name="documents_upload",
+)
 async def upload_document(
     request: Request,
     db: Annotated[Session, Depends(get_db)],

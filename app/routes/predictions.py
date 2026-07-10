@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.config import settings
 from app.database import get_db
+from app.middleware.rate_limit import rate_limit
 from app.middleware.tenant import get_request_tenant_id
 from app.models import AnalysisJob, Patient, Prediction, User
 from app.services.access import can_predict, can_view_patient, effective_tenant_id, patients_query
@@ -188,6 +189,11 @@ def _get_job_or_404(db: Session, job_id: int, user: User, request: Request) -> A
 
 
 @router.post("/predict/{patient_id}", response_model=JobStartResponse)
+@rate_limit(
+    limit=settings.RATE_LIMIT_PREDICT_PER_MINUTE,
+    period=60,
+    name="analytics_predict",
+)
 def start_prediction(
     patient_id: int,
     request: Request,

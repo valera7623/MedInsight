@@ -212,10 +212,10 @@ async def lifespan(app: FastAPI):
         shutdown_manager.register_handler("ws_listener", lambda: ws_task.cancel(), timeout=3)
 
     logger.info(
-        "MedInsight v%s started. Storage: %s, DB: %s",
+        "MedInsight v%s started. Storage: %s, DB dialect: %s",
         settings.APP_VERSION,
         settings.STORAGE_PATH,
-        settings.DATABASE_URL,
+        settings.DATABASE_URL.split("://", 1)[0],
     )
 
     yield
@@ -264,6 +264,13 @@ async def request_validation_exception_handler(request: Request, exc: RequestVal
         messages.append(f"{field}: {err.get('msg', 'ошибка валидации')}")
     detail: str | list[str] = messages[0] if len(messages) == 1 else messages
     return JSONResponse(status_code=422, content={"detail": detail})
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    detail = str(exc) if settings.ENVIRONMENT != "production" else "Internal server error"
+    return JSONResponse(status_code=500, content={"detail": detail})
 
 
 origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
@@ -374,6 +381,11 @@ else:
 @app.get("/metrics")
 def metrics():
     return Response(content=render_metrics(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/reset-password")
+def reset_password_page():
+    return FileResponse(static_dir / "reset-password.html")
 
 
 @app.get("/login")

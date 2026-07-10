@@ -117,6 +117,7 @@ async function fetchCurrentUser() {
     if (window.MedInsightDemo) window.MedInsightDemo.apply();
   }
   renderUserSessionInfo(currentUser);
+  applyWriteRestrictions();
   return currentUser;
 }
 
@@ -164,6 +165,60 @@ function canDeleteDocument() {
 
 function isViewer() {
   return currentUser?.role === 'viewer' || currentUser?.role === 'researcher';
+}
+
+function isReadOnly() {
+  return isViewer();
+}
+
+function applyWriteRestrictions() {
+  if (!isReadOnly()) return;
+  document.querySelectorAll('[data-write-only]').forEach((el) => {
+    el.classList.add('hidden');
+    el.setAttribute('aria-hidden', 'true');
+  });
+  document.querySelectorAll('[data-write-action]').forEach((el) => {
+    el.disabled = true;
+    el.title = 'Недоступно для вашей роли';
+  });
+}
+
+function showToast(message, type = 'info') {
+  let host = document.getElementById('app-toasts');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'app-toasts';
+    host.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:360px';
+    document.body.appendChild(host);
+  }
+  const colors = { info: '#1565c0', error: '#b91c1c', success: '#15803d' };
+  const toast = document.createElement('div');
+  toast.setAttribute('role', 'status');
+  toast.style.cssText = `background:${colors[type] || colors.info};color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.2);font-size:14px`;
+  toast.textContent = message;
+  host.appendChild(toast);
+  setTimeout(() => toast.remove(), 5000);
+}
+
+function connectWebSocket(onEvent) {
+  if (typeof MedInsightSocket === 'undefined') return null;
+  const socket = new MedInsightSocket({ onEvent: onEvent || (() => {}) });
+  socket.connect();
+  return socket;
+}
+
+let dashboardSocket = null;
+
+function setupDashboardWebSocket() {
+  if (dashboardSocket) return;
+  dashboardSocket = connectWebSocket((payload) => {
+    if (payload.event === 'prediction.ready' || payload.event === 'document.parsed') {
+      loadDashboard({ cacheBust: true });
+    }
+    if (payload.event === 'limit.exceeded') {
+      showToast('Месячный лимит анализов исчерпан', 'error');
+    }
+  });
 }
 
 function showAdminNav() {
@@ -218,13 +273,27 @@ async function deletePatient(patientId, onSuccess) {
 }
 
 function setupModals() {
+  document.querySelectorAll('.modal').forEach((modal) => {
+    if (!modal.getAttribute('role')) modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+  });
+
   document.querySelectorAll('.modal-close, .modal-backdrop').forEach(el => {
     el.addEventListener('click', () => {
       const modal = el.closest('.modal');
       modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden', 'true');
       if (modal?.id === 'patient-modal') {
         resetPatientForm();
       }
+    });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.modal:not(.hidden)').forEach((modal) => {
+      modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden', 'true');
     });
   });
 }
@@ -233,10 +302,13 @@ function openModal(id) {
   const modal = document.getElementById(id);
   if (!modal) return;
   modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
   modal.querySelectorAll('.error-message').forEach(el => {
     el.textContent = '';
     el.classList.add('hidden');
   });
+  const focusable = modal.querySelector('input, select, textarea, button');
+  if (focusable) focusable.focus();
 }
 
 function resetPatientForm() {
@@ -1160,10 +1232,15 @@ function initDashboard() {
   fetchCurrentUser()
     .then(async () => {
       showAdminNav();
+      applyWriteRestrictions();
+      setupDashboardWebSocket();
       await loadDepartments('dept-filter', { includeAll: true });
       return loadDashboard();
     })
-    .catch(err => console.error(err));
+    .catch(err => {
+      console.error(err);
+      showToast(err.message || 'Ошибка загрузки дашборда', 'error');
+    });
 }
 
 let patientsPage = 1;
@@ -1373,14 +1450,14 @@ async function loadPatientInsights(patientId) {
       el.innerHTML = `
         <div class="recommendations-list">
           <h3>Клиническая заметка</h3>
-          <p>${data.insights}</p>
+          <p>${escapeHtml(data.insights)}</p>
           <h3>Рекомендации</h3>
-          <ul>${data.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
+          <ul>${(data.recommendations || []).map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
         </div>
       `;
     }
   } catch (err) {
-    if (el) el.innerHTML = `<div class="error-message">${err.message}</div>`;
+    if (el) el.innerHTML = `<div class="error-message">${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -1418,13 +1495,13 @@ async function loadPatientPredictions(patientId) {
     ${pred.factors?.length ? `
       <div class="recommendations-list">
         <h3>Факторы риска</h3>
-        <ul>${pred.factors.map(f => `<li>${f}</li>`).join('')}</ul>
+        <ul>${pred.factors.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
       </div>
     ` : ''}
     ${pred.recommendations?.length ? `
       <div class="recommendations-list">
         <h3>Рекомендации</h3>
-        <ul>${pred.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
+        <ul>${pred.recommendations.map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
       </div>
     ` : ''}
     <p style="font-size:0.8rem;color:#64748b;margin-top:0.75rem">
@@ -1482,8 +1559,11 @@ function initPatientPage() {
   setupPatientDicomSection(patientId);
 
   fetchCurrentUser()
-    .then(() => loadPatientDetail(patientId))
-    .catch(err => console.error(err));
+    .then(() => { applyWriteRestrictions(); return loadPatientDetail(patientId); })
+    .catch(err => {
+      console.error(err);
+      showToast(err.message || 'Ошибка загрузки карточки пациента', 'error');
+    });
 }
 
 function initPatientsPage() {
@@ -1500,6 +1580,9 @@ function initPatientsPage() {
   setupPatientsControls();
 
   fetchCurrentUser()
-    .then(() => { showAdminNav(); return loadPatientsList(); })
-    .catch(err => console.error(err));
+    .then(() => { showAdminNav(); applyWriteRestrictions(); return loadPatientsList(); })
+    .catch(err => {
+      console.error(err);
+      showToast(err.message || 'Ошибка загрузки пациентов', 'error');
+    });
 }

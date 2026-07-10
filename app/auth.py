@@ -19,21 +19,15 @@ from app.services.email import get_email_service
 router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer(auto_error=False)
 
-VALID_REGISTER_ROLES = {
-    "admin",
-    "head_of_department",
-    "doctor",
-    "nurse",
-    "researcher",
-    "viewer",
-}
-REGISTER_DEPARTMENT_REQUIRED = frozenset({"head_of_department", "nurse"})
-REGISTER_DEPARTMENT_OPTIONAL = frozenset({"doctor", "head_of_department", "nurse"})
+# Self-registration: elevated roles (admin, head_of_department) are admin-provisioned only.
+VALID_REGISTER_ROLES = frozenset({"doctor", "nurse", "researcher", "viewer"})
+REGISTER_DEPARTMENT_REQUIRED = frozenset({"nurse"})
+REGISTER_DEPARTMENT_OPTIONAL = frozenset({"doctor", "nurse"})
 
 
 class UserRegister(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=6)
+    password: str = Field(min_length=8)
     full_name: str = Field(min_length=1, max_length=255)
     role: str = Field(default="doctor")
     subdomain: str | None = None
@@ -48,10 +42,20 @@ class UserLogin(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str | None = None
     token_type: str = "bearer"
     tenant_id: int | None = None
     role: str
     demo_mode: bool = False
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=10)
+    new_password: str = Field(min_length=8)
 
 
 class UserResponse(BaseModel):
@@ -116,24 +120,39 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(user: User) -> str:
-    expire = datetime.utcnow() + timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
+    expire = datetime.utcnow() + timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS)
     payload = {
         "sub": str(user.id),
         "tenant_id": user.tenant_id,
         "role": user.role,
+        "type": "access",
         "exp": expire,
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def create_email_token(email: str, purpose: str, expire_hours: int) -> str:
-    """Signed, short-lived token for email verification / password reset links."""
-    expire = datetime.utcnow() + timedelta(hours=expire_hours)
-    payload = {"sub": email, "type": purpose, "exp": expire}
+def create_refresh_token(user: User) -> str:
+    expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    payload = {
+        "sub": str(user.id),
+        "tenant_id": user.tenant_id,
+        "role": user.role,
+        "type": "refresh",
+        "exp": expire,
+    }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def decode_email_token(token: str, *, purpose: str) -> str:
+def create_email_token(email: str, purpose: str, expire_hours: int, *, tenant_id: int | None = None) -> str:
+    """Signed, short-lived token for email verification / password reset links."""
+    expire = datetime.utcnow() + timedelta(hours=expire_hours)
+    payload: dict = {"sub": email, "type": purpose, "exp": expire}
+    if tenant_id is not None:
+        payload["tenant_id"] = tenant_id
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def decode_email_token(token: str, *, purpose: str) -> tuple[str, int | None]:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     except JWTError as exc:
@@ -146,7 +165,8 @@ def decode_email_token(token: str, *, purpose: str) -> str:
     email = payload.get("sub")
     if not email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token payload")
-    return str(email)
+    tenant_id = payload.get("tenant_id")
+    return str(email), int(tenant_id) if tenant_id is not None else None
 
 
 def email_verification_required() -> bool:
@@ -275,7 +295,7 @@ def register(
     if data.role in REGISTER_DEPARTMENT_REQUIRED and not data.department_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="department_id is required for head_of_department and nurse roles",
+            detail="department_id is required for nurse role",
         )
 
     department_id: int | None = None
@@ -314,7 +334,9 @@ def register(
     db.refresh(user)
 
     if needs_verification:
-        token = create_email_token(user.email, "verify", settings.EMAIL_VERIFICATION_EXPIRE_HOURS)
+        token = create_email_token(
+            user.email, "verify", settings.EMAIL_VERIFICATION_EXPIRE_HOURS, tenant_id=user.tenant_id
+        )
         background_tasks.add_task(
             get_email_service().send_verification_email, user.email, token, settings.FRONTEND_URL
         )
@@ -370,6 +392,35 @@ def login(data: UserLogin, request: Request, db: Annotated[Session, Depends(get_
 
     return TokenResponse(
         access_token=create_access_token(user),
+        refresh_token=create_refresh_token(user),
+        tenant_id=user.tenant_id,
+        role=user.role,
+        demo_mode=bool(settings.DEMO_MODE),
+    )
+
+
+@router.post("/refresh", response_model=TokenResponse)
+@rate_limit(
+    limit=settings.RATE_LIMIT_LOGIN_PER_MINUTE,
+    period=60,
+    name="auth_refresh",
+)
+def refresh_token(data: RefreshTokenRequest, db: Annotated[Session, Depends(get_db)]):
+    try:
+        payload = jwt.decode(data.refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    if payload.get("type") != "refresh":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
+    user_id = payload.get("sub")
+    if user_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if not user or user.is_blocked:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or blocked")
+    return TokenResponse(
+        access_token=create_access_token(user),
+        refresh_token=create_refresh_token(user),
         tenant_id=user.tenant_id,
         role=user.role,
         demo_mode=bool(settings.DEMO_MODE),
@@ -409,7 +460,9 @@ def request_reset(
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
         )
-        token = create_email_token(user.email, "reset", settings.EMAIL_PASSWORD_RESET_EXPIRE_HOURS)
+        token = create_email_token(
+            user.email, "reset", settings.EMAIL_PASSWORD_RESET_EXPIRE_HOURS, tenant_id=user.tenant_id
+        )
         background_tasks.add_task(
             get_email_service().send_password_reset_email, user.email, token, settings.FRONTEND_URL
         )
@@ -417,13 +470,49 @@ def request_reset(
     return {"detail": "If the email exists, reset instructions have been sent."}
 
 
+@router.post("/reset-password", response_model=MessageResponse)
+@rate_limit(
+    limit=settings.RATE_LIMIT_RESET_PER_HOUR,
+    period=3600,
+    name="auth_reset_password",
+)
+def reset_password(
+    request: Request,
+    data: ResetPasswordRequest,
+    db: Annotated[Session, Depends(get_db)],
+):
+    email, tenant_id = decode_email_token(data.token, purpose="reset")
+    query = db.query(User).filter(User.email == email)
+    if tenant_id is not None:
+        query = query.filter(User.tenant_id == tenant_id)
+    user = query.first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
+    user.password_hash = hash_password(data.new_password)
+    db.commit()
+    log_audit(
+        db,
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+        action="password_reset_completed",
+        resource_type="user",
+        resource_id=user.id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    return MessageResponse(detail="Password updated successfully")
+
+
 @router.post("/verify-email", response_model=MessageResponse)
 def verify_email(
     db: Annotated[Session, Depends(get_db)],
     token: str = Query(..., min_length=10),
 ):
-    email = decode_email_token(token, purpose="verify")
-    user = db.query(User).filter(User.email == email).order_by(User.id.desc()).first()
+    email, tenant_id = decode_email_token(token, purpose="verify")
+    query = db.query(User).filter(User.email == email)
+    if tenant_id is not None:
+        query = query.filter(User.tenant_id == tenant_id)
+    user = query.first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -467,7 +556,9 @@ def resend_verification(
     user = query.first()
 
     if user and not user.email_verified:
-        token = create_email_token(user.email, "verify", settings.EMAIL_VERIFICATION_EXPIRE_HOURS)
+        token = create_email_token(
+            user.email, "verify", settings.EMAIL_VERIFICATION_EXPIRE_HOURS, tenant_id=user.tenant_id
+        )
         background_tasks.add_task(
             get_email_service().send_verification_email, user.email, token, settings.FRONTEND_URL
         )

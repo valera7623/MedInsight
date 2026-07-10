@@ -8,7 +8,10 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = "change-me-in-production-use-openssl-rand-hex-32"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_DAYS: int = 7
+    ACCESS_TOKEN_EXPIRE_HOURS: int = 1
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ACCESS_TOKEN_EXPIRE_DAYS: int = 7  # legacy alias; prefer ACCESS_TOKEN_EXPIRE_HOURS
+    ENVIRONMENT: str = "development"  # development | production
     DATABASE_URL: str = "sqlite:///./medinsight.db"
     DEVELOPMENT_DATABASE_URL: str = "sqlite:///./medinsight.db"
     PRODUCTION_DATABASE_URL: str = "postgresql://medinsight:secure_password@postgres:5432/medinsight"
@@ -205,6 +208,9 @@ class Settings(BaseSettings):
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 10
     RATE_LIMIT_REGISTER_PER_HOUR: int = 5
     RATE_LIMIT_RESET_PER_HOUR: int = 3
+    RATE_LIMIT_UPLOAD_PER_MINUTE: int = 20
+    RATE_LIMIT_PREDICT_PER_MINUTE: int = 10
+    RATE_LIMIT_ADMIN_PER_MINUTE: int = 30
 
     # Phase 5: Graceful Shutdown
     GRACEFUL_SHUTDOWN_TIMEOUT: int = 30
@@ -304,6 +310,17 @@ class Settings(BaseSettings):
         if self.DEMO_MODE:
             object.__setattr__(self, "DOCX_WATERMARK", self.DEMO_WATERMARK)
             object.__setattr__(self, "DOCX_FILL_DEMO_WHEN_EMPTY", True)
+        if self.ENVIRONMENT == "production":
+            insecure_defaults = {
+                "SECRET_KEY": "change-me-in-production-use-openssl-rand-hex-32",
+                "SUPER_ADMIN_PASSWORD": "change_me_super_admin",
+                "POSTGRES_PASSWORD": "secure_password",
+            }
+            for field, default in insecure_defaults.items():
+                if getattr(self, field) == default:
+                    raise ValueError(
+                        f"{field} must be changed from the default value in production (ENVIRONMENT=production)"
+                    )
 
 
 settings = Settings()
