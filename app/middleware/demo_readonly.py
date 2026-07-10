@@ -28,6 +28,18 @@ _ALLOWED_PREFIXES = (
 class DemoReadOnlyMiddleware(BaseHTTPMiddleware):
     """Reject write operations in the buyer-facing demo stack."""
 
+    @staticmethod
+    def _is_allowed(path: str) -> bool:
+        for prefix in _ALLOWED_PREFIXES:
+            if path == prefix or path.rstrip("/") == prefix.rstrip("/"):
+                return True
+            if prefix.endswith("/"):
+                if path.startswith(prefix):
+                    return True
+            elif path.startswith(prefix + "/"):
+                return True
+        return False
+
     async def dispatch(self, request: Request, call_next) -> Response:
         if not settings.DEMO_MODE:
             return await call_next(request)
@@ -35,11 +47,7 @@ class DemoReadOnlyMiddleware(BaseHTTPMiddleware):
         if request.method not in _MUTATING:
             return await call_next(request)
 
-        path = request.url.path
-        if any(path == p or path.startswith(p + "/") for p in _ALLOWED_PREFIXES):
-            return await call_next(request)
-        # Exact match for login without trailing slash variants already covered.
-        if path.rstrip("/") in {p.rstrip("/") for p in _ALLOWED_PREFIXES}:
+        if self._is_allowed(request.url.path):
             return await call_next(request)
 
         return JSONResponse(
