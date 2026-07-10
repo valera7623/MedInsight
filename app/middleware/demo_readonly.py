@@ -11,11 +11,15 @@ from app.config import settings
 _MUTATING = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 # Auth and health must remain usable in the public demo.
+# Export/report generation is read-only from a data perspective (writes temp files only).
 _ALLOWED_PREFIXES = (
     "/api/auth/login",
     "/api/auth/request-reset",
     "/api/auth/resend-verification",
     "/api/auth/verify-email",
+    "/api/export/",
+    "/api/reports/generate",
+    "/api/reports/preview",
     "/health",
     "/metrics",
 )
