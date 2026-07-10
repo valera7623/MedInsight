@@ -2,11 +2,11 @@
 
 # Authentication
 
-Auto-generated reference for **Authentication** endpoints (11 operations).
+Auto-generated reference for **Authentication** endpoints (13 operations).
 
 **OpenAPI tags:** auth, preferences
 
-**Endpoints:** 11
+**Endpoints:** 13
 
 ---
 
@@ -60,7 +60,7 @@ Login
 
 | Status | Description | Example |
 |--------|-------------|---------|
-| 200 | Successful Response | `{"access_token": "string", "token_type": "bearer", "tenant_id": 0, "role": "string", "demo_mode": false}` |
+| 200 | Successful Response | `{"access_token": "string", "refresh_token": "string", "token_type": "bearer", "tenant_id": 0, "role": "string", "demo...` |
 | 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
 
 **Example:**
@@ -92,6 +92,38 @@ Me
 ```bash
 curl -X GET https://fileguardian.com.ru/api/auth/me \
   -H "Authorization: Bearer $JWT"
+```
+
+## POST /api/auth/refresh
+
+Refresh Token
+
+**Authentication:** none
+
+**Request Body:**
+
+```json
+{
+  "refresh_token": "string"
+}
+```
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"access_token": "string", "refresh_token": "string", "token_type": "bearer", "tenant_id": 0, "role": "string", "demo...` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/auth/refresh \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"string"}'
 ```
 
 ## POST /api/auth/register
@@ -195,6 +227,39 @@ curl -X POST https://fileguardian.com.ru/api/auth/resend-verification \
   -H "Authorization: Bearer $JWT" \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com","subdomain":"string"}'
+```
+
+## POST /api/auth/reset-password
+
+Reset Password
+
+**Authentication:** none
+
+**Request Body:**
+
+```json
+{
+  "token": "string",
+  "new_password": "string"
+}
+```
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"detail": "string", "email_verified": true}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/auth/reset-password \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"token":"string","new_password":"string"}'
 ```
 
 ## GET /api/auth/tenants

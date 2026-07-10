@@ -1796,7 +1796,7 @@
   <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Безопность
+        Безопасность
       
     </span>
   </a>
@@ -2027,7 +2027,7 @@
   <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Безопность
+        Безопасность
       
     </span>
   </a>
@@ -2149,32 +2149,40 @@
 <ul>
 <li>[x] MkDocs-сайт документации</li>
 <li>[ ] Английская версия user-guide</li>
-<li>[ ] Автогенерация API markdown из OpenAPI</li>
+<li>[x] Автогенерация API markdown из OpenAPI</li>
 </ul>
 <h3 id="dicom">DICOM<a class="headerlink" href="#dicom" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Поддержка DICOM ZIP (многофайловые исследования)</li>
-<li>[ ] Аннотации на снимках</li>
-<li>[ ] Интеграция DICOM metadata в GPT-прогнозы</li>
+<li>[x] Поддержка DICOM ZIP (многофайловые исследования)</li>
+<li>[x] Аннотации на снимках</li>
+<li>[x] Интеграция DICOM metadata в GPT-прогнозы</li>
 </ul>
-<h3 id="_1">Безопность<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<h3 id="_1">Безопасность<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
 <ul>
+<li>[x] Ограничение self-registration (без admin/head_of_department)</li>
+<li>[x] Password reset end-to-end (API + UI)</li>
+<li>[x] FHIR API: JWT + tenant scoping</li>
+<li>[x] Tenant spoofing fix в usage_limit/cache middleware</li>
+<li>[x] XSS hardening в AI/prediction HTML</li>
+<li>[x] Fail-fast на default secrets в production</li>
+<li>[x] JWT refresh tokens (access 1h + refresh 7d)</li>
+<li>[x] Rate limits на upload/predict/admin</li>
 <li>[ ] 2FA (TOTP)</li>
-<li>[ ] Audit export в SIEM</li>
-<li>[ ] PostgreSQL как рекомендуемая БД для prod</li>
+<li>[x] Audit export в SIEM (Phase 13, feature flag)</li>
+<li>[x] PostgreSQL как рекомендуемая БД для prod</li>
 </ul>
 <h2 id="q4-2026">Q4 2026<a class="headerlink" href="#q4-2026" title="Permanent link">&para;</a></h2>
 <h3 id="_2">Клинические функции<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] HL7 FHIR import/export</li>
-<li>[ ] Шаблоны отчётов PDF</li>
-<li>[ ] Календарь приёмов</li>
+<li>[x] HL7 FHIR import/export (Phase 14)</li>
+<li>[x] Шаблоны отчётов PDF (Phase 15)</li>
+<li>[x] Календарь приёмов (Phase 16)</li>
 </ul>
 <h3 id="ai">AI<a class="headerlink" href="#ai" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Fine-tuned модели на анонимизированных данных</li>
-<li>[ ] Объяснимость прогнозов (SHAP-like)</li>
-<li>[ ] RAG по клиническим guidelines</li>
+<li>[x] Объяснимость прогнозов (SHAP, Phase 17)</li>
+<li>[x] RAG по клиническим guidelines (self-healing)</li>
 </ul>
 <h3 id="_3">Инфраструктура<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
 <ul>

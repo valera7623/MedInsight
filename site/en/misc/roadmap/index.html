@@ -2149,32 +2149,40 @@
 <ul>
 <li>[x] MkDocs documentation site</li>
 <li>[ ] English user-guide version</li>
-<li>[ ] Auto-generate API markdown from OpenAPI</li>
+<li>[x] Auto-generate API markdown from OpenAPI</li>
 </ul>
 <h3 id="dicom">DICOM<a class="headerlink" href="#dicom" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] DICOM ZIP support (multi-file studies)</li>
-<li>[ ] Image annotations</li>
-<li>[ ] DICOM metadata integration in GPT predictions</li>
+<li>[x] DICOM ZIP support (multi-file studies)</li>
+<li>[x] Image annotations</li>
+<li>[x] DICOM metadata integration in GPT predictions</li>
 </ul>
 <h3 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h3>
 <ul>
+<li>[x] Restrict self-registration (no admin/head_of_department)</li>
+<li>[x] Password reset end-to-end (API + UI)</li>
+<li>[x] FHIR API: JWT + tenant scoping</li>
+<li>[x] Tenant spoofing fix in usage_limit/cache middleware</li>
+<li>[x] XSS hardening in AI/prediction HTML</li>
+<li>[x] Fail-fast on default secrets in production</li>
+<li>[x] JWT refresh tokens (1h access + 7d refresh)</li>
+<li>[x] Rate limits on upload/predict/admin</li>
 <li>[ ] 2FA (TOTP)</li>
-<li>[ ] Audit export to SIEM</li>
-<li>[ ] PostgreSQL as recommended prod DB</li>
+<li>[x] Audit export to SIEM (Phase 13, feature flag)</li>
+<li>[x] PostgreSQL as recommended production DB</li>
 </ul>
 <h2 id="q4-2026">Q4 2026<a class="headerlink" href="#q4-2026" title="Permanent link">&para;</a></h2>
 <h3 id="clinical-features">Clinical features<a class="headerlink" href="#clinical-features" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] HL7 FHIR import/export</li>
-<li>[ ] PDF report templates</li>
-<li>[ ] Appointment calendar</li>
+<li>[x] HL7 FHIR import/export (Phase 14)</li>
+<li>[x] PDF report templates (Phase 15)</li>
+<li>[x] Appointments calendar (Phase 16)</li>
 </ul>
 <h3 id="ai">AI<a class="headerlink" href="#ai" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Fine-tuned models on anonymized data</li>
-<li>[ ] Prediction explainability (SHAP-like)</li>
-<li>[ ] RAG over clinical guidelines</li>
+<li>[x] Prediction explainability (SHAP, Phase 17)</li>
+<li>[x] RAG on clinical guidelines (self-healing)</li>
 </ul>
 <h3 id="infrastructure">Infrastructure<a class="headerlink" href="#infrastructure" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2185,15 +2193,15 @@
 <h2 id="2027">2027+<a class="headerlink" href="#2027" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Mobile app (React Native)</li>
-<li>Integration with EGISZ (Russia)</li>
-<li>Offline-first for field studies</li>
+<li>EGISZ integration (Russia)</li>
+<li>Offline-first for field research</li>
 <li>Medical device certification (if required)</li>
 </ul>
 <h2 id="how-to-suggest-a-feature">How to suggest a feature<a class="headerlink" href="#how-to-suggest-a-feature" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Open an issue on <a href="https://github.com/valera7623/MedInsight/issues">GitHub</a></li>
 <li>Describe the use case and user role</li>
-<li>Priority is set by clinic requests and security needs</li>
+<li>Priority is driven by clinic demand and security</li>
 </ol>
 <h2 id="principles">Principles<a class="headerlink" href="#principles" title="Permanent link">&para;</a></h2>
 <ul>

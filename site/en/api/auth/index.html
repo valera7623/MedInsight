@@ -1222,6 +1222,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#post-apiauthrefresh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/refresh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#post-apiauthregister" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1248,6 +1259,17 @@
     <span class="md-ellipsis">
       
         POST /api/auth/resend-verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiauthreset-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/reset-password
       
     </span>
   </a>
@@ -2011,6 +2033,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#post-apiauthrefresh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/refresh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#post-apiauthregister" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2037,6 +2070,17 @@
     <span class="md-ellipsis">
       
         POST /api/auth/resend-verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiauthreset-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/reset-password
       
     </span>
   </a>
@@ -2121,9 +2165,9 @@
 <!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
 <h1 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h1>
-<p>Auto-generated reference for <strong>Authentication</strong> endpoints (11 operations).</p>
+<p>Auto-generated reference for <strong>Authentication</strong> endpoints (13 operations).</p>
 <p><strong>OpenAPI tags:</strong> auth, preferences</p>
-<p><strong>Endpoints:</strong> 11</p>
+<p><strong>Endpoints:</strong> 13</p>
 <hr />
 <h2 id="get-apiauthdepartments">GET /api/auth/departments<a class="headerlink" href="#get-apiauthdepartments" title="Permanent link">&para;</a></h2>
 <p>List Public Departments</p>
@@ -2198,7 +2242,7 @@
 <tr>
 <td>200</td>
 <td>Successful Response</td>
-<td><code>{"access_token": "string", "token_type": "bearer", "tenant_id": 0, "role": "string", "demo_mode": false}</code></td>
+<td><code>{"access_token": "string", "refresh_token": "string", "token_type": "bearer", "tenant_id": 0, "role": "string", "demo...</code></td>
 </tr>
 <tr>
 <td>422</td>
@@ -2236,6 +2280,42 @@
 <p><strong>Example:</strong></p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/auth/me<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="post-apiauthrefresh">POST /api/auth/refresh<a class="headerlink" href="#post-apiauthrefresh" title="Permanent link">&para;</a></h2>
+<p>Refresh Token</p>
+<p><strong>Authentication:</strong> none</p>
+<p><strong>Request Body:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;refresh_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"access_token": "string", "refresh_token": "string", "token_type": "bearer", "tenant_id": 0, "role": "string", "demo...</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/auth/refresh<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;refresh_token&quot;:&quot;string&quot;}&#39;</span>
 </code></pre></div>
 <h2 id="post-apiauthregister">POST /api/auth/register<a class="headerlink" href="#post-apiauthregister" title="Permanent link">&para;</a></h2>
 <p>Register</p>
@@ -2351,6 +2431,43 @@
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;email&quot;:&quot;user@example.com&quot;,&quot;subdomain&quot;:&quot;string&quot;}&#39;</span>
+</code></pre></div>
+<h2 id="post-apiauthreset-password">POST /api/auth/reset-password<a class="headerlink" href="#post-apiauthreset-password" title="Permanent link">&para;</a></h2>
+<p>Reset Password</p>
+<p><strong>Authentication:</strong> none</p>
+<p><strong>Request Body:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;new_password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"detail": "string", "email_verified": true}</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/auth/reset-password<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;token&quot;:&quot;string&quot;,&quot;new_password&quot;:&quot;string&quot;}&#39;</span>
 </code></pre></div>
 <h2 id="get-apiauthtenants">GET /api/auth/tenants<a class="headerlink" href="#get-apiauthtenants" title="Permanent link">&para;</a></h2>
 <p>List Public Tenants</p>
