@@ -194,7 +194,7 @@ def _setup_audit_trigger(conn) -> None:
                 'old', CASE WHEN TG_OP IN ('UPDATE', 'DELETE') THEN row_to_json(OLD)::jsonb ELSE NULL END,
                 'new', CASE WHEN TG_OP IN ('INSERT', 'UPDATE') THEN row_to_json(NEW)::jsonb ELSE NULL END
               );
-              INSERT INTO audit_logs (action, resource_type, resource_id, details, created_at)
+              INSERT INTO audit_logs (action, resource_type, resource_id, details, created_at, export_status, export_attempts)
               VALUES (
                 lower(TG_OP),
                 TG_TABLE_NAME,
@@ -203,7 +203,9 @@ def _setup_audit_trigger(conn) -> None:
                   NULL
                 ),
                 payload,
-                NOW() AT TIME ZONE 'utc'
+                NOW() AT TIME ZONE 'utc',
+                'pending',
+                0
               );
               RETURN COALESCE(NEW, OLD);
             END;

@@ -123,7 +123,10 @@ print(\"Tables OK\")
   '
 
   echo "Seeding demo data..."
-  compose exec -T demo_app bash -c 'PYTHONPATH=/app python -m scripts.seed_demo'
+  compose exec -T demo_app bash -c 'PYTHONPATH=/app python -m scripts.seed_demo' || {
+    echo "Seed failed once — retrying with --force..."
+    compose exec -T demo_app bash -c 'PYTHONPATH=/app python -m scripts.seed_demo --force'
+  }
 
   echo ""
   echo "MedInsight DEMO is running."

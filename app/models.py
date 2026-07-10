@@ -233,8 +233,10 @@ class AuditLog(Base):
     # SIEM export & signing (Phase 13)
     signature: Mapped[str | None] = mapped_column(String(64), nullable=True)
     signed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    # Index defined in __table_args__ (avoid duplicate create_all with index=True).
-    export_status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    # server_default required: PG audit_log_trigger inserts without this column.
+    export_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending", server_default="pending"
+    )
     export_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_export_attempt_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     export_error: Mapped[str | None] = mapped_column(Text, nullable=True)
