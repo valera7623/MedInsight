@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Автор** | [Valera (valera7623)](https://github.com/valera7623) · valera7623@gmail.com |
+| **Автор** | [Valery Popov](https://github.com/valera7623) · valera7623@gmail.com |
 | **Лицензия** | [MIT](LICENSE) |
 | **Версия** | 1.0.0 (июнь 2026) |
 | **Production** | [fileguardian.com.ru](https://fileguardian.com.ru) |

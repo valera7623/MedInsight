@@ -2,7 +2,7 @@
 name = "medinsight"
 version = "1.0.0"
 description = "Clinical analytics platform — document parsing, entity extraction, predictions, DICOM"
-authors = ["Valera <valera7623@gmail.com>"]
+authors = ["Valery Popov <valera7623@gmail.com>"]
 readme = "README.md"
 repository = "https://github.com/valera7623/MedInsight"
 license = "MIT"
