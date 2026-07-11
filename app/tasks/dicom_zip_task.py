@@ -6,12 +6,20 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from sqlalchemy.exc import IntegrityError
+
 from app.config import settings
 from app.database import SessionLocal
 from app.models import DicomFrame, DicomSeries, DicomStudy, Patient
 from app.services.dicom_parser import DicomParseError
 from app.services.dicom_storage import DicomStorage
 from app.services.dicom_zip_processor import DicomZipProcessor, DicomZipError
+from app.services.dicom_persistence import (
+    cross_patient_conflict_message,
+    delete_study_data,
+    friendly_integrity_error,
+    prepare_study_for_upload,
+)
 from app.tasks.celery_app import celery_app
 from app.tasks.dicom_task import _notify_dicom_ready
 
@@ -107,6 +115,18 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
             series_groups=primary_series_groups,
         )
         real_study_uid = structure["study_uid"]
+
+        first_series_uid = (
+            structure["series"][0]["series_uid"]
+            if structure.get("series")
+            else f"{real_study_uid}.series.0"
+        )
+        prepare_study_for_upload(
+            db,
+            study,
+            {"study_uid": real_study_uid, "series_uid": first_series_uid},
+            storage,
+        )
 
         study.study_uid = real_study_uid
         study.study_date = structure.get("study_date") or study.study_date
@@ -208,6 +228,20 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
                     study.patient_id,
                     series_groups=alt_series_groups,
                 )
+                alt_uid = alt_structure["study_uid"]
+                existing_alt = db.query(DicomStudy).filter(DicomStudy.study_uid == alt_uid).first()
+                if existing_alt:
+                    if existing_alt.patient_id != study.patient_id:
+                        msg = cross_patient_conflict_message(db, existing_alt, study, storage)
+                        if msg:
+                            logger.warning("Skipped secondary study %s: %s", alt_uid, msg)
+                            continue
+                    elif existing_alt.status == "processing":
+                        logger.warning("Skipped secondary study %s: already processing", alt_uid)
+                        continue
+                    else:
+                        delete_study_data(db, existing_alt, storage)
+
                 alt_study = DicomStudy(
                     patient_id=study.patient_id,
                     tenant_id=study.tenant_id,
@@ -299,8 +333,8 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
             "total_files": total_files,
         }
 
-    except Exception as exc:
-        logger.exception("DICOM ZIP processing failed for study %s: %s", study_id, exc)
+    except DicomParseError as exc:
+        logger.warning("DICOM ZIP parse/conflict for study %s: %s", study_id, exc)
         db.rollback()
         if study := db.query(DicomStudy).filter(DicomStudy.id == study_id).first():
             study.status = "failed"
@@ -308,6 +342,26 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
             study.processed_at = datetime.utcnow()
             db.commit()
         return {"status": "failed", "error": str(exc)}
+    except IntegrityError as exc:
+        logger.warning("DICOM ZIP integrity error for study %s: %s", study_id, exc)
+        db.rollback()
+        message = friendly_integrity_error(exc) or "Конфликт данных DICOM (дубликат Study UID)."
+        if study := db.query(DicomStudy).filter(DicomStudy.id == study_id).first():
+            study.status = "failed"
+            study.error_message = message
+            study.processed_at = datetime.utcnow()
+            db.commit()
+        return {"status": "failed", "error": message}
+    except Exception as exc:
+        logger.exception("DICOM ZIP processing failed for study %s: %s", study_id, exc)
+        db.rollback()
+        message = friendly_integrity_error(exc) if isinstance(exc, IntegrityError) else str(exc)
+        if study := db.query(DicomStudy).filter(DicomStudy.id == study_id).first():
+            study.status = "failed"
+            study.error_message = message
+            study.processed_at = datetime.utcnow()
+            db.commit()
+        return {"status": "failed", "error": message}
     finally:
         db.close()
         if temp_dir:

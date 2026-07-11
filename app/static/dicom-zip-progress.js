@@ -67,6 +67,7 @@ function startDicomZipProgressPolling(jobId, studyId, totalFiles, onComplete) {
       if (data.status === 'FAILURE' || data.status === 'failed') {
         hideDicomZipProgress();
         notifyError(data.error || 'Ошибка обработки ZIP-архива');
+        if (onComplete) onComplete(data);
         return;
       }
     } catch (err) {
