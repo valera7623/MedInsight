@@ -239,13 +239,13 @@ class FhirMapper:
                     if dicom_study.get("modality")
                     else None,
                     numberOfInstances=dicom_study.get("num_instances"),
-                    bodySite=CodeableConcept(text=dicom_study.get("body_part")) if dicom_study.get("body_part") else None,
+                    bodySite=Coding(display=dicom_study.get("body_part")) if dicom_study.get("body_part") else None,
                 )
             )
         return ImagingStudy(
             id=sid,
             meta=_meta(),
-            status="available" if dicom_study.get("status") == "processed" else "registered",
+            status="available" if dicom_study.get("status") in ("processed", "ready") else "registered",
             subject=_patient_ref(patient_id),
             started=dicom_study.get("study_date") or dicom_study.get("created_at"),
             description=dicom_study.get("study_description"),
