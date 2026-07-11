@@ -1860,6 +1860,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Политика паролей и блокировка входа
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2fa-totp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Двухфакторная аутентификация (2FA / TOTP)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#env" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Синхронизация .env с шаблоном
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#email" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2636,6 +2669,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Политика паролей и блокировка входа
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2fa-totp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Двухфакторная аутентификация (2FA / TOTP)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#env" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Синхронизация .env с шаблоном
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#email" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2752,6 +2818,11 @@
 <td><code>APP_PORT</code></td>
 <td><code>8000</code></td>
 <td>Порт uvicorn</td>
+</tr>
+<tr>
+<td><code>ENVIRONMENT</code></td>
+<td><code>development</code></td>
+<td><code>development</code> / <code>production</code></td>
 </tr>
 <tr>
 <td><code>APP_VERSION</code></td>
@@ -3248,8 +3319,98 @@
 <td><code>5</code></td>
 <td>Регистрация</td>
 </tr>
+<tr>
+<td><code>RATE_LIMIT_RESET_PER_HOUR</code></td>
+<td><code>3</code></td>
+<td>Сброс пароля</td>
+</tr>
 </tbody>
 </table>
+<h2 id="_8">Политика паролей и блокировка входа<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Переменная</th>
+<th>По умолчанию</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PASSWORD_MIN_LENGTH</code></td>
+<td><code>12</code></td>
+<td>Минимальная длина пароля</td>
+</tr>
+<tr>
+<td><code>PASSWORD_REQUIRE_COMPLEXITY</code></td>
+<td><code>true</code></td>
+<td>Требовать буквы, цифры и спецсимволы</td>
+</tr>
+<tr>
+<td><code>PASSWORD_HIBP_CHECK_ENABLED</code></td>
+<td><code>false</code></td>
+<td>Проверка пароля через Have I Been Pwned</td>
+</tr>
+<tr>
+<td><code>LOGIN_LOCKOUT_MAX_ATTEMPTS</code></td>
+<td><code>5</code></td>
+<td>Неудачных попыток до блокировки</td>
+</tr>
+<tr>
+<td><code>LOGIN_LOCKOUT_DURATION_SECONDS</code></td>
+<td><code>900</code></td>
+<td>Длительность блокировки (15 мин)</td>
+</tr>
+</tbody>
+</table>
+<p>Блокировка хранится в Redis (<code>login_lock:{user_id}</code>). Сбрасывается при успешном входе.</p>
+<h2 id="2fa-totp">Двухфакторная аутентификация (2FA / TOTP)<a class="headerlink" href="#2fa-totp" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Переменная</th>
+<th>По умолчанию</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MFA_ENFORCED</code></td>
+<td><code>true</code></td>
+<td>Глобально требовать 2FA для ролей из политики</td>
+</tr>
+<tr>
+<td><code>MFA_REQUIRED_ROLES</code></td>
+<td><code>admin,doctor</code></td>
+<td>Роли через запятую (tenant может переопределить в <code>settings.mfa_required_roles</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>Поведение:</p>
+<ul>
+<li>При <code>MFA_ENFORCED=true</code> в <strong>production</strong> <code>super_admin</code> всегда обязан включить TOTP.</li>
+<li>Роли из <code>MFA_REQUIRED_ROLES</code> (или tenant override) не могут войти, пока не включат TOTP в настройках аккаунта.</li>
+<li>При <code>MFA_ENFORCED=false</code> проверка TOTP <strong>отключена</strong> (временный обход для обслуживания). Включите снова после работ.</li>
+</ul>
+<p>Проверка в контейнере:</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>app<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from app.config import settings; print(settings.MFA_ENFORCED)&quot;</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Изменения .env и Docker</p>
+<p>Переменные из <code>env_file: .env</code> попадают в контейнер при <strong>создании</strong> контейнера.
+<code>docker restart</code> <strong>не</strong> подхватывает новые ключи из <code>.env</code>.
+После правки <code>.env</code> пересоздайте сервисы:</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.yml<span class="w"> </span>-f<span class="w"> </span>docker-compose.prod.yml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--force-recreate<span class="w"> </span>app<span class="w"> </span>celery_worker
+</code></pre></div>
+<p>Полный <code>./deploy.sh production</code> делает <code>compose down</code> + <code>up</code> и тоже применяет <code>.env</code>.</p>
+</div>
+<h2 id="env">Синхронизация .env с шаблоном<a class="headerlink" href="#env" title="Permanent link">&para;</a></h2>
+<p>Скрипт <code>scripts/sync_env_from_example.py</code> добавляет в <code>.env</code> ключи из <code>.env.example</code>,
+не перезаписывая существующие значения. Перед изменением создаётся бэкап <code>.env.backup.&lt;timestamp&gt;</code>.</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>scripts/sync_env_from_example.py
+<span class="c1"># или на VPS:</span>
+docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>app<span class="w"> </span>python<span class="w"> </span>scripts/sync_env_from_example.py
+</code></pre></div>
 <h2 id="email">Email<a class="headerlink" href="#email" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -3283,14 +3444,18 @@
 </table>
 <h2 id="envproduction">Пример .env.production<a class="headerlink" href="#envproduction" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nv">SECRET_KEY</span><span class="o">=</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span><span class="k">)</span>
-<span class="nv">DATABASE_URL</span><span class="o">=</span>sqlite:////app/data/medinsight.db
+<span class="nv">ENVIRONMENT</span><span class="o">=</span>production
+<span class="nv">POSTGRES_PASSWORD</span><span class="o">=</span>&lt;надёжный-пароль&gt;
+<span class="nv">DATABASE_URL</span><span class="o">=</span>postgresql://medinsight:&lt;пароль&gt;@postgres:5432/medinsight
 <span class="nv">REDIS_URL</span><span class="o">=</span>redis://redis:6379/0
-<span class="nv">APP_ENV</span><span class="o">=</span>production
-<span class="nv">CORS_ORIGINS</span><span class="o">=</span>https://medinsight.fileguardian.info
+<span class="nv">CORS_ORIGINS</span><span class="o">=</span>https://fileguardian.com.ru
 <span class="nv">ENCRYPTION_ENABLED</span><span class="o">=</span><span class="nb">true</span>
 <span class="nv">OPENAI_API_KEY</span><span class="o">=</span>sk-...
-<span class="nv">FRONTEND_URL</span><span class="o">=</span>https://medinsight.fileguardian.info
+<span class="nv">FRONTEND_URL</span><span class="o">=</span>https://fileguardian.com.ru
+<span class="nv">MFA_ENFORCED</span><span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
+<p><code>deploy.sh production</code> собирает <code>DATABASE_URL</code> из <code>POSTGRES_PASSWORD</code> и не затирает пароль
+при повторных деплоях (volume PostgreSQL сохраняет учётные данные).</p>
 
 
 

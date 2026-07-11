@@ -2569,6 +2569,12 @@ docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"
 </div>
 <h2 id="compose">Переменные в compose<a class="headerlink" href="#compose" title="Permanent link">&para;</a></h2>
 <p>Передаются через <code>env_file: .env</code> или <code>environment:</code> в compose-файле.</p>
+<div class="admonition warning">
+<p class="admonition-title">Перезапуск vs пересоздание</p>
+<p><code>docker compose restart app</code> не подхружает новые ключи из <code>.env</code>.
+Используйте <code>docker compose up -d --force-recreate app celery_worker</code>
+или <code>./deploy.sh production</code>.</p>
+</div>
 <h2 id="_5">Сборка<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
 <p>Dockerfile оптимизирован для VPS:</p>
 <ul>

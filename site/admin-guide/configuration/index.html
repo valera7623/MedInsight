@@ -893,6 +893,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Безопасность и шифрование">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#2fa-totp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2FA (TOTP)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2369,6 +2386,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Безопасность и шифрование">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#2fa-totp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2FA (TOTP)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2519,7 +2553,7 @@
 </thead>
 <tbody>
 <tr>
-<td><code>APP_ENV</code></td>
+<td><code>ENVIRONMENT</code></td>
 <td><code>development</code></td>
 <td><code>development</code> / <code>production</code></td>
 </tr>
@@ -2555,6 +2589,10 @@
 </thead>
 <tbody>
 <tr>
+<td><code>ENVIRONMENT</code></td>
+<td><code>development</code> или <code>production</code> (fail-fast на дефолтных секретах в prod)</td>
+</tr>
+<tr>
 <td><code>AGE_PUBLIC_KEY</code></td>
 <td>Публичный ключ age для шифрования файлов</td>
 </tr>
@@ -2566,8 +2604,37 @@
 <td><code>ENCRYPTION_ENABLED</code></td>
 <td><code>true</code> / <code>false</code></td>
 </tr>
+<tr>
+<td><code>MFA_ENFORCED</code></td>
+<td><code>true</code> — требовать 2FA; <code>false</code> — временно отключить (см. ниже)</td>
+</tr>
+<tr>
+<td><code>MFA_REQUIRED_ROLES</code></td>
+<td>Роли, для которых обязателен TOTP (<code>admin,doctor</code> по умолчанию)</td>
+</tr>
+<tr>
+<td><code>PASSWORD_MIN_LENGTH</code></td>
+<td>Мин. длина пароля (12)</td>
+</tr>
+<tr>
+<td><code>LOGIN_LOCKOUT_MAX_ATTEMPTS</code></td>
+<td>Попыток до блокировки аккаунта (5)</td>
+</tr>
 </tbody>
 </table>
+<h3 id="2fa-totp">2FA (TOTP)<a class="headerlink" href="#2fa-totp" title="Permanent link">&para;</a></h3>
+<p>Пользователь включает TOTP в настройках аккаунта (<code>/api/totp/*</code>). При входе API может вернуть
+<code>totp_required: true</code> — тогда повторите <code>POST /api/auth/login</code> с полем <code>totp_code</code>.</p>
+<p>Временное отключение 2FA на сервере:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># в .env на VPS</span>
+<span class="nv">MFA_ENFORCED</span><span class="o">=</span><span class="nb">false</span>
+docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.yml<span class="w"> </span>-f<span class="w"> </span>docker-compose.prod.yml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--force-recreate<span class="w"> </span>app<span class="w"> </span>celery_worker
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>docker restart</code> не подхватывает новые переменные из <code>.env</code> — нужен <code>--force-recreate</code>
+или полный <code>./deploy.sh production</code>.</p>
+</div>
 <p>Генерация ключей:</p>
 <div class="highlight"><pre><span></span><code>age-keygen<span class="w"> </span>-o<span class="w"> </span>age-key.txt
 <span class="c1"># AGE_PUBLIC_KEY = age1...</span>
@@ -2727,7 +2794,18 @@
 </tbody>
 </table>
 <h2 id="_7">Применение изменений<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.prod.yml<span class="w"> </span>restart<span class="w"> </span>app<span class="w"> </span>worker<span class="w"> </span>beat
+<p>Переменные из <code>.env</code> передаются в контейнер через <code>env_file</code> при <strong>создании</strong> контейнера.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Недостаточно — старые env останутся в контейнере:</span>
+docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>app
+
+<span class="c1"># Правильно — пересоздать app и worker:</span>
+docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.yml<span class="w"> </span>-f<span class="w"> </span>docker-compose.prod.yml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--force-recreate<span class="w"> </span>app<span class="w"> </span>celery_worker
+
+<span class="c1"># Или полный деплой (рекомендуется):</span>
+./deploy.sh<span class="w"> </span>production
+</code></pre></div>
+<p>Добавить недостающие ключи из <code>.env.example</code> без потери секретов:</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>scripts/sync_env_from_example.py
 </code></pre></div>
 <p>Полный список: <a href="../../deployment/environment-variables/">environment-variables.md</a>.</p>
 

@@ -2114,6 +2114,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2264,7 +2275,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2439,6 +2450,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2589,7 +2611,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2643,6 +2665,16 @@
 <ul>
 <li>Full MkDocs documentation (<code>docs/</code>, <code>mkdocs.yml</code>)</li>
 <li>Scripts <code>docker_cleanup.sh</code>, <code>setup_swap.sh</code></li>
+<li><code>scripts/sync_env_from_example.py</code> — merge <code>.env</code> with <code>.env.example</code></li>
+<li><code>MFA_ENFORCED</code> flag to temporarily disable mandatory 2FA</li>
+</ul>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>DICOM viewer CSP and frame slider layout</li>
+<li>FHIR <code>bodySite</code> Coding validation</li>
+<li><code>deploy.sh</code> PostgreSQL URL from <code>POSTGRES_PASSWORD</code></li>
+<li>Skip TOTP verification when <code>MFA_ENFORCED=false</code></li>
+<li>Docs: MFA, env reload in Docker</li>
 </ul>
 <h2 id="100-2026-06"><a href="https://github.com/valera7623/MedInsight/releases/tag/v1.0.0">1.0.0</a> — 2026-06<a class="headerlink" href="#100-2026-06" title="Permanent link">&para;</a></h2>
 <h3 id="added-phase-12-dicom">Added — Phase 12: DICOM<a class="headerlink" href="#added-phase-12-dicom" title="Permanent link">&para;</a></h3>
@@ -2699,7 +2731,7 @@
 <ul>
 <li>Patients, documents, PDF/DOCX parsing, dashboard</li>
 </ul>
-<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>User deletion (FK constraints, audit)</li>
 <li>Docker build timeout on VPS (<code>PIP_DEFAULT_TIMEOUT</code>)</li>

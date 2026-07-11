@@ -1860,6 +1860,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#password-policy-login-lockout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Password policy &amp; login lockout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-factor-authentication-2fa-totp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two-factor authentication (2FA / TOTP)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#email" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2636,6 +2658,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#password-policy-login-lockout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Password policy &amp; login lockout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-factor-authentication-2fa-totp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two-factor authentication (2FA / TOTP)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#email" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3248,8 +3292,75 @@
 <td><code>5</code></td>
 <td>Registration</td>
 </tr>
+<tr>
+<td><code>RATE_LIMIT_RESET_PER_HOUR</code></td>
+<td><code>3</code></td>
+<td>Password reset</td>
+</tr>
 </tbody>
 </table>
+<h2 id="password-policy-login-lockout">Password policy &amp; login lockout<a class="headerlink" href="#password-policy-login-lockout" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PASSWORD_MIN_LENGTH</code></td>
+<td><code>12</code></td>
+<td>Minimum password length</td>
+</tr>
+<tr>
+<td><code>PASSWORD_REQUIRE_COMPLEXITY</code></td>
+<td><code>true</code></td>
+<td>Require mixed character classes</td>
+</tr>
+<tr>
+<td><code>PASSWORD_HIBP_CHECK_ENABLED</code></td>
+<td><code>false</code></td>
+<td>Have I Been Pwned check</td>
+</tr>
+<tr>
+<td><code>LOGIN_LOCKOUT_MAX_ATTEMPTS</code></td>
+<td><code>5</code></td>
+<td>Failed attempts before lockout</td>
+</tr>
+<tr>
+<td><code>LOGIN_LOCKOUT_DURATION_SECONDS</code></td>
+<td><code>900</code></td>
+<td>Lockout duration (15 min)</td>
+</tr>
+</tbody>
+</table>
+<p>Lockout state is stored in Redis and cleared on successful login.</p>
+<h2 id="two-factor-authentication-2fa-totp">Two-factor authentication (2FA / TOTP)<a class="headerlink" href="#two-factor-authentication-2fa-totp" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MFA_ENFORCED</code></td>
+<td><code>true</code></td>
+<td>Enforce 2FA for configured roles</td>
+</tr>
+<tr>
+<td><code>MFA_REQUIRED_ROLES</code></td>
+<td><code>admin,doctor</code></td>
+<td>Comma-separated roles (tenant may override via <code>settings.mfa_required_roles</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>When <code>MFA_ENFORCED=true</code>, <code>super_admin</code> must enable TOTP in production. Set <code>MFA_ENFORCED=false</code>
+only temporarily for maintenance; recreate containers after changing <code>.env</code> (see Russian doc section).</p>
 <h2 id="email">Email<a class="headerlink" href="#email" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

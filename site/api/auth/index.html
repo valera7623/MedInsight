@@ -1231,6 +1231,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#post-apiauthrefresh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/refresh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiauthrequest-reset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/request-reset
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiauthreset-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/reset-password
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#get-apiauthme" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1246,6 +1279,17 @@
     <span class="md-ellipsis">
       
         GET /api/auth/departments
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2fa-totp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2FA (TOTP)
       
     </span>
   </a>
@@ -2295,6 +2339,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#post-apiauthrefresh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/refresh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiauthrequest-reset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/request-reset
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-apiauthreset-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /api/auth/reset-password
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#get-apiauthme" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2310,6 +2387,17 @@
     <span class="md-ellipsis">
       
         GET /api/auth/departments
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2fa-totp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2FA (TOTP)
       
     </span>
   </a>
@@ -2350,7 +2438,9 @@
 <h1 id="api">API — Аутентификация<a class="headerlink" href="#api" title="Permanent link">&para;</a></h1>
 <p>Префикс: <code>/api/auth</code></p>
 <h2 id="post-apiauthregister">POST /api/auth/register<a class="headerlink" href="#post-apiauthregister" title="Permanent link">&para;</a></h2>
-<p>Регистрация пользователя.</p>
+<p>Регистрация пользователя (self-service). Роли <code>admin</code> и <code>head_of_department</code> <strong>не</strong> доступны
+через публичную регистрацию — их создаёт администратор.</p>
+<p><strong>Доступные роли:</strong> <code>doctor</code>, <code>nurse</code>, <code>researcher</code>, <code>viewer</code></p>
 <p><strong>Тело (JSON):</strong></p>
 <table>
 <thead>
@@ -2372,7 +2462,7 @@
 <td>password</td>
 <td>string</td>
 <td>да</td>
-<td>Пароль</td>
+<td>Пароль (политика: min 12 символов в production)</td>
 </tr>
 <tr>
 <td>full_name</td>
@@ -2384,7 +2474,7 @@
 <td>role</td>
 <td>string</td>
 <td>да</td>
-<td>admin, doctor, nurse, …</td>
+<td>Одна из ролей выше</td>
 </tr>
 <tr>
 <td>subdomain</td>
@@ -2395,7 +2485,7 @@
 <tr>
 <td>department_id</td>
 <td>int</td>
-<td>для nurse/head</td>
+<td>для nurse</td>
 <td>ID отделения</td>
 </tr>
 </tbody>
@@ -2405,7 +2495,7 @@
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
 <span class="s1">    &quot;email&quot;: &quot;doctor@clinic.ru&quot;,</span>
-<span class="s1">    &quot;password&quot;: &quot;SecurePass123&quot;,</span>
+<span class="s1">    &quot;password&quot;: &quot;SecurePass123!&quot;,</span>
 <span class="s1">    &quot;full_name&quot;: &quot;Иванов Иван&quot;,</span>
 <span class="s1">    &quot;role&quot;: &quot;doctor&quot;,</span>
 <span class="s1">    &quot;subdomain&quot;: &quot;demo&quot;,</span>
@@ -2421,17 +2511,38 @@
 <span class="p">}</span>
 </code></pre></div>
 <h2 id="post-apiauthlogin">POST /api/auth/login<a class="headerlink" href="#post-apiauthlogin" title="Permanent link">&para;</a></h2>
-<p><strong>Тело:</strong> <code>email</code>, <code>password</code>, <code>subdomain</code></p>
+<p><strong>Тело:</strong> <code>email</code>, <code>password</code>, <code>subdomain</code>, опционально <code>totp_code</code></p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/api/auth/login<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;email&quot;:&quot;doctor@clinic.ru&quot;,&quot;password&quot;:&quot;SecurePass123&quot;,&quot;subdomain&quot;:&quot;demo&quot;}&#39;</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;email&quot;:&quot;doctor@clinic.ru&quot;,&quot;password&quot;:&quot;SecurePass123!&quot;,&quot;subdomain&quot;:&quot;demo&quot;}&#39;</span>
 </code></pre></div>
-<p><strong>Ответ 200:</strong></p>
+<p><strong>Ответ 200 (успех):</strong></p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;access_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eyJ...&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;token_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bearer&quot;</span>
+<span class="w">  </span><span class="nt">&quot;refresh_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;token_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bearer&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;tenant_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;doctor&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;demo_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;totp_required&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
 <span class="p">}</span>
 </code></pre></div>
+<p><strong>Ответ 200 (нужен код 2FA):</strong> если у пользователя включён TOTP и <code>MFA_ENFORCED=true</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;access_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;refresh_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;totp_required&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;admin&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Повторите запрос с <code>totp_code</code> (6 цифр из приложения-аутентификатора или резервный код).</p>
+<p><strong>Super admin:</strong> выбирается по email независимо от subdomain; subdomain всё равно передаётся в форме.</p>
+<h2 id="post-apiauthrefresh">POST /api/auth/refresh<a class="headerlink" href="#post-apiauthrefresh" title="Permanent link">&para;</a></h2>
+<p>Обновление access token по refresh token (cookie или тело запроса).</p>
+<h2 id="post-apiauthrequest-reset">POST /api/auth/request-reset<a class="headerlink" href="#post-apiauthrequest-reset" title="Permanent link">&para;</a></h2>
+<p>Запрос письма для сброса пароля. Rate limit: 3/час.</p>
+<h2 id="post-apiauthreset-password">POST /api/auth/reset-password<a class="headerlink" href="#post-apiauthreset-password" title="Permanent link">&para;</a></h2>
+<p>Установка нового пароля по токену из письма.</p>
 <h2 id="get-apiauthme">GET /api/auth/me<a class="headerlink" href="#get-apiauthme" title="Permanent link">&para;</a></h2>
 <p>Текущий пользователь. Требует Bearer token.</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer TOKEN&quot;</span><span class="w"> </span><span class="se">\</span>
@@ -2451,6 +2562,40 @@
 <p>Публичный список отделений клиники.</p>
 <div class="highlight"><pre><span></span><code>GET /api/auth/departments?subdomain=demo
 </code></pre></div>
+<h2 id="2fa-totp">2FA (TOTP)<a class="headerlink" href="#2fa-totp" title="Permanent link">&para;</a></h2>
+<p>Эндпоинты <code>/api/totp/*</code> (требуют JWT):</p>
+<table>
+<thead>
+<tr>
+<th>Метод</th>
+<th>Путь</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/totp/setup</code></td>
+<td>QR-код и секрет для приложения</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/totp/verify</code></td>
+<td>Подтверждение и включение 2FA</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/totp/disable</code></td>
+<td>Отключение (с кодом)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/totp/status</code></td>
+<td><code>{ "enabled": true/false }</code></td>
+</tr>
+</tbody>
+</table>
+<p>Политика 2FA задаётся <code>MFA_ENFORCED</code> и <code>MFA_REQUIRED_ROLES</code> (см. <a href="../../deployment/environment-variables/">environment-variables.md</a>).</p>
 <h2 id="_1">Ошибки<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2462,18 +2607,34 @@
 <tbody>
 <tr>
 <td>400</td>
-<td>Email уже занят, неверная роль</td>
+<td>Email уже занят, неверная роль, слабый пароль</td>
 </tr>
 <tr>
 <td>401</td>
-<td>Неверный пароль</td>
+<td>Неверный email/пароль или код 2FA</td>
+</tr>
+<tr>
+<td>403</td>
+<td>Аккаунт заблокирован; email не подтверждён; 2FA обязательна для роли</td>
 </tr>
 <tr>
 <td>404</td>
 <td>Subdomain не найден</td>
 </tr>
+<tr>
+<td>429</td>
+<td>Rate limit или блокировка после неудачных попыток (<code>Account locked. Retry after …s</code>)</td>
+</tr>
 </tbody>
 </table>
+<p>Типичные сообщения <code>detail</code>:</p>
+<ul>
+<li><code>Invalid email or password</code></li>
+<li><code>2FA is required for your role. Enable TOTP in account settings.</code></li>
+<li><code>Account locked. Retry after 900s.</code></li>
+<li><code>Invalid 2FA code</code></li>
+</ul>
+<p>Автогенерированная OpenAPI-справка: <a href="auth.en.md">auth.en.md</a></p>
 
 
 

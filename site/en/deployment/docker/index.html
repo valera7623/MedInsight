@@ -2569,6 +2569,11 @@ docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"
 </div>
 <h2 id="variables-in-compose">Variables in compose<a class="headerlink" href="#variables-in-compose" title="Permanent link">&para;</a></h2>
 <p>Passed via <code>env_file: .env</code> or <code>environment:</code> in the compose file.</p>
+<div class="admonition warning">
+<p class="admonition-title">Restart vs recreate</p>
+<p><code>docker compose restart app</code> does <strong>not</strong> reload new keys from <code>.env</code>.
+Use <code>docker compose up -d --force-recreate app celery_worker</code> or <code>./deploy.sh production</code>.</p>
+</div>
 <h2 id="build">Build<a class="headerlink" href="#build" title="Permanent link">&para;</a></h2>
 <p>Dockerfile optimized for VPS:</p>
 <ul>

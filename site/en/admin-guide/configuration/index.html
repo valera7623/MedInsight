@@ -2519,7 +2519,7 @@
 </thead>
 <tbody>
 <tr>
-<td><code>APP_ENV</code></td>
+<td><code>ENVIRONMENT</code></td>
 <td><code>development</code></td>
 <td><code>development</code> / <code>production</code></td>
 </tr>
@@ -2555,6 +2555,10 @@
 </thead>
 <tbody>
 <tr>
+<td><code>ENVIRONMENT</code></td>
+<td><code>development</code> or <code>production</code></td>
+</tr>
+<tr>
 <td><code>AGE_PUBLIC_KEY</code></td>
 <td>age public key for file encryption</td>
 </tr>
@@ -2565,6 +2569,18 @@
 <tr>
 <td><code>ENCRYPTION_ENABLED</code></td>
 <td><code>true</code> / <code>false</code></td>
+</tr>
+<tr>
+<td><code>MFA_ENFORCED</code></td>
+<td><code>true</code> — require 2FA; <code>false</code> — temporary bypass</td>
+</tr>
+<tr>
+<td><code>MFA_REQUIRED_ROLES</code></td>
+<td>Roles that must enable TOTP</td>
+</tr>
+<tr>
+<td><code>LOGIN_LOCKOUT_MAX_ATTEMPTS</code></td>
+<td>Failed logins before account lockout</td>
 </tr>
 </tbody>
 </table>
@@ -2727,9 +2743,20 @@
 </tbody>
 </table>
 <h2 id="applying-changes">Applying changes<a class="headerlink" href="#applying-changes" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.prod.yml<span class="w"> </span>restart<span class="w"> </span>app<span class="w"> </span>worker<span class="w"> </span>beat
+<p>Environment variables from <code>.env</code> are injected when the container is <strong>created</strong>.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Insufficient — old env remains:</span>
+docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>app
+
+<span class="c1"># Recreate app and worker:</span>
+docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.yml<span class="w"> </span>-f<span class="w"> </span>docker-compose.prod.yml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--force-recreate<span class="w"> </span>app<span class="w"> </span>celery_worker
+
+<span class="c1"># Or full deploy:</span>
+./deploy.sh<span class="w"> </span>production
 </code></pre></div>
-<p>Full list: <a href="../../deployment/environment-variables/">environment-variables.md</a>.</p>
+<p>Merge missing keys from <code>.env.example</code>:</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>scripts/sync_env_from_example.py
+</code></pre></div>
+<p>Full list: <a href="../../deployment/environment-variables/">environment-variables.en.md</a>.</p>
 
 
 

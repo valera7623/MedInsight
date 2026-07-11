@@ -2557,11 +2557,15 @@ nano<span class="w"> </span>.env.production
 </code></pre></div>
 <p>Required:</p>
 <ul>
-<li><code>SECRET_KEY</code></li>
-<li><code>AGE_PUBLIC_KEY</code> / <code>AGE_SECRET_KEY</code></li>
-<li><code>APP_ENV=production</code></li>
-<li><code>CORS_ORIGINS=https://your-domain</code></li>
+<li><code>SECRET_KEY</code> — <code>openssl rand -hex 32</code></li>
+<li><code>ENVIRONMENT=production</code></li>
+<li><code>POSTGRES_PASSWORD</code> (deploy.sh builds <code>DATABASE_URL</code>)</li>
+<li><code>CORS_ORIGINS</code> and <code>FRONTEND_URL</code> — your HTTPS domain</li>
+<li><code>MFA_ENFORCED=true</code> (or <code>false</code> temporarily for maintenance)</li>
 </ul>
+<p>After repo updates, sync new keys:</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>scripts/sync_env_from_example.py
+</code></pre></div>
 <h2 id="5-first-deploy">5. First deploy<a class="headerlink" href="#5-first-deploy" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>chmod<span class="w"> </span>+x<span class="w"> </span>deploy.sh<span class="w"> </span>scripts/*.sh
 ./deploy.sh<span class="w"> </span>production
@@ -2609,6 +2613,9 @@ curl<span class="w"> </span>-s<span class="w"> </span>https://medinsight.example
 <h2 id="updates">Updates<a class="headerlink" href="#updates" title="Permanent link">&para;</a></h2>
 <p>Automatically via GitHub Actions (push to <code>main</code>) or manually:</p>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>~/medinsight<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>pull<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>./deploy.sh<span class="w"> </span>production
+</code></pre></div>
+<p>If you changed only <code>.env</code>:</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.yml<span class="w"> </span>-f<span class="w"> </span>docker-compose.prod.yml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--force-recreate<span class="w"> </span>app<span class="w"> </span>celery_worker
 </code></pre></div>
 <h2 id="ssh-alias">SSH alias<a class="headerlink" href="#ssh-alias" title="Permanent link">&para;</a></h2>
 <p><code>~/.ssh/config</code>:</p>

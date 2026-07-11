@@ -2114,6 +2114,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2264,7 +2275,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2439,6 +2450,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2589,7 +2611,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2643,6 +2665,17 @@
 <ul>
 <li>Полная документация MkDocs (<code>docs/</code>, <code>mkdocs.yml</code>)</li>
 <li>Скрипты <code>docker_cleanup.sh</code>, <code>setup_swap.sh</code></li>
+<li><code>scripts/sync_env_from_example.py</code> — слияние <code>.env</code> с <code>.env.example</code> без потери секретов</li>
+<li>Флаг <code>MFA_ENFORCED</code> для временного отключения обязательной 2FA</li>
+</ul>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>DICOM viewer: CSP (<code>blob:</code>), загрузка кадров через <code>createImageBitmap</code></li>
+<li>DICOM viewer: видимость слайдера кадров (flex layout)</li>
+<li>FHIR export: <code>bodySite</code> как <code>Coding</code> в <code>ImagingStudySeries</code></li>
+<li><code>deploy.sh</code>: <code>DATABASE_URL</code> из <code>POSTGRES_PASSWORD</code>, без перезаписи пароля volume PostgreSQL</li>
+<li>2FA: при <code>MFA_ENFORCED=false</code> пропуск проверки TOTP при входе</li>
+<li>Документация: MFA, lockout, применение <code>.env</code> в Docker</li>
 </ul>
 <h2 id="100-2026-06"><a href="https://github.com/valera7623/MedInsight/releases/tag/v1.0.0">1.0.0</a> — 2026-06<a class="headerlink" href="#100-2026-06" title="Permanent link">&para;</a></h2>
 <h3 id="added-phase-12-dicom">Added — Phase 12: DICOM<a class="headerlink" href="#added-phase-12-dicom" title="Permanent link">&para;</a></h3>
@@ -2699,7 +2732,7 @@
 <ul>
 <li>Пациенты, документы, парсинг PDF/DOCX, дашборд</li>
 </ul>
-<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Удаление пользователей (FK constraints, audit)</li>
 <li>Docker build timeout на VPS (<code>PIP_DEFAULT_TIMEOUT</code>)</li>

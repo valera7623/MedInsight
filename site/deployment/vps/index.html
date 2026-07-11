@@ -2557,11 +2557,15 @@ nano<span class="w"> </span>.env.production
 </code></pre></div>
 <p>Обязательно:</p>
 <ul>
-<li><code>SECRET_KEY</code></li>
-<li><code>AGE_PUBLIC_KEY</code> / <code>AGE_SECRET_KEY</code></li>
-<li><code>APP_ENV=production</code></li>
-<li><code>CORS_ORIGINS=https://your-domain</code></li>
+<li><code>SECRET_KEY</code> — <code>openssl rand -hex 32</code></li>
+<li><code>ENVIRONMENT=production</code></li>
+<li><code>POSTGRES_PASSWORD</code> — надёжный пароль ( <code>deploy.sh</code> построит <code>DATABASE_URL</code> )</li>
+<li><code>CORS_ORIGINS</code> и <code>FRONTEND_URL</code> — ваш HTTPS-домен</li>
+<li><code>MFA_ENFORCED=true</code> (или <code>false</code> только временно для обслуживания)</li>
 </ul>
+<p>После обновления репозитория синхронизируйте новые ключи:</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>scripts/sync_env_from_example.py
+</code></pre></div>
 <h2 id="5">5. Первый деплой<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>chmod<span class="w"> </span>+x<span class="w"> </span>deploy.sh<span class="w"> </span>scripts/*.sh
 ./deploy.sh<span class="w"> </span>production
@@ -2609,6 +2613,12 @@ curl<span class="w"> </span>-s<span class="w"> </span>https://medinsight.example
 <h2 id="_2">Обновление<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <p>Автоматически через GitHub Actions (push в <code>main</code>) или вручную:</p>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>~/medinsight<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>pull<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>./deploy.sh<span class="w"> </span>production
+</code></pre></div>
+<p>Если меняли только <code>.env</code> без деплоя кода:</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.yml<span class="w"> </span>-f<span class="w"> </span>docker-compose.prod.yml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--force-recreate<span class="w"> </span>app<span class="w"> </span>celery_worker
+</code></pre></div>
+<p>Проверка, что переменная попала в контейнер:</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>app<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from app.config import settings; print(settings.MFA_ENFORCED)&quot;</span>
 </code></pre></div>
 <h2 id="ssh-alias">SSH alias<a class="headerlink" href="#ssh-alias" title="Permanent link">&para;</a></h2>
 <p><code>~/.ssh/config</code>:</p>

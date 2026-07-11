@@ -2435,12 +2435,15 @@ git<span class="w"> </span>fetch<span class="w"> </span>origin<span class="w"> <
 </code></pre></div>
 <p>The <code>deploy.sh</code> script:</p>
 <ul>
-<li>copies <code>.env</code> from <code>.env.production</code> (if present);</li>
-<li>builds images <code>docker compose -f docker-compose.prod.yml build</code>;</li>
-<li>starts services <code>up -d</code>;</li>
+<li>pulls latest code;</li>
+<li>in production builds <code>DATABASE_URL</code> from <code>POSTGRES_PASSWORD</code>;</li>
+<li>runs <code>compose down</code> + <code>build</code> + <code>up -d</code> (containers recreated with current <code>.env</code>);</li>
 <li>applies SQL migrations from <code>app/db/migrations/</code>;</li>
 <li>runs <code>scripts/docker_cleanup.sh deploy</code>.</li>
 </ul>
+<p>Sync new keys from <code>.env.example</code> without overwriting secrets:</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>scripts/sync_env_from_example.py
+</code></pre></div>
 <h2 id="post-deploy-check">Post-deploy check<a class="headerlink" href="#post-deploy-check" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-s<span class="w"> </span>http://localhost:8000/health/ready
 <span class="c1"># {&quot;status&quot;:&quot;ready&quot;,&quot;database&quot;:&quot;ok&quot;,&quot;redis&quot;:&quot;ok&quot;}</span>

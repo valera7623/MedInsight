@@ -865,6 +865,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Ручной деплой на VPS">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vps_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Переменные окружения на VPS
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -879,7 +896,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#vps_1" class="md-nav__link">
+  <a href="#vps_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Структура на VPS
@@ -2325,6 +2342,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Ручной деплой на VPS">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vps_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Переменные окружения на VPS
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2339,7 +2373,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#vps_1" class="md-nav__link">
+  <a href="#vps_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Структура на VPS
@@ -2435,17 +2469,27 @@ git<span class="w"> </span>fetch<span class="w"> </span>origin<span class="w"> <
 </code></pre></div>
 <p>Скрипт <code>deploy.sh</code>:</p>
 <ul>
-<li>копирует <code>.env</code> из <code>.env.production</code> (если есть);</li>
-<li>собирает образы <code>docker compose -f docker-compose.prod.yml build</code>;</li>
-<li>поднимает сервисы <code>up -d</code>;</li>
+<li>подтягивает код (<code>git fetch</code> / merge);</li>
+<li>в production собирает <code>DATABASE_URL</code> из <code>POSTGRES_PASSWORD</code> (не затирает пароль volume PostgreSQL);</li>
+<li>делает <code>compose down</code> + <code>build</code> + <code>up -d</code> (контейнеры пересоздаются с актуальным <code>.env</code>);</li>
 <li>применяет SQL-миграции из <code>app/db/migrations/</code>;</li>
 <li>вызывает <code>scripts/docker_cleanup.sh deploy</code>.</li>
 </ul>
+<h3 id="vps_1">Переменные окружения на VPS<a class="headerlink" href="#vps_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Добавить ключи из .env.example, сохранив секреты</span>
+python<span class="w"> </span>scripts/sync_env_from_example.py
+
+<span class="c1"># Проверить, что контейнер видит настройку (пример: MFA)</span>
+docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>app<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from app.config import settings; print(settings.MFA_ENFORCED)&quot;</span>
+</code></pre></div>
+<p>Если меняли <code>.env</code> вручную без полного деплоя — пересоздайте app/worker:</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.yml<span class="w"> </span>-f<span class="w"> </span>docker-compose.prod.yml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--force-recreate<span class="w"> </span>app<span class="w"> </span>celery_worker
+</code></pre></div>
 <h2 id="_3">Проверка после деплоя<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-s<span class="w"> </span>http://localhost:8000/health/ready
 <span class="c1"># {&quot;status&quot;:&quot;ready&quot;,&quot;database&quot;:&quot;ok&quot;,&quot;redis&quot;:&quot;ok&quot;}</span>
 </code></pre></div>
-<h2 id="vps_1">Структура на VPS<a class="headerlink" href="#vps_1" title="Permanent link">&para;</a></h2>
+<h2 id="vps_2">Структура на VPS<a class="headerlink" href="#vps_2" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>~/medinsight/
 ├── .env                 # секреты (не в git)
 ├── docker-compose.prod.yml
