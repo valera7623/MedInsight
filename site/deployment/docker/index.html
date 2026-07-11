@@ -2221,8 +2221,9 @@ docker<span class="w"> </span>compose<span class="w"> </span>build<span class="w
 <span class="c1"># Shell в контейнере</span>
 docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>app<span class="w"> </span>bash
 
-<span class="c1"># Миграции</span>
-docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>app<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>app.db.migrate
+<span class="c1"># Миграции (legacy или Alembic)</span>
+docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>app<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;python scripts/run_alembic_migrate.py&#39;</span><span class="w">  </span><span class="c1"># если ALEMBIC_ENABLED=true</span>
+<span class="c1"># иначе deploy.sh / lifespan применяют create_all + app/db/migrations</span>
 
 <span class="c1"># Очистка (без volumes)</span>
 ./scripts/docker_cleanup.sh<span class="w"> </span>deploy

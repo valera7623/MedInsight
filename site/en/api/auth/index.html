@@ -960,7 +960,7 @@
   <span class="md-ellipsis">
     
   
-    Database Schema
+    Database schema
   
 
     
@@ -1187,6 +1187,17 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#get-apiauthcapabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/auth/capabilities
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#get-apiauthdepartments" class="md-nav__link">
@@ -2000,6 +2011,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#get-apiauthcapabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/auth/capabilities
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#get-apiauthdepartments" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2165,10 +2187,34 @@
 <!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
 <h1 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h1>
-<p>Auto-generated reference for <strong>Authentication</strong> endpoints (13 operations).</p>
+<p>Auto-generated reference for <strong>Authentication</strong> endpoints (14 operations).</p>
 <p><strong>OpenAPI tags:</strong> auth, preferences</p>
-<p><strong>Endpoints:</strong> 13</p>
+<p><strong>Endpoints:</strong> 14</p>
 <hr />
+<h2 id="get-apiauthcapabilities">GET /api/auth/capabilities<a class="headerlink" href="#get-apiauthcapabilities" title="Permanent link">&para;</a></h2>
+<p>Auth Capabilities</p>
+<p><strong>Authentication:</strong> none</p>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>{"password_reset_available": true, "fhir_enabled": true, "siem_export_enabled": true, "telegram_bot_enabled": true, "...</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span>https://fileguardian.com.ru/api/auth/capabilities<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
 <h2 id="get-apiauthdepartments">GET /api/auth/departments<a class="headerlink" href="#get-apiauthdepartments" title="Permanent link">&para;</a></h2>
 <p>List Public Departments</p>
 <p><strong>Authentication:</strong> none</p>
@@ -2226,7 +2272,8 @@
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;subdomain&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<span class="w">  </span><span class="nt">&quot;subdomain&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;totp_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
 <span class="p">}</span>
 </code></pre></div>
 <p><strong>Responses:</strong></p>
@@ -2255,7 +2302,7 @@
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/auth/login<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;email&quot;:&quot;user@example.com&quot;,&quot;password&quot;:&quot;string&quot;,&quot;subdomain&quot;:&quot;string&quot;}&#39;</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;email&quot;:&quot;user@example.com&quot;,&quot;password&quot;:&quot;string&quot;,&quot;subdomain&quot;:&quot;string&quot;,&quot;totp_code&quot;:&quot;string&quot;}&#39;</span>
 </code></pre></div>
 <h2 id="get-apiauthme">GET /api/auth/me<a class="headerlink" href="#get-apiauthme" title="Permanent link">&para;</a></h2>
 <p>Me</p>

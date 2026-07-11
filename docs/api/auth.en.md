@@ -2,13 +2,35 @@
 
 # Authentication
 
-Auto-generated reference for **Authentication** endpoints (13 operations).
+Auto-generated reference for **Authentication** endpoints (14 operations).
 
 **OpenAPI tags:** auth, preferences
 
-**Endpoints:** 13
+**Endpoints:** 14
 
 ---
+
+## GET /api/auth/capabilities
+
+Auth Capabilities
+
+**Authentication:** none
+
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"password_reset_available": true, "fhir_enabled": true, "siem_export_enabled": true, "telegram_bot_enabled": true, "...` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/auth/capabilities \
+  -H "Authorization: Bearer $JWT"
+```
 
 ## GET /api/auth/departments
 
@@ -50,7 +72,8 @@ Login
 {
   "email": "user@example.com",
   "password": "string",
-  "subdomain": "string"
+  "subdomain": "string",
+  "totp_code": "string"
 }
 ```
 
@@ -69,7 +92,7 @@ Login
 curl -X POST https://fileguardian.com.ru/api/auth/login \
   -H "Authorization: Bearer $JWT" \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"string","subdomain":"string"}'
+  -d '{"email":"user@example.com","password":"string","subdomain":"string","totp_code":"string"}'
 ```
 
 ## GET /api/auth/me

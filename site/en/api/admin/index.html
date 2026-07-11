@@ -960,7 +960,7 @@
   <span class="md-ellipsis">
     
   
-    Database Schema
+    Database schema
   
 
     
@@ -1775,6 +1775,17 @@
     <span class="md-ellipsis">
       
         POST /api/admin/users/{user_id}/block
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#put-apiadminusersuser_idpassword" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PUT /api/admin/users/{user_id}/password
       
     </span>
   </a>
@@ -2616,6 +2627,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#put-apiadminusersuser_idpassword" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PUT /api/admin/users/{user_id}/password
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#put-apiadminusersuser_idrole" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2715,9 +2737,9 @@
 <!-- AUTO-GENERATED from OpenAPI — do not edit manually. Run: python scripts/generate_api_docs.py --import-app --update-nav -->
 
 <h1 id="admin">Admin<a class="headerlink" href="#admin" title="Permanent link">&para;</a></h1>
-<p>Auto-generated reference for <strong>Admin</strong> endpoints (38 operations).</p>
+<p>Auto-generated reference for <strong>Admin</strong> endpoints (39 operations).</p>
 <p><strong>OpenAPI tags:</strong> admin, admin-backup, users, telegram</p>
-<p><strong>Endpoints:</strong> 38</p>
+<p><strong>Endpoints:</strong> 39</p>
 <hr />
 <h2 id="get-apiadminaudit">GET /api/admin/audit<a class="headerlink" href="#get-apiadminaudit" title="Permanent link">&para;</a></h2>
 <p>List Audit</p>
@@ -4153,6 +4175,63 @@
 <p><strong>Example:</strong></p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://fileguardian.com.ru/api/admin/users/<span class="o">{</span>user_id<span class="o">}</span>/block<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span>
+</code></pre></div>
+<h2 id="put-apiadminusersuser_idpassword">PUT /api/admin/users/{user_id}/password<a class="headerlink" href="#put-apiadminusersuser_idpassword" title="Permanent link">&para;</a></h2>
+<p>Reset User Password</p>
+<p><strong>Authentication:</strong> <code>Bearer JWT</code> (required)</p>
+<p><strong>Request Body:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>In</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>user_id</td>
+<td>path</td>
+<td>integer</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Successful Response</td>
+<td><code>null</code></td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td><code>{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>PUT<span class="w"> </span>https://fileguardian.com.ru/api/admin/users/<span class="o">{</span>user_id<span class="o">}</span>/password<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$JWT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;password&quot;:&quot;string&quot;}&#39;</span>
 </code></pre></div>
 <h2 id="put-apiadminusersuser_idrole">PUT /api/admin/users/{user_id}/role<a class="headerlink" href="#put-apiadminusersuser_idrole" title="Permanent link">&para;</a></h2>
 <p>Update User Role</p>

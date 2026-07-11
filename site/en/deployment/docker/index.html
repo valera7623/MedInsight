@@ -960,7 +960,7 @@
   <span class="md-ellipsis">
     
   
-    Database Schema
+    Database schema
   
 
     
@@ -2222,7 +2222,8 @@ docker<span class="w"> </span>compose<span class="w"> </span>build<span class="w
 docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>app<span class="w"> </span>bash
 
 <span class="c1"># Migrations</span>
-docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>app<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>app.db.migrate
+docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>app<span class="w"> </span>alembic<span class="w"> </span>upgrade<span class="w"> </span>head
+<span class="c1"># or legacy (ALEMBIC_ENABLED=false): schema init runs in deploy.sh</span>
 
 <span class="c1"># Cleanup (without volumes)</span>
 ./scripts/docker_cleanup.sh<span class="w"> </span>deploy

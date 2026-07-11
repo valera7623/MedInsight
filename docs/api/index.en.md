@@ -32,7 +32,7 @@ Obtain a token via `POST /api/auth/login`.
 
 | Section | Description |
 |---------|-------------|
-| [Authentication](auth.md) | 13 endpoint(s) |
+| [Authentication](auth.md) | 14 endpoint(s) |
 | [Patients](patients.md) | 5 endpoint(s) |
 | [Documents](documents.md) | 8 endpoint(s) |
 | [DICOM](dicom.md) | 12 endpoint(s) |
@@ -41,7 +41,7 @@ Obtain a token via `POST /api/auth/login`.
 | [Export](exports.md) | 10 endpoint(s) |
 | [Webhooks](webhooks.md) | 7 endpoint(s) |
 | [Payments](payments.md) | 6 endpoint(s) |
-| [Admin](admin.md) | 38 endpoint(s) |
+| [Admin](admin.md) | 39 endpoint(s) |
 
 ## Error format
 
@@ -65,4 +65,4 @@ Obtain a token via `POST /api/auth/login`.
 
 ---
 
-*Generated from OpenAPI 3.1.0 — 2026-07-10 21:14 UTC*
+*Generated from OpenAPI 3.1.0 — 2026-07-11 00:14 UTC*

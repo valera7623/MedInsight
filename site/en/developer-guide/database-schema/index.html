@@ -31,7 +31,7 @@
     
     
       
-        <title>Database Schema - MedInsight Documentation</title>
+        <title>Database schema - MedInsight Documentation</title>
       
     
     
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Database Schema
+              Database schema
             
           </span>
         </div>
@@ -972,7 +972,7 @@
   <span class="md-ellipsis">
     
   
-    Database Schema
+    Database schema
   
 
     
@@ -990,7 +990,7 @@
   <span class="md-ellipsis">
     
   
-    Database Schema
+    Database schema
   
 
     
@@ -1016,10 +1016,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#er-diagram-main-entities" class="md-nav__link">
+  <a href="#er-diagram-core-entities" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ER diagram (main entities)
+        ER diagram (core entities)
       
     </span>
   </a>
@@ -1995,10 +1995,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#er-diagram-main-entities" class="md-nav__link">
+  <a href="#er-diagram-core-entities" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ER diagram (main entities)
+        ER diagram (core entities)
       
     </span>
   </a>
@@ -2152,8 +2152,8 @@
   
 
 
-<h1 id="database-schema">Database Schema<a class="headerlink" href="#database-schema" title="Permanent link">&para;</a></h1>
-<h2 id="er-diagram-main-entities">ER diagram (main entities)<a class="headerlink" href="#er-diagram-main-entities" title="Permanent link">&para;</a></h2>
+<h1 id="database-schema">Database schema<a class="headerlink" href="#database-schema" title="Permanent link">&para;</a></h1>
+<h2 id="er-diagram-core-entities">ER diagram (core entities)<a class="headerlink" href="#er-diagram-core-entities" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>erDiagram
     Tenant ||--o{ User : has
     Tenant ||--o{ Patient : has
@@ -2235,9 +2235,9 @@
 <td>Department</td>
 </tr>
 <tr>
-<td>hashed_password</td>
+<td><code>password_hash</code></td>
 <td>VARCHAR</td>
-<td>bcrypt</td>
+<td>bcrypt hash</td>
 </tr>
 </tbody>
 </table>
@@ -2355,13 +2355,17 @@
 </tbody>
 </table>
 <h2 id="migrations">Migrations<a class="headerlink" href="#migrations" title="Permanent link">&para;</a></h2>
-<p>SQL files in <code>app/db/migrations/</code> (001–014+).</p>
-<p>Applied on deploy:</p>
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>app.db.migrate
+<p><strong>Legacy:</strong> SQL/Python files in <code>app/db/migrations/</code> (001–031) — frozen; applied via <code>run_migrations()</code> after <code>create_all</code> when <code>ALEMBIC_ENABLED=false</code>.</p>
+<p><strong>Alembic (recommended for prod):</strong> <code>alembic/</code> directory, baseline <code>001_baseline</code>. Set <code>ALEMBIC_ENABLED=true</code> — then <code>deploy.sh</code> runs <code>alembic upgrade head</code> (with <code>pg_advisory_lock</code> on PostgreSQL) instead of <code>create_all</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Local / in container</span>
+docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>app<span class="w"> </span>alembic<span class="w"> </span>upgrade<span class="w"> </span>head
+
+<span class="c1"># Or via deploy helper</span>
+python<span class="w"> </span>scripts/run_alembic_migrate.py
 </code></pre></div>
 <h2 id="schema-generation">Schema generation<a class="headerlink" href="#schema-generation" title="Permanent link">&para;</a></h2>
-<p>Alembic (if configured) or inspect models:</p>
-<div class="highlight"><pre><span></span><code>grep<span class="w"> </span><span class="s2">&quot;^class &quot;</span><span class="w"> </span>app/models.py
+<p>Inspect models (<code>app/models/</code> package):</p>
+<div class="highlight"><pre><span></span><code>grep<span class="w"> </span><span class="s2">&quot;^class &quot;</span><span class="w"> </span>app/models/*.py
 </code></pre></div>
 <h2 id="indexes">Indexes<a class="headerlink" href="#indexes" title="Permanent link">&para;</a></h2>
 <ul>

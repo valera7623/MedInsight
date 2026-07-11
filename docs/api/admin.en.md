@@ -2,11 +2,11 @@
 
 # Admin
 
-Auto-generated reference for **Admin** endpoints (38 operations).
+Auto-generated reference for **Admin** endpoints (39 operations).
 
 **OpenAPI tags:** admin, admin-backup, users, telegram
 
-**Endpoints:** 38
+**Endpoints:** 39
 
 ---
 
@@ -923,6 +923,43 @@ Block User
 ```bash
 curl -X POST https://fileguardian.com.ru/api/admin/users/{user_id}/block \
   -H "Authorization: Bearer $JWT"
+```
+
+## PUT /api/admin/users/{user_id}/password
+
+Reset User Password
+
+**Authentication:** `Bearer JWT` (required)
+
+**Request Body:**
+
+```json
+{
+  "password": "string"
+}
+```
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| user_id | path | integer | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `null` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X PUT https://fileguardian.com.ru/api/admin/users/{user_id}/password \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"password":"string"}'
 ```
 
 ## PUT /api/admin/users/{user_id}/role

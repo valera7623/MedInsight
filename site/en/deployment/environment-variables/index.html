@@ -960,7 +960,7 @@
   <span class="md-ellipsis">
     
   
-    Database Schema
+    Database schema
   
 
     
@@ -2339,9 +2339,19 @@
 <td>JWT algorithm</td>
 </tr>
 <tr>
+<td><code>ACCESS_TOKEN_EXPIRE_HOURS</code></td>
+<td><code>1</code></td>
+<td>Access JWT lifetime (hours)</td>
+</tr>
+<tr>
+<td><code>REFRESH_TOKEN_EXPIRE_DAYS</code></td>
+<td><code>7</code></td>
+<td>Refresh JWT lifetime (days)</td>
+</tr>
+<tr>
 <td><code>ACCESS_TOKEN_EXPIRE_DAYS</code></td>
 <td><code>7</code></td>
-<td>Token lifetime</td>
+<td>Legacy name; use <code>ACCESS_TOKEN_EXPIRE_HOURS</code></td>
 </tr>
 </tbody>
 </table>

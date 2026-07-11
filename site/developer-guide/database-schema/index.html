@@ -2235,9 +2235,9 @@
 <td>Отделение</td>
 </tr>
 <tr>
-<td>hashed_password</td>
+<td><code>password_hash</code></td>
 <td>VARCHAR</td>
-<td>bcrypt</td>
+<td>bcrypt hash</td>
 </tr>
 </tbody>
 </table>
@@ -2355,13 +2355,17 @@
 </tbody>
 </table>
 <h2 id="_3">Миграции<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
-<p>SQL-файлы в <code>app/db/migrations/</code> (001–014+).</p>
-<p>Применение при деплое:</p>
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>app.db.migrate
+<p><strong>Legacy:</strong> SQL/Python-файлы в <code>app/db/migrations/</code> (001–031) — заморожены; применяются через <code>run_migrations()</code> после <code>create_all</code> при <code>ALEMBIC_ENABLED=false</code>.</p>
+<p><strong>Alembic (рекомендуется для prod):</strong> каталог <code>alembic/</code>, baseline <code>001_baseline</code>. Включите <code>ALEMBIC_ENABLED=true</code> — тогда <code>deploy.sh</code> выполняет <code>alembic upgrade head</code> (с <code>pg_advisory_lock</code> на PostgreSQL) вместо <code>create_all</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Локально / в контейнере</span>
+docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>app<span class="w"> </span>alembic<span class="w"> </span>upgrade<span class="w"> </span>head
+
+<span class="c1"># Или через deploy helper</span>
+python<span class="w"> </span>scripts/run_alembic_migrate.py
 </code></pre></div>
 <h2 id="_4">Генерация схемы<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
-<p>Alembic (если настроен) или просмотр моделей:</p>
-<div class="highlight"><pre><span></span><code>grep<span class="w"> </span><span class="s2">&quot;^class &quot;</span><span class="w"> </span>app/models.py
+<p>Просмотр моделей (пакет <code>app/models/</code>):</p>
+<div class="highlight"><pre><span></span><code>grep<span class="w"> </span><span class="s2">&quot;^class &quot;</span><span class="w"> </span>app/models/*.py
 </code></pre></div>
 <h2 id="_5">Индексы<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
 <ul>
