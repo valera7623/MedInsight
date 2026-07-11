@@ -2,11 +2,11 @@
 
 # Authentication
 
-Auto-generated reference for **Authentication** endpoints (14 operations).
+Auto-generated reference for **Authentication** endpoints (17 operations).
 
 **OpenAPI tags:** auth, preferences
 
-**Endpoints:** 14
+**Endpoints:** 17
 
 ---
 
@@ -93,6 +93,39 @@ curl -X POST https://fileguardian.com.ru/api/auth/login \
   -H "Authorization: Bearer $JWT" \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com","password":"string","subdomain":"string","totp_code":"string"}'
+```
+
+## POST /api/auth/logout
+
+Logout
+
+**Authentication:** `Bearer JWT` (required)
+
+**Request Body:**
+
+```json
+{
+  "refresh_token": "string",
+  "all_devices": false
+}
+```
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"detail": "string", "email_verified": true}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X POST https://fileguardian.com.ru/api/auth/logout \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"string","all_devices":false}'
 ```
 
 ## GET /api/auth/me
@@ -283,6 +316,56 @@ curl -X POST https://fileguardian.com.ru/api/auth/reset-password \
   -H "Authorization: Bearer $JWT" \
   -H "Content-Type: application/json" \
   -d '{"token":"string","new_password":"string"}'
+```
+
+## GET /api/auth/sessions
+
+My Sessions
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `[{"jti": "string", "created_at": 0}]` |
+
+**Example:**
+
+```bash
+curl -X GET https://fileguardian.com.ru/api/auth/sessions \
+  -H "Authorization: Bearer $JWT"
+```
+
+## DELETE /api/auth/sessions/{jti}
+
+Revoke My Session
+
+**Authentication:** `Bearer JWT` (required)
+
+
+
+**Parameters:**
+
+| Parameter | In | Type | Required | Description |
+|-----------|----|------|----------|-------------|
+| jti | path | string | ✅ | — |
+
+**Responses:**
+
+| Status | Description | Example |
+|--------|-------------|---------|
+| 200 | Successful Response | `{"detail": "string", "email_verified": true}` |
+| 422 | Validation Error | `{"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}` |
+
+**Example:**
+
+```bash
+curl -X DELETE https://fileguardian.com.ru/api/auth/sessions/{jti} \
+  -H "Authorization: Bearer $JWT"
 ```
 
 ## GET /api/auth/tenants

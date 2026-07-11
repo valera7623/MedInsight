@@ -32,7 +32,7 @@ Obtain a token via `POST /api/auth/login`.
 
 | Section | Description |
 |---------|-------------|
-| [Authentication](auth.md) | 14 endpoint(s) |
+| [Authentication](auth.md) | 17 endpoint(s) |
 | [Patients](patients.md) | 5 endpoint(s) |
 | [Documents](documents.md) | 8 endpoint(s) |
 | [DICOM](dicom.md) | 12 endpoint(s) |
@@ -65,4 +65,4 @@ Obtain a token via `POST /api/auth/login`.
 
 ---
 
-*Generated from OpenAPI 3.1.0 — 2026-07-11 01:14 UTC*
+*Generated from OpenAPI 3.1.0 — 2026-07-11 08:31 UTC*
