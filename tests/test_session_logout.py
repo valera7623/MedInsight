@@ -20,7 +20,7 @@ def test_logout_revokes_session(client, db_session):
     headers = auth_header(user)
     headers["Authorization"] = f"Bearer {data['access_token']}"
 
-    with patch("app.services.session_store.revoke_session") as revoke:
+    with patch("app.auth.revoke_session") as revoke:
         res = client.post(
             "/api/auth/logout",
             json={"refresh_token": data.get("refresh_token")},

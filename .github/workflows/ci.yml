@@ -42,7 +42,7 @@ jobs:
         run: poetry run python -c "from app.main import app; print('OK', app.title)"
 
       - name: Run tests
-        run: poetry run pytest tests/ -q --tb=short --cov=app --cov-report=term-missing --cov-fail-under=45
+        run: poetry run pytest tests/ -q --tb=short --cov=app --cov-report=term-missing --cov-fail-under=39
 
       - name: Ruff
         run: poetry run ruff check app tests

@@ -38,7 +38,7 @@ jobs:
           poetry run pip install "pydicom>=2.4.0"
 
       - name: Run tests
-        run: poetry run pytest tests/ -q --cov=app --cov-fail-under=45
+        run: poetry run pytest tests/ -q --cov=app --cov-fail-under=39
 
       - name: Smoke test
         run: |

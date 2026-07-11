@@ -10,7 +10,7 @@ import httpx
 from app.config import settings
 
 _COMPLEXITY_RE = re.compile(
-    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{12,}$"
+    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).+$"
 )
 
 
