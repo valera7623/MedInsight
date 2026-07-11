@@ -14,7 +14,7 @@
 
 | Переменная | По умолчанию | Описание |
 |------------|--------------|----------|
-| `APP_ENV` | `development` | `development` / `production` |
+| `ENVIRONMENT` | `development` | `development` / `production` |
 | `APP_PORT` | `8000` | Порт uvicorn |
 | `APP_VERSION` | `1.0.0` | Версия в `/health` |
 | `CORS_ORIGINS` | `*` | Разрешённые origins (через запятую) |
@@ -24,9 +24,31 @@
 
 | Переменная | Описание |
 |------------|----------|
+| `ENVIRONMENT` | `development` или `production` (fail-fast на дефолтных секретах в prod) |
 | `AGE_PUBLIC_KEY` | Публичный ключ age для шифрования файлов |
 | `AGE_SECRET_KEY` | Приватный ключ (только на сервере!) |
 | `ENCRYPTION_ENABLED` | `true` / `false` |
+| `MFA_ENFORCED` | `true` — требовать 2FA; `false` — временно отключить (см. ниже) |
+| `MFA_REQUIRED_ROLES` | Роли, для которых обязателен TOTP (`admin,doctor` по умолчанию) |
+| `PASSWORD_MIN_LENGTH` | Мин. длина пароля (12) |
+| `LOGIN_LOCKOUT_MAX_ATTEMPTS` | Попыток до блокировки аккаунта (5) |
+
+### 2FA (TOTP)
+
+Пользователь включает TOTP в настройках аккаунта (`/api/totp/*`). При входе API может вернуть
+`totp_required: true` — тогда повторите `POST /api/auth/login` с полем `totp_code`.
+
+Временное отключение 2FA на сервере:
+
+```bash
+# в .env на VPS
+MFA_ENFORCED=false
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate app celery_worker
+```
+
+!!! note
+    `docker restart` не подхватывает новые переменные из `.env` — нужен `--force-recreate`
+    или полный `./deploy.sh production`.
 
 Генерация ключей:
 
@@ -93,8 +115,23 @@ age-keygen -o age-key.txt
 
 ## Применение изменений
 
+Переменные из `.env` передаются в контейнер через `env_file` при **создании** контейнера.
+
 ```bash
-docker compose -f docker-compose.prod.yml restart app worker beat
+# Недостаточно — старые env останутся в контейнере:
+docker compose restart app
+
+# Правильно — пересоздать app и worker:
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate app celery_worker
+
+# Или полный деплой (рекомендуется):
+./deploy.sh production
+```
+
+Добавить недостающие ключи из `.env.example` без потери секретов:
+
+```bash
+python scripts/sync_env_from_example.py
 ```
 
 Полный список: [environment-variables.md](../deployment/environment-variables.md).

@@ -14,7 +14,7 @@ All settings are via environment variables (`.env` or `.env.production`).
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `APP_ENV` | `development` | `development` / `production` |
+| `ENVIRONMENT` | `development` | `development` / `production` |
 | `APP_PORT` | `8000` | uvicorn port |
 | `APP_VERSION` | `1.0.0` | Version in `/health` |
 | `CORS_ORIGINS` | `*` | Allowed origins (comma-separated) |
@@ -24,9 +24,13 @@ All settings are via environment variables (`.env` or `.env.production`).
 
 | Variable | Description |
 |----------|-------------|
+| `ENVIRONMENT` | `development` or `production` |
 | `AGE_PUBLIC_KEY` | age public key for file encryption |
 | `AGE_SECRET_KEY` | Private key (server only!) |
 | `ENCRYPTION_ENABLED` | `true` / `false` |
+| `MFA_ENFORCED` | `true` — require 2FA; `false` — temporary bypass |
+| `MFA_REQUIRED_ROLES` | Roles that must enable TOTP |
+| `LOGIN_LOCKOUT_MAX_ATTEMPTS` | Failed logins before account lockout |
 
 Key generation:
 
@@ -93,8 +97,23 @@ Without a key, rule-based fallback is used.
 
 ## Applying changes
 
+Environment variables from `.env` are injected when the container is **created**.
+
 ```bash
-docker compose -f docker-compose.prod.yml restart app worker beat
+# Insufficient — old env remains:
+docker compose restart app
+
+# Recreate app and worker:
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate app celery_worker
+
+# Or full deploy:
+./deploy.sh production
 ```
 
-Full list: [environment-variables.md](../deployment/environment-variables.md).
+Merge missing keys from `.env.example`:
+
+```bash
+python scripts/sync_env_from_example.py
+```
+
+Full list: [environment-variables.en.md](../deployment/environment-variables.en.md).

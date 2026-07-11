@@ -9,6 +9,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Full MkDocs documentation (`docs/`, `mkdocs.yml`)
 - Scripts `docker_cleanup.sh`, `setup_swap.sh`
+- `scripts/sync_env_from_example.py` — merge `.env` with `.env.example`
+- `MFA_ENFORCED` flag to temporarily disable mandatory 2FA
+
+### Fixed
+- DICOM viewer CSP and frame slider layout
+- FHIR `bodySite` Coding validation
+- `deploy.sh` PostgreSQL URL from `POSTGRES_PASSWORD`
+- Skip TOTP verification when `MFA_ENFORCED=false`
+- Docs: MFA, env reload in Docker
 
 ## [1.0.0] — 2026-06
 

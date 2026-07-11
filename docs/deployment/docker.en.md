@@ -64,6 +64,10 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 Passed via `env_file: .env` or `environment:` in the compose file.
 
+!!! warning "Restart vs recreate"
+    `docker compose restart app` does **not** reload new keys from `.env`.
+    Use `docker compose up -d --force-recreate app celery_worker` or `./deploy.sh production`.
+
 ## Build
 
 Dockerfile optimized for VPS:

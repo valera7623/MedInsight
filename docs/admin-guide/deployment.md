@@ -34,11 +34,27 @@ git fetch origin && git reset --hard origin/main
 
 Скрипт `deploy.sh`:
 
-- копирует `.env` из `.env.production` (если есть);
-- собирает образы `docker compose -f docker-compose.prod.yml build`;
-- поднимает сервисы `up -d`;
+- подтягивает код (`git fetch` / merge);
+- в production собирает `DATABASE_URL` из `POSTGRES_PASSWORD` (не затирает пароль volume PostgreSQL);
+- делает `compose down` + `build` + `up -d` (контейнеры пересоздаются с актуальным `.env`);
 - применяет SQL-миграции из `app/db/migrations/`;
 - вызывает `scripts/docker_cleanup.sh deploy`.
+
+### Переменные окружения на VPS
+
+```bash
+# Добавить ключи из .env.example, сохранив секреты
+python scripts/sync_env_from_example.py
+
+# Проверить, что контейнер видит настройку (пример: MFA)
+docker compose exec app python -c "from app.config import settings; print(settings.MFA_ENFORCED)"
+```
+
+Если меняли `.env` вручную без полного деплоя — пересоздайте app/worker:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate app celery_worker
+```
 
 ## Проверка после деплоя
 

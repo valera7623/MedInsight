@@ -47,10 +47,17 @@ nano .env.production
 
 Required:
 
-- `SECRET_KEY`
-- `AGE_PUBLIC_KEY` / `AGE_SECRET_KEY`
-- `APP_ENV=production`
-- `CORS_ORIGINS=https://your-domain`
+- `SECRET_KEY` — `openssl rand -hex 32`
+- `ENVIRONMENT=production`
+- `POSTGRES_PASSWORD` (deploy.sh builds `DATABASE_URL`)
+- `CORS_ORIGINS` and `FRONTEND_URL` — your HTTPS domain
+- `MFA_ENFORCED=true` (or `false` temporarily for maintenance)
+
+After repo updates, sync new keys:
+
+```bash
+python scripts/sync_env_from_example.py
+```
 
 ## 5. First deploy
 
@@ -120,6 +127,12 @@ Automatically via GitHub Actions (push to `main`) or manually:
 
 ```bash
 cd ~/medinsight && git pull && ./deploy.sh production
+```
+
+If you changed only `.env`:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate app celery_worker
 ```
 
 ## SSH alias

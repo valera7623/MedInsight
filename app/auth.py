@@ -540,7 +540,7 @@ def login(data: UserLogin, request: Request, response: Response, db: Annotated[S
             detail="Подтвердите email. Проверьте почту или запросите повторную отправку письма.",
         )
 
-    if user.totp_enabled:
+    if settings.MFA_ENFORCED and user.totp_enabled:
         from app.services.totp import consume_backup_code, verify_totp
 
         if not data.totp_code:

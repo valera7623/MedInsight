@@ -9,6 +9,16 @@
 ### Added
 - Полная документация MkDocs (`docs/`, `mkdocs.yml`)
 - Скрипты `docker_cleanup.sh`, `setup_swap.sh`
+- `scripts/sync_env_from_example.py` — слияние `.env` с `.env.example` без потери секретов
+- Флаг `MFA_ENFORCED` для временного отключения обязательной 2FA
+
+### Fixed
+- DICOM viewer: CSP (`blob:`), загрузка кадров через `createImageBitmap`
+- DICOM viewer: видимость слайдера кадров (flex layout)
+- FHIR export: `bodySite` как `Coding` в `ImagingStudySeries`
+- `deploy.sh`: `DATABASE_URL` из `POSTGRES_PASSWORD`, без перезаписи пароля volume PostgreSQL
+- 2FA: при `MFA_ENFORCED=false` пропуск проверки TOTP при входе
+- Документация: MFA, lockout, применение `.env` в Docker
 
 ## [1.0.0] — 2026-06
 

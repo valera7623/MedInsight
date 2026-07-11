@@ -47,10 +47,17 @@ nano .env.production
 
 Обязательно:
 
-- `SECRET_KEY`
-- `AGE_PUBLIC_KEY` / `AGE_SECRET_KEY`
-- `APP_ENV=production`
-- `CORS_ORIGINS=https://your-domain`
+- `SECRET_KEY` — `openssl rand -hex 32`
+- `ENVIRONMENT=production`
+- `POSTGRES_PASSWORD` — надёжный пароль ( `deploy.sh` построит `DATABASE_URL` )
+- `CORS_ORIGINS` и `FRONTEND_URL` — ваш HTTPS-домен
+- `MFA_ENFORCED=true` (или `false` только временно для обслуживания)
+
+После обновления репозитория синхронизируйте новые ключи:
+
+```bash
+python scripts/sync_env_from_example.py
+```
 
 ## 5. Первый деплой
 
@@ -120,6 +127,18 @@ curl -s https://medinsight.example.com/health/ready
 
 ```bash
 cd ~/medinsight && git pull && ./deploy.sh production
+```
+
+Если меняли только `.env` без деплоя кода:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate app celery_worker
+```
+
+Проверка, что переменная попала в контейнер:
+
+```bash
+docker compose exec app python -c "from app.config import settings; print(settings.MFA_ENFORCED)"
 ```
 
 ## SSH alias

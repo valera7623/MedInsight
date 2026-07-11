@@ -167,6 +167,29 @@ Full reference from `.env.example`.
 | `RATE_LIMIT_ENABLED` | `true` | Limits |
 | `RATE_LIMIT_LOGIN_PER_MINUTE` | `10` | Login |
 | `RATE_LIMIT_REGISTER_PER_HOUR` | `5` | Registration |
+| `RATE_LIMIT_RESET_PER_HOUR` | `3` | Password reset |
+
+## Password policy & login lockout
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PASSWORD_MIN_LENGTH` | `12` | Minimum password length |
+| `PASSWORD_REQUIRE_COMPLEXITY` | `true` | Require mixed character classes |
+| `PASSWORD_HIBP_CHECK_ENABLED` | `false` | Have I Been Pwned check |
+| `LOGIN_LOCKOUT_MAX_ATTEMPTS` | `5` | Failed attempts before lockout |
+| `LOGIN_LOCKOUT_DURATION_SECONDS` | `900` | Lockout duration (15 min) |
+
+Lockout state is stored in Redis and cleared on successful login.
+
+## Two-factor authentication (2FA / TOTP)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MFA_ENFORCED` | `true` | Enforce 2FA for configured roles |
+| `MFA_REQUIRED_ROLES` | `admin,doctor` | Comma-separated roles (tenant may override via `settings.mfa_required_roles`) |
+
+When `MFA_ENFORCED=true`, `super_admin` must enable TOTP in production. Set `MFA_ENFORCED=false`
+only temporarily for maintenance; recreate containers after changing `.env` (see Russian doc section).
 
 ## Email
 

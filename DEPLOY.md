@@ -54,9 +54,40 @@ cat ~/.ssh/medinsight_deploy
 `./deploy.sh production` автоматически:
 
 1. Запускает контейнер `postgres:15-alpine` (volume `medinsight-postgres`)
-2. Устанавливает `DATABASE_URL=postgresql://medinsight:…@postgres:5432/medinsight`
-3. Выполняет `create_all` + миграцию `019_migrate_to_postgresql` (JSONB, FTS, UUID, audit-триггеры)
+2. Строит `DATABASE_URL` из `POSTGRES_PASSWORD` в `.env` (пароль volume **не** сбрасывается при деплое)
+3. Выполняет `create_all` + миграции / Alembic
 4. Запускает `bootstrap_system` (tenant + super admin)
+
+Перед первым production-деплоем задайте в `.env` на VPS:
+
+```env
+ENVIRONMENT=production
+POSTGRES_PASSWORD=<надёжный-пароль>
+SECRET_KEY=<openssl rand -hex 32>
+FRONTEND_URL=https://fileguardian.com.ru
+CORS_ORIGINS=https://fileguardian.com.ru
+MFA_ENFORCED=true
+```
+
+`DATABASE_URL` и `PRODUCTION_DATABASE_URL` скрипт `deploy.sh` запишет сам из `POSTGRES_PASSWORD`.
+
+### Синхронизация .env
+
+После обновления репозитория добавьте новые ключи из `.env.example`:
+
+```bash
+python scripts/sync_env_from_example.py   # бэкап .env.backup.<timestamp>
+```
+
+### Применение изменений .env
+
+`docker restart` **не** загружает новые переменные из `.env`. Нужно пересоздание контейнеров:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate app celery_worker
+```
+
+Или полный `./deploy.sh production` (рекомендуется).
 
 ### Миграция данных SQLite → PostgreSQL
 
@@ -123,10 +154,15 @@ cd ~/medinsight && git pull && ./deploy.sh production
 Перед первым production-деплоем задайте в `.env` на VPS:
 
 ```env
+ENVIRONMENT=production
 POSTGRES_PASSWORD=<надёжный-пароль>
-PRODUCTION_DATABASE_URL=postgresql://medinsight:<пароль>@postgres:5432/medinsight
-DATABASE_URL=postgresql://medinsight:<пароль>@postgres:5432/medinsight
+SECRET_KEY=<openssl rand -hex 32>
+FRONTEND_URL=https://your-domain
+CORS_ORIGINS=https://your-domain
 ```
+
+`deploy.sh production` соберёт `DATABASE_URL` из `POSTGRES_PASSWORD`. Не меняйте пароль в `.env`
+без `ALTER USER` в PostgreSQL — volume сохраняет старый пароль.
 
 ## 8. DNS на VPS (Docker / git)
 

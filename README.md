@@ -639,6 +639,17 @@ healthcheck:
 | `POST /api/auth/login` | 10 запросов / минуту | `RATE_LIMIT_LOGIN_PER_MINUTE` |
 | `POST /api/auth/request-reset` | 3 запроса / час | `RATE_LIMIT_RESET_PER_HOUR` |
 
+### Двухфакторная аутентификация (2FA)
+
+- TOTP (Google Authenticator и аналоги) через `/api/totp/*`
+- `MFA_ENFORCED=true` (по умолчанию): в production `super_admin` и роли из `MFA_REQUIRED_ROLES`
+  обязаны включить 2FA перед входом
+- `MFA_ENFORCED=false` — временно отключить проверку (обслуживание); после правки `.env` нужен
+  `--force-recreate` контейнеров app/worker
+- Блокировка аккаунта после `LOGIN_LOCKOUT_MAX_ATTEMPTS` неудачных попыток (Redis, 15 мин по умолчанию)
+
+Подробнее: [docs/deployment/environment-variables.md](docs/deployment/environment-variables.md)
+
 - IP клиента определяется с учётом reverse-proxy (`X-Forwarded-For` / `X-Real-IP`).
 - **Fail-open**: если Redis недоступен или `RATE_LIMIT_ENABLED=false`, запросы
   пропускаются — сбой инфраструктуры не блокирует пользователей.

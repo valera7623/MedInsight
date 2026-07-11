@@ -64,6 +64,11 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 Передаются через `env_file: .env` или `environment:` в compose-файле.
 
+!!! warning "Перезапуск vs пересоздание"
+    `docker compose restart app` не подхружает новые ключи из `.env`.
+    Используйте `docker compose up -d --force-recreate app celery_worker`
+    или `./deploy.sh production`.
+
 ## Сборка
 
 Dockerfile оптимизирован для VPS:

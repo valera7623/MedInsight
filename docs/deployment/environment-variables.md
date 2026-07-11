@@ -24,6 +24,7 @@
 | Переменная | По умолчанию | Описание |
 |------------|--------------|----------|
 | `APP_PORT` | `8000` | Порт uvicorn |
+| `ENVIRONMENT` | `development` | `development` / `production` |
 | `APP_VERSION` | `1.0.0` | Версия в `/health` |
 | `CORS_ORIGINS` | localhost | Origins через запятую |
 | `SPACY_MODEL` | `ru_core_news_lg` | NLP-модель spaCy |
@@ -167,6 +168,60 @@
 | `RATE_LIMIT_ENABLED` | `true` | Лимиты |
 | `RATE_LIMIT_LOGIN_PER_MINUTE` | `10` | Логин |
 | `RATE_LIMIT_REGISTER_PER_HOUR` | `5` | Регистрация |
+| `RATE_LIMIT_RESET_PER_HOUR` | `3` | Сброс пароля |
+
+## Политика паролей и блокировка входа
+
+| Переменная | По умолчанию | Описание |
+|------------|--------------|----------|
+| `PASSWORD_MIN_LENGTH` | `12` | Минимальная длина пароля |
+| `PASSWORD_REQUIRE_COMPLEXITY` | `true` | Требовать буквы, цифры и спецсимволы |
+| `PASSWORD_HIBP_CHECK_ENABLED` | `false` | Проверка пароля через Have I Been Pwned |
+| `LOGIN_LOCKOUT_MAX_ATTEMPTS` | `5` | Неудачных попыток до блокировки |
+| `LOGIN_LOCKOUT_DURATION_SECONDS` | `900` | Длительность блокировки (15 мин) |
+
+Блокировка хранится в Redis (`login_lock:{user_id}`). Сбрасывается при успешном входе.
+
+## Двухфакторная аутентификация (2FA / TOTP)
+
+| Переменная | По умолчанию | Описание |
+|------------|--------------|----------|
+| `MFA_ENFORCED` | `true` | Глобально требовать 2FA для ролей из политики |
+| `MFA_REQUIRED_ROLES` | `admin,doctor` | Роли через запятую (tenant может переопределить в `settings.mfa_required_roles`) |
+
+Поведение:
+
+- При `MFA_ENFORCED=true` в **production** `super_admin` всегда обязан включить TOTP.
+- Роли из `MFA_REQUIRED_ROLES` (или tenant override) не могут войти, пока не включат TOTP в настройках аккаунта.
+- При `MFA_ENFORCED=false` проверка TOTP **отключена** (временный обход для обслуживания). Включите снова после работ.
+
+Проверка в контейнере:
+
+```bash
+docker compose exec app python -c "from app.config import settings; print(settings.MFA_ENFORCED)"
+```
+
+!!! warning "Изменения .env и Docker"
+    Переменные из `env_file: .env` попадают в контейнер при **создании** контейнера.
+    `docker restart` **не** подхватывает новые ключи из `.env`.
+    После правки `.env` пересоздайте сервисы:
+
+    ```bash
+    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate app celery_worker
+    ```
+
+    Полный `./deploy.sh production` делает `compose down` + `up` и тоже применяет `.env`.
+
+## Синхронизация .env с шаблоном
+
+Скрипт `scripts/sync_env_from_example.py` добавляет в `.env` ключи из `.env.example`,
+не перезаписывая существующие значения. Перед изменением создаётся бэкап `.env.backup.<timestamp>`.
+
+```bash
+python scripts/sync_env_from_example.py
+# или на VPS:
+docker compose exec app python scripts/sync_env_from_example.py
+```
 
 ## Email
 
@@ -182,11 +237,16 @@
 
 ```bash
 SECRET_KEY=$(openssl rand -hex 32)
-DATABASE_URL=sqlite:////app/data/medinsight.db
+ENVIRONMENT=production
+POSTGRES_PASSWORD=<надёжный-пароль>
+DATABASE_URL=postgresql://medinsight:<пароль>@postgres:5432/medinsight
 REDIS_URL=redis://redis:6379/0
-APP_ENV=production
-CORS_ORIGINS=https://medinsight.fileguardian.info
+CORS_ORIGINS=https://fileguardian.com.ru
 ENCRYPTION_ENABLED=true
 OPENAI_API_KEY=sk-...
-FRONTEND_URL=https://medinsight.fileguardian.info
+FRONTEND_URL=https://fileguardian.com.ru
+MFA_ENFORCED=true
 ```
+
+`deploy.sh production` собирает `DATABASE_URL` из `POSTGRES_PASSWORD` и не затирает пароль
+при повторных деплоях (volume PostgreSQL сохраняет учётные данные).

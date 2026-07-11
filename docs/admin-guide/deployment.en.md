@@ -34,11 +34,17 @@ git fetch origin && git reset --hard origin/main
 
 The `deploy.sh` script:
 
-- copies `.env` from `.env.production` (if present);
-- builds images `docker compose -f docker-compose.prod.yml build`;
-- starts services `up -d`;
+- pulls latest code;
+- in production builds `DATABASE_URL` from `POSTGRES_PASSWORD`;
+- runs `compose down` + `build` + `up -d` (containers recreated with current `.env`);
 - applies SQL migrations from `app/db/migrations/`;
 - runs `scripts/docker_cleanup.sh deploy`.
+
+Sync new keys from `.env.example` without overwriting secrets:
+
+```bash
+python scripts/sync_env_from_example.py
+```
 
 ## Post-deploy check
 
