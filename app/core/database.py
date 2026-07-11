@@ -12,6 +12,7 @@ from pathlib import Path
 
 from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.config import settings
 
@@ -46,10 +47,19 @@ def ensure_db_directory() -> None:
         logger.debug("Database directory ready: %s", db_path.parent)
 
 
+def _is_sqlite_memory(url: str) -> bool:
+    if not url.startswith("sqlite"):
+        return False
+    path = url[len("sqlite:///") :]
+    return path in ("", ":memory:")
+
+
 def _engine_kwargs(url: str) -> dict:
     kwargs: dict = {}
     if is_sqlite(url):
         kwargs["connect_args"] = {"check_same_thread": False}
+        if _is_sqlite_memory(url):
+            kwargs["poolclass"] = StaticPool
     elif is_postgresql(url):
         kwargs.update(
             pool_size=settings.DB_POOL_SIZE,

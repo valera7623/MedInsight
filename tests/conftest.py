@@ -7,9 +7,7 @@ from datetime import date, datetime
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 # Configure test environment before app imports that read settings.
 os.environ.setdefault("ENVIRONMENT", "development")
@@ -23,22 +21,16 @@ os.environ.setdefault("FHIR_ENABLED", "true")
 os.environ.setdefault("ENCRYPTION_ENABLED", "false")
 
 from app.auth import create_access_token, create_email_token, hash_password  # noqa: E402
-from app.core.database import Base, get_db  # noqa: E402
+from app.core.database import Base, engine, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Department, Patient, Tenant, User  # noqa: E402
 
 
 @pytest.fixture()
 def db_engine():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
     Base.metadata.create_all(bind=engine)
     yield engine
     Base.metadata.drop_all(bind=engine)
-    engine.dispose()
 
 
 @pytest.fixture()
