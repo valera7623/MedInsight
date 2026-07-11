@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_HOURS: int = 1
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ACCESS_TOKEN_EXPIRE_DAYS: int = 7  # legacy alias; prefer ACCESS_TOKEN_EXPIRE_HOURS
+    APP_VERSION: str = "1.0.0"
     ENVIRONMENT: str = "development"  # development | production
     DATABASE_URL: str = "sqlite:///./medinsight.db"
     DEVELOPMENT_DATABASE_URL: str = "sqlite:///./medinsight.db"
