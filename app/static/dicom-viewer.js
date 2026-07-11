@@ -8,7 +8,9 @@ const viewerState = {
   rotation: 0,
   panX: 0,
   panY: 0,
-  wl: 100,
+  windowCenter: 128,
+  windowWidth: 256,
+  preset: 'default',
   dragging: false,
   lastX: 0,
   lastY: 0,
@@ -23,8 +25,9 @@ const viewerState = {
 function getUrlParams() {
   const p = new URLSearchParams(window.location.search);
   return {
-    wc: p.get('wc'),
-    ww: p.get('ww'),
+    wc: p.get('wc') != null ? parseInt(p.get('wc'), 10) : null,
+    ww: p.get('ww') != null ? parseInt(p.get('ww'), 10) : null,
+    preset: p.get('preset'),
     frame: parseInt(p.get('frame') || '0', 10),
   };
 }
@@ -96,6 +99,7 @@ function renderSeriesList() {
       viewerState.rotation = 0;
       viewerState.panX = 0;
       viewerState.panY = 0;
+      resetWindowLevel();
       renderSeriesList();
       updateFrameSlider();
       loadCurrentFrameImage();
@@ -116,19 +120,11 @@ function updateFrameSlider() {
   }
 }
 
-function applyWindowLevel(ctx, canvas, wlPercent) {
+function applyWindowLevel(ctx, canvas) {
+  const { windowCenter, windowWidth } = viewerState;
+  if (window.DicomWlPresets?.isDefault(windowCenter, windowWidth)) return;
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-  const factor = wlPercent / 100;
-  const brightness = (factor - 0.5) * 80;
-  const contrast = 0.5 + factor * 0.5;
-  for (let i = 0; i < data.length; i += 4) {
-    for (let c = 0; c < 3; c++) {
-      let v = data[i + c];
-      v = (v - 128) * contrast + 128 + brightness;
-      data[i + c] = Math.max(0, Math.min(255, v));
-    }
-  }
+  window.DicomWlPresets.applyToImageData(imageData, windowCenter, windowWidth);
   ctx.putImageData(imageData, 0, 0);
 }
 
@@ -153,9 +149,7 @@ function drawImage() {
   ctx.drawImage(viewerState.img, -iw / 2, -ih / 2);
   ctx.restore();
 
-  if (viewerState.wl !== 100) {
-    applyWindowLevel(ctx, canvas, viewerState.wl);
-  }
+  applyWindowLevel(ctx, canvas);
 
   canvas.style.maxWidth = `${maxW}px`;
   canvas.style.maxHeight = `${maxH}px`;
@@ -255,6 +249,48 @@ async function initViewerAnnotationUi(frame) {
   syncAnnotationOverlay();
 }
 
+function resetWindowLevel() {
+  const def = window.DicomWlPresets?.DEFAULT_WL || { center: 128, width: 256 };
+  viewerState.windowCenter = def.center;
+  viewerState.windowWidth = def.width;
+  viewerState.preset = 'default';
+  window.DicomViewerToolbar?.resetUi();
+}
+
+function updateView3dLink() {
+  const link = document.getElementById('view-3d-link');
+  if (!link || !viewerState.study?.study_uid) return;
+  const params = new URLSearchParams();
+  if (viewerState.preset && viewerState.preset !== 'default') {
+    params.set('preset', viewerState.preset);
+  }
+  if (viewerState.windowCenter != null) params.set('wc', String(viewerState.windowCenter));
+  if (viewerState.windowWidth != null) params.set('ww', String(viewerState.windowWidth));
+  const qs = params.toString();
+  link.href = `/dicom/3d/${encodeURIComponent(viewerState.study.study_uid)}${qs ? `?${qs}` : ''}`;
+}
+
+function handleWlToolbarAction(action, value) {
+  if (action === 'preset') {
+    viewerState.preset = value.id;
+    viewerState.windowCenter = value.center;
+    viewerState.windowWidth = value.width;
+  } else if (action === 'window') {
+    viewerState.preset = 'custom';
+    viewerState.windowCenter = value.center;
+    viewerState.windowWidth = value.width;
+  }
+  updateView3dLink();
+  drawImage();
+}
+
+function setupWlToolbar() {
+  const host = document.getElementById('dicom-wl-toolbar-host');
+  if (host && window.DicomViewerToolbar) {
+    DicomViewerToolbar.mount(host, handleWlToolbarAction);
+  }
+}
+
 function updateAnnotateLink(frame) {
   const link = document.getElementById('annotate-link');
   if (!link || !frame) return;
@@ -318,19 +354,13 @@ function setupViewerTools() {
     viewerState.rotation = 0;
     viewerState.panX = 0;
     viewerState.panY = 0;
-    viewerState.wl = 100;
-    const wl = document.getElementById('wl-slider');
-    if (wl) wl.value = '100';
+    resetWindowLevel();
+    updateView3dLink();
     drawImage();
   });
   document.getElementById('tool-rotate')?.addEventListener('click', () => {
     viewerState.rotation = (viewerState.rotation + 90) % 360;
     drawImage();
-  });
-
-  document.getElementById('wl-slider')?.addEventListener('input', e => {
-    viewerState.wl = parseInt(e.target.value, 10);
-    loadCurrentFrameImage();
   });
 
   document.getElementById('frame-slider')?.addEventListener('input', e => {
@@ -368,6 +398,7 @@ function setupViewerTools() {
 async function initDicomViewer(studyUid) {
   if (!requireAuth()) return;
   setupLogout();
+  setupWlToolbar();
   setupViewerTools();
 
   const cfgRes = await apiFetch('/api/dicom/annotations/config');
@@ -378,6 +409,18 @@ async function initDicomViewer(studyUid) {
 
   const urlParams = getUrlParams();
   viewerState.frameIndex = urlParams.frame || 0;
+  if (urlParams.preset && window.DicomWlPresets?.PRESET_WL[urlParams.preset]) {
+    const wl = window.DicomWlPresets.PRESET_WL[urlParams.preset];
+    viewerState.preset = urlParams.preset;
+    viewerState.windowCenter = wl.center;
+    viewerState.windowWidth = wl.width;
+    window.DicomViewerToolbar?.setWindow(wl.center, wl.width, urlParams.preset);
+  } else if (urlParams.wc != null && urlParams.ww != null) {
+    viewerState.preset = 'custom';
+    viewerState.windowCenter = urlParams.wc;
+    viewerState.windowWidth = urlParams.ww;
+    window.DicomViewerToolbar?.setWindow(urlParams.wc, urlParams.ww, null);
+  }
 
   const res = await apiFetch(`/api/dicom/studies/${encodeURIComponent(studyUid)}`);
   if (!res.ok) {
@@ -388,10 +431,7 @@ async function initDicomViewer(studyUid) {
   viewerState.study = await res.json();
   document.title = `DICOM — ${viewerState.study.modality || studyUid}`;
 
-  const view3d = document.getElementById('view-3d-link');
-  if (view3d) {
-    view3d.href = `/dicom/3d/${encodeURIComponent(studyUid)}`;
-  }
+  updateView3dLink();
 
   const deleteBtn = document.getElementById('delete-study-btn');
   if (deleteBtn) {

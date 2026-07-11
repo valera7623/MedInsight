@@ -3,23 +3,7 @@
  */
 
 const Dicom3dToolbar = (() => {
-  const PRESETS = [
-    { id: 'default', label: 'Default' },
-    { id: 'bone', label: 'Bone' },
-    { id: 'lung', label: 'Lung' },
-    { id: 'brain', label: 'Brain' },
-    { id: 'abdomen', label: 'Abdomen' },
-    { id: 'liver', label: 'Liver' },
-  ];
-
-  const PRESET_WL = {
-    default: { center: 128, width: 256 },
-    lung: { center: 90, width: 360 },
-    bone: { center: 210, width: 100 },
-    brain: { center: 128, width: 72 },
-    abdomen: { center: 130, width: 180 },
-    liver: { center: 140, width: 110 },
-  };
+  const { PRESETS, PRESET_WL } = window.DicomWlPresets;
 
   const MODES = [
     { id: 'mip', label: 'MIP' },

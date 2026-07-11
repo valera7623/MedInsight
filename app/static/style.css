@@ -685,6 +685,12 @@ select.btn {
   flex-shrink: 0;
 }
 .dicom-wl-label { font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem; }
+.dicom-wl-toolbar-host {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-card);
+  overflow-x: auto;
+}
 .dicom-frame-label { margin-left: auto; font-size: 0.85rem; color: var(--text-secondary); }
 .dicom-canvas-wrap {
   flex: 1;

@@ -35,15 +35,12 @@
         <button class="btn btn-secondary btn-sm" id="tool-zoom-out" title="Уменьшить">🔍−</button>
         <button class="btn btn-secondary btn-sm" id="tool-reset" title="Сброс">⟲</button>
         <button class="btn btn-secondary btn-sm" id="tool-rotate" title="Поворот">↻</button>
-        <label class="dicom-wl-label">
-          W/L
-          <input type="range" id="wl-slider" min="0" max="200" value="100">
-        </label>
         <span id="frame-label" class="dicom-frame-label">Кадр 1 / 1</span>
         <a class="btn btn-primary btn-sm hidden" id="annotate-link" href="#">✏️ Полный редактор</a>
         <a class="btn btn-primary btn-sm" id="view-3d-link" href="#">🧊 3D</a>
         <button class="btn btn-danger btn-sm hidden" id="delete-study-btn" type="button">Удалить</button>
       </div>
+      <div id="dicom-wl-toolbar-host" class="dicom-wl-toolbar-host"></div>
       <div id="annotation-toolbar" class="annotation-toolbar dicom-viewer-ann-toolbar hidden"></div>
       <div class="dicom-canvas-wrap" id="canvas-wrap">
         <div class="dicom-canvas-stack">
@@ -62,6 +59,8 @@
   <script src="/static/dicom-annotations.js"></script>
   <script src="/static/dicom-annotation-editor.js"></script>
   <script src="/static/dicom-annotation-toolbar.js"></script>
+  <script src="/static/dicom-wl-presets.js"></script>
+  <script src="/static/dicom-viewer-toolbar.js"></script>
   <script src="/static/dicom-viewer.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
