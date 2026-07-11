@@ -72,9 +72,9 @@ async def sso_login():
 @router.get("/callback")
 async def sso_callback(
     request: Request,
+    db: Annotated[Session, Depends(get_db)],
     code: str = Query(...),
     state: str = Query(...),
-    db: Annotated[Session, Depends(get_db)],
 ):
     if not sso_enabled():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SSO not configured")
