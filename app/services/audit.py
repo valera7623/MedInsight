@@ -55,6 +55,20 @@ def log_audit(
         db.commit()
         if settings.SIEM_EXPORT_ENABLED:
             enqueue_pending_batch([entry.id])
+        if settings.SIEM_WEBHOOK_ENABLED:
+            from app.services.siem_webhook import push_audit_event
+
+            push_audit_event(
+                {
+                    "id": entry.id,
+                    "action": entry.action,
+                    "tenant_id": entry.tenant_id,
+                    "user_id": entry.user_id,
+                    "resource_type": entry.resource_type,
+                    "resource_id": entry.resource_id,
+                    "created_at": entry.created_at.isoformat() if entry.created_at else None,
+                }
+            )
         return entry
     except Exception as exc:
         db.rollback()

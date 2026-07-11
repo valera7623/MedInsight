@@ -26,7 +26,8 @@ from app.middleware.logging import LoggingMiddleware
 from app.middleware.usage_limit import UsageLimitMiddleware
 from app.middleware.cache_middleware import CacheMiddleware
 from app.middleware.demo_readonly import DemoReadOnlyMiddleware
-from app.routes import admin, admin_backup, analytics, appointments, audit_export, cache_admin, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, docx_export, documents, export, export_async, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, reports, telegram, templates, totp, users, webhooks
+from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.routes import admin, admin_backup, analytics, appointments, audit_export, cache_admin, dicom, dicom_annotations, dicom_annotations_edit, dicom_annotations_export, dicom_context, dicom_volume, dicom_zip, docx_export, documents, dsar, export, export_async, export_excel, fhir_export, fhir_import, health, patients, payments, predictions, preferences, reports, sso, telegram, templates, totp, users, webhooks
 from app.routes import websocket as websocket_route
 from app.utils.logging import configure_logging
 from app.webhooks import stripe as stripe_webhook
@@ -285,6 +286,8 @@ else:
 if settings.REDIS_CACHE_ENABLED:
     app.add_middleware(CacheMiddleware)
 app.add_middleware(UsageLimitMiddleware)
+if settings.SECURITY_HEADERS_ENABLED:
+    app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -312,6 +315,7 @@ app.add_middleware(LoggingMiddleware)
 
 app.include_router(health.router)
 app.include_router(auth_router, prefix="/api")
+app.include_router(sso.router, prefix="/api")
 app.include_router(totp.router, prefix="/api")
 app.include_router(patients.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
@@ -331,6 +335,7 @@ app.include_router(export_async.router, prefix="/api")
 app.include_router(export_excel.router, prefix="/api")
 app.include_router(cache_admin.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(dsar.router, prefix="/api")
 app.include_router(audit_export.router, prefix="/api")
 app.include_router(admin_backup.router, prefix="/api")
 app.include_router(users.router, prefix="/api")

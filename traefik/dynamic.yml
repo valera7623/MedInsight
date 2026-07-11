@@ -9,6 +9,8 @@ http:
       entryPoints:
         - websecure
       service: medinsight
+      middlewares:
+        - security-headers
       tls:
         certResolver: letsencrypt
 
@@ -25,6 +27,8 @@ http:
       entryPoints:
         - websecure
       service: medinsight-demo
+      middlewares:
+        - security-headers
       tls:
         certResolver: letsencrypt
 
@@ -53,3 +57,10 @@ http:
       redirectScheme:
         scheme: https
         permanent: true
+    security-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        frameDeny: true
+        contentTypeNosniff: true
+        referrerPolicy: "strict-origin-when-cross-origin"

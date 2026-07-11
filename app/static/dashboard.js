@@ -5,8 +5,9 @@ let currentUser = null;
 function setupLogout() {
   const btn = document.getElementById('logout-btn');
   if (btn) {
-    btn.addEventListener('click', () => {
-      clearSession();
+    btn.addEventListener('click', async () => {
+      if (typeof logoutSession === 'function') await logoutSession(false);
+      else clearSession();
       window.location.href = '/login';
     });
   }

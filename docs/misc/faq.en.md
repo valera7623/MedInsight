@@ -52,7 +52,7 @@ Default 500 MB (`DICOM_MAX_FILE_SIZE_MB`).
 
 ### Can I upload a folder of series?
 
-Currently one `.dcm` at a time. ZIP support is on the roadmap.
+Single `.dcm` upload and **DICOM ZIP** (multi-file studies) are supported.
 
 ## Predictions
 

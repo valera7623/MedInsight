@@ -70,7 +70,7 @@ class TenantResponse(BaseModel):
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=6)
+    password: str = Field(min_length=12)
     full_name: str = Field(min_length=1, max_length=255)
     role: str = Field(default="doctor")
     tenant_id: int | None = None
@@ -318,6 +318,13 @@ def create_user(
         dept = db.query(Department).filter(Department.id == data.department_id).first()
         if not dept or (tenant_id is not None and dept.tenant_id != tenant_id):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid department for tenant")
+
+    from app.services.password_policy import PasswordPolicyError, validate_password
+
+    try:
+        validate_password(data.password, email=data.email)
+    except PasswordPolicyError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     user = User(
         tenant_id=tenant_id,

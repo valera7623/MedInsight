@@ -42,7 +42,16 @@ jobs:
         run: poetry run python -c "from app.main import app; print('OK', app.title)"
 
       - name: Run tests
-        run: poetry run pytest tests/ -q --tb=short
+        run: poetry run pytest tests/ -q --tb=short --cov=app --cov-report=term-missing --cov-fail-under=45
+
+      - name: Ruff
+        run: poetry run ruff check app tests
+
+      - name: Bandit
+        run: poetry run bandit -r app -ll -q || true
+
+      - name: pip-audit
+        run: poetry run pip-audit || true
 
   test-postgres:
     runs-on: ubuntu-latest

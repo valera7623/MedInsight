@@ -19,6 +19,12 @@ os.environ.setdefault("EMAIL_VERIFICATION_ENABLED", "false")
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 os.environ.setdefault("FHIR_ENABLED", "true")
 os.environ.setdefault("ENCRYPTION_ENABLED", "false")
+os.environ.setdefault("PASSWORD_REQUIRE_COMPLEXITY", "false")
+os.environ.setdefault("PASSWORD_MIN_LENGTH", "8")
+os.environ.setdefault("PASSWORD_HIBP_CHECK_ENABLED", "false")
+os.environ.setdefault("MFA_REQUIRED_ROLES", "")
+os.environ.setdefault("SESSION_STORE_ENABLED", "false")
+os.environ.setdefault("SIEM_WEBHOOK_ENABLED", "false")
 
 from app.auth import create_access_token, create_email_token, hash_password  # noqa: E402
 from app.core.database import Base, engine, get_db  # noqa: E402

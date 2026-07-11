@@ -23,7 +23,7 @@ MedInsight development plans.
 - [x] Fail-fast on default secrets in production
 - [x] JWT refresh tokens (1h access + 7d refresh)
 - [x] Rate limits on upload/predict/admin
-- [ ] 2FA (TOTP)
+- [x] 2FA (TOTP)
 - [x] Audit export to SIEM (Phase 13, feature flag)
 - [x] PostgreSQL as recommended production DB
 

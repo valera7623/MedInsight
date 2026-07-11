@@ -236,6 +236,7 @@ def run_migrations():
             "029_migrate_cache_stats.py",
             "030_migrate_ai_parser.py",
             "031_migrate_auth_tokens.py",
+            "032_enterprise_rls.py",
         ):
             migration_path = migrations_dir / migration_file
             spec = importlib.util.spec_from_file_location(migration_file.replace(".py", ""), migration_path)

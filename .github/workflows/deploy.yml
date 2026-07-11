@@ -38,7 +38,7 @@ jobs:
           poetry run pip install "pydicom>=2.4.0"
 
       - name: Run tests
-        run: poetry run pytest tests/ -q
+        run: poetry run pytest tests/ -q --cov=app --cov-fail-under=45
 
       - name: Smoke test
         run: |
@@ -57,13 +57,14 @@ jobs:
           APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
           APP_PORT: ${{ secrets.APP_PORT }}
           CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
           command_timeout: 30m
-          envs: GH_REPO,APP_SECRET_KEY,APP_PORT,CORS_ORIGINS
+          envs: GH_REPO,APP_SECRET_KEY,APP_PORT,CORS_ORIGINS,POSTGRES_PASSWORD
           script: |
             set -euo pipefail
 
@@ -111,6 +112,8 @@ jobs:
             ./deploy.sh production
 
             docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+
+            curl -sf "http://127.0.0.1:${APP_PORT:-8000}/health/ready" || exit 1
 
             # Demo stack (separate DB; shares Traefik). Requires DNS:
             # A-record demo.fileguardian.com.ru → this VPS.

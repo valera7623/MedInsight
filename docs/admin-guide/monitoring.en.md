@@ -45,7 +45,7 @@ Endpoint `GET /metrics` (if `PROMETHEUS_ENABLED=true`).
 
 Admin panel → **Audit**: logins, uploads, deletions, role changes.
 
-API: `GET /api/admin/audit-logs` (admin only).
+API: `GET /api/admin/audit` (admin only).
 
 ## Alerts (recommendations)
 

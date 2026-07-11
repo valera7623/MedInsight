@@ -29,6 +29,25 @@ function clearSession() {
   localStorage.removeItem('role');
 }
 
+async function logoutSession(allDevices = false) {
+  const refresh = getRefreshToken();
+  const token = getToken();
+  try {
+    await fetch(`${API}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ refresh_token: refresh, all_devices: allDevices }),
+    });
+  } catch {
+    /* best effort */
+  }
+  clearSession();
+}
+
 function requireAuth() {
   if (!getToken()) {
     window.location.href = '/login';
@@ -43,6 +62,7 @@ async function refreshAccessToken() {
   if (!_refreshPromise) {
     _refreshPromise = fetch(`${API}/api/auth/refresh`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refresh }),
     })
@@ -67,7 +87,7 @@ async function apiFetch(path, options = {}, retried = false) {
     headers['Content-Type'] = headers['Content-Type'] || 'application/json';
   }
 
-  const res = await fetch(`${API}${path}`, { ...options, headers });
+  const res = await fetch(`${API}${path}`, { ...options, headers, credentials: 'include' });
 
   if (res.status === 401 && !retried) {
     const refreshed = await refreshAccessToken();

@@ -45,7 +45,7 @@ docker compose -f docker-compose.prod.yml exec worker \
 
 Админ-панель → **Аудит**: входы, загрузки, удаления, смена ролей.
 
-API: `GET /api/admin/audit-logs` (только admin).
+API: `GET /api/admin/audit` (только admin).
 
 ## Алерты (рекомендации)
 

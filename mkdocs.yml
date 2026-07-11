@@ -110,6 +110,17 @@ nav:
       - deployment/vps.md
       - deployment/ci-cd.md
       - deployment/environment-variables.md
+      - deployment/managed-services.md
+      - deployment/dr.md
+  - Compliance:
+      - compliance/index.md
+      - compliance/privacy-overview.md
+      - compliance/data-flow-diagrams.md
+      - compliance/subprocessors.md
+      - compliance/retention-policy.md
+      - compliance/dsar-runbook.md
+      - compliance/incident-response.md
+      - compliance/control-mapping.md
   - Дополнительно:
       - misc/changelog.md
       - misc/roadmap.md

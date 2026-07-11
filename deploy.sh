@@ -181,7 +181,6 @@ if [ "$MODE" = "production" ]; then
   fi
   echo "Starting MedInsight (production, PostgreSQL + HTTPS via Traefik)..."
   for key_val in \
-    "OTEL_ENABLED=false" \
     "CHROMA_EMBEDDINGS_ENABLED=false"; do
     key="${key_val%%=*}"
     val="${key_val#*=}"

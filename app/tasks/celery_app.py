@@ -86,6 +86,12 @@ if settings.SIEM_EXPORT_ENABLED:
         "schedule": 5 * 60.0,  # every 5 minutes
     }
 
+if settings.AUDIT_ARCHIVE_ENABLED:
+    celery_app.conf.beat_schedule["audit-retention-daily"] = {
+        "task": "app.tasks.audit_retention_task.archive_audit_logs",
+        "schedule": 24 * 60 * 60.0,
+    }
+
 if settings.APPOINTMENTS_ENABLED:
     celery_app.conf.beat_schedule.update({
         "appointment-reminders": {

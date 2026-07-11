@@ -221,6 +221,89 @@ class Settings(BaseSettings):
     RATE_LIMIT_UPLOAD_PER_MINUTE: int = 20
     RATE_LIMIT_PREDICT_PER_MINUTE: int = 10
     RATE_LIMIT_ADMIN_PER_MINUTE: int = 30
+    RATE_LIMIT_LOGIN_PER_ACCOUNT: int = 5
+    RATE_LIMIT_LOGIN_ACCOUNT_PERIOD: int = 900
+
+    # Enterprise: password policy
+    PASSWORD_MIN_LENGTH: int = 12
+    PASSWORD_REQUIRE_COMPLEXITY: bool = True
+    PASSWORD_HIBP_CHECK_ENABLED: bool = False
+
+    # Enterprise: account lockout
+    LOGIN_LOCKOUT_MAX_ATTEMPTS: int = 5
+    LOGIN_LOCKOUT_DURATION_SECONDS: int = 900
+
+    # Enterprise: server-side sessions
+    SESSION_STORE_ENABLED: bool = True
+
+    # Enterprise: MFA policy (comma-separated roles; tenant.settings overrides)
+    MFA_REQUIRED_ROLES: str = "admin,doctor"
+
+    # Enterprise: OIDC SSO
+    SSO_OIDC_ENABLED: bool = False
+    SSO_OIDC_ISSUER_URL: str = ""
+    SSO_OIDC_CLIENT_ID: str = ""
+    SSO_OIDC_CLIENT_SECRET: str = ""
+    SSO_OIDC_REDIRECT_URI: str = ""
+    SSO_OIDC_AUTHORIZE_URL: str = ""
+    SSO_OIDC_TOKEN_URL: str = ""
+    SSO_OIDC_SCOPES: str = "openid email profile"
+
+    # Enterprise: auth cookies (hybrid with Bearer)
+    AUTH_COOKIE_ENABLED: bool = False
+    AUTH_COOKIE_SECURE: bool = True
+    AUTH_COOKIE_SAMESITE: str = "lax"
+    AUTH_ACCESS_COOKIE_NAME: str = "medinsight_access"
+    AUTH_REFRESH_COOKIE_NAME: str = "medinsight_refresh"
+
+    # Enterprise: security headers
+    SECURITY_HEADERS_ENABLED: bool = True
+    SECURITY_HSTS_ENABLED: bool = True
+    SECURITY_HSTS_MAX_AGE: int = 31536000
+    SECURITY_CSP: str = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+
+    # Enterprise: PHI field encryption
+    PHI_FIELD_ENCRYPTION_ENABLED: bool = False
+    PHI_FIELD_ENCRYPTION_KEY: str = ""
+
+    # Enterprise: PostgreSQL RLS
+    RLS_ENABLED: bool = False
+
+    # Enterprise: secrets vault
+    VAULT_ENABLED: bool = False
+    VAULT_ADDR: str = ""
+    VAULT_TOKEN: str = ""
+    VAULT_SECRET_PATH: str = "secret/data/medinsight"
+
+    # Enterprise: audit retention
+    AUDIT_RETENTION_DAYS: int = 365
+    AUDIT_ARCHIVE_ENABLED: bool = False
+
+    # Enterprise: SIEM real-time webhook
+    SIEM_WEBHOOK_URL: str = ""
+    SIEM_WEBHOOK_ENABLED: bool = False
+
+    # Enterprise: managed services (cloud migration)
+    OBJECT_STORAGE_ENABLED: bool = False
+    OBJECT_STORAGE_BUCKET: str = ""
+    OBJECT_STORAGE_ENDPOINT: str = ""
+    MANAGED_DATABASE_URL: str = ""
+    MANAGED_REDIS_URL: str = ""
+
+    # Enterprise: multi-region / data residency
+    DATA_RESIDENCY_REGION: str = "ru-central1"
+    TENANT_REGION_ENFORCED: bool = False
+
+    # Enterprise: WebAuthn
+    WEBAUTHN_ENABLED: bool = False
+    WEBAUTHN_RP_ID: str = ""
+    WEBAUTHN_RP_NAME: str = "MedInsight"
+
+    # Enterprise: custom roles (JSON per tenant in settings)
+    CUSTOM_ROLES_ENABLED: bool = False
+
+    # Enterprise: feature flags
+    FEATURE_FLAGS_ENABLED: bool = False
 
     # Phase 5: Graceful Shutdown
     GRACEFUL_SHUTDOWN_TIMEOUT: int = 30

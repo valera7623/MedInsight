@@ -23,7 +23,7 @@
 - [x] Fail-fast на default secrets в production
 - [x] JWT refresh tokens (access 1h + refresh 7d)
 - [x] Rate limits на upload/predict/admin
-- [ ] 2FA (TOTP)
+- [x] 2FA (TOTP)
 - [x] Audit export в SIEM (Phase 13, feature flag)
 - [x] PostgreSQL как рекомендуемая БД для prod
 
