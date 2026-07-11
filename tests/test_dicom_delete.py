@@ -27,6 +27,7 @@ def _seed_user_and_patient(db):
         last_name="Patient",
         birth_date=datetime(1990, 1, 1).date(),
         gender="M",
+        phone="+79001234567",
     )
     db.add(patient)
     db.commit()
