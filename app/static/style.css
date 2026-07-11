@@ -629,17 +629,26 @@ select.btn {
   background: var(--accent-primary);
   transition: width 0.3s ease;
 }
-.dicom-viewer-body { overflow: hidden; }
+.dicom-viewer-body {
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.dicom-viewer-body .navbar { flex-shrink: 0; }
 .dicom-viewer-layout {
   display: grid;
   grid-template-columns: 260px 1fr;
-  height: calc(100vh - 56px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 .dicom-sidebar {
   background: var(--bg-card);
   border-right: 1px solid var(--border-primary);
   padding: 1rem;
   overflow-y: auto;
+  min-height: 0;
 }
 .dicom-series-list { list-style: none; margin: 0.75rem 0; padding: 0; }
 .dicom-series-list li {
@@ -658,7 +667,13 @@ select.btn {
 .dicom-meta-list { font-size: 0.85rem; }
 .dicom-meta-list dt { color: var(--text-secondary); margin-top: 0.4rem; }
 .dicom-meta-list dd { margin: 0; }
-.dicom-viewport { display: flex; flex-direction: column; background: #000; }
+.dicom-viewport {
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  min-height: 0;
+  overflow: hidden;
+}
 .dicom-toolbar {
   display: flex;
   gap: 0.5rem;
@@ -667,11 +682,13 @@ select.btn {
   background: var(--bg-card);
   border-bottom: 1px solid var(--border-primary);
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 .dicom-wl-label { font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem; }
 .dicom-frame-label { margin-left: auto; font-size: 0.85rem; color: var(--text-secondary); }
 .dicom-canvas-wrap {
   flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -680,7 +697,16 @@ select.btn {
 }
 .dicom-canvas-wrap:active { cursor: grabbing; }
 #dicom-canvas { image-rendering: auto; }
-.dicom-frame-slider { width: 100%; padding: 0.5rem 1rem; background: var(--bg-card); }
+.dicom-frame-slider {
+  width: 100%;
+  margin: 0;
+  padding: 0.65rem 1rem;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-primary);
+  flex-shrink: 0;
+  box-sizing: border-box;
+  min-height: 2.5rem;
+}
 
 .dicom-canvas-stack { position: relative; display: inline-block; line-height: 0; }
 .dicom-canvas-stack canvas { display: block; }
@@ -705,6 +731,7 @@ select.btn {
   border-top: none;
   border-bottom: 1px solid var(--border-primary);
   padding: 0.35rem 1rem;
+  flex-shrink: 0;
 }
 .dicom-viewport.annotating .dicom-canvas-wrap {
   cursor: crosshair;
