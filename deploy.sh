@@ -38,11 +38,29 @@ env_file_get() {
   grep -E "^${key}=" .env 2>/dev/null | head -1 | cut -d= -f2- || true
 }
 
-# Resolve production PostgreSQL URL without clobbering custom .env credentials.
-# Priority: PRODUCTION_DATABASE_URL in .env → shell env → postgresql DATABASE_URL
-# in .env → built from POSTGRES_* in .env → default.
+# Resolve production PostgreSQL URL from .env credentials.
+# POSTGRES_PASSWORD is the source of truth (must match the existing postgres volume).
+# PRODUCTION_DATABASE_URL is only used when POSTGRES_PASSWORD is unset (legacy/manual).
 resolve_production_database_url() {
-  local from_env url user pass db
+  local from_env user pass db
+
+  user="$(env_file_get POSTGRES_USER)"
+  user="${user:-medinsight}"
+  pass="$(env_file_get POSTGRES_PASSWORD)"
+  db="$(env_file_get POSTGRES_DB)"
+  db="${db:-medinsight}"
+
+  if [ -n "$pass" ]; then
+    echo "postgresql://${user}:${pass}@postgres:5432/${db}"
+    return
+  fi
+
+  if [ -n "${POSTGRES_PASSWORD:-}" ]; then
+    user="${POSTGRES_USER:-medinsight}"
+    db="${POSTGRES_DB:-medinsight}"
+    echo "postgresql://${user}:${POSTGRES_PASSWORD}@postgres:5432/${db}"
+    return
+  fi
 
   from_env="$(env_file_get PRODUCTION_DATABASE_URL)"
   if [ -n "$from_env" ]; then
@@ -61,13 +79,7 @@ resolve_production_database_url() {
     return
   fi
 
-  user="$(env_file_get POSTGRES_USER)"
-  user="${user:-medinsight}"
-  pass="$(env_file_get POSTGRES_PASSWORD)"
-  pass="${pass:-secure_password}"
-  db="$(env_file_get POSTGRES_DB)"
-  db="${db:-medinsight}"
-  echo "postgresql://${user}:${pass}@postgres:5432/${db}"
+  echo "postgresql://${user}:secure_password@postgres:5432/${db}"
 }
 
 set_env_var() {
