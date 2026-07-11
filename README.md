@@ -1,6 +1,36 @@
 # MedInsight
 
-Платформа клинической аналитики — MVP для загрузки медицинских документов, извлечения сущностей, визуализации статистики и GPT-прогнозирования рисков.
+**Production-ready B2B SaaS** для частных клиник, медцентров и telemedicine-стартапов в РФ и СНГ: клиническая аналитика, парсинг медицинских документов, DICOM (2D/3D), AI-прогнозы рисков с SHAP, мультитенантность и встроенный биллинг.
+
+| | |
+|---|---|
+| **Автор** | [Valera (valera7623)](https://github.com/valera7623) · valera7623@gmail.com |
+| **Лицензия** | [MIT](LICENSE) |
+| **Версия** | 1.0.0 (июнь 2026) |
+| **Production** | [fileguardian.com.ru](https://fileguardian.com.ru) |
+| **Демо** | [demo.fileguardian.com.ru/demo](https://demo.fileguardian.com.ru/demo) |
+| **Документация** | [fileguardian.com.ru/help/](https://fileguardian.com.ru/help/) · [API Swagger](https://fileguardian.com.ru/docs) |
+
+### Возможности
+
+- Управление пациентами, отделениями, RBAC (7 ролей), мультитенантность (subdomain)
+- Парсинг PDF/DOCX (МКБ-10, препараты, анализы) — spaCy + GPT через [ProxyAPI](https://proxyapi.ru)
+- DICOM: загрузка, 2D/3D viewer, аннотации, ZIP-архивы; пресеты W/L (Bone, Lung, Brain…)
+- GPT-прогнозы и SHAP-объяснимость; self-healing RAG (ChromaDB)
+- HL7 FHIR R4 import/export, webhooks, Telegram-бот
+- Безопасность: age-шифрование, JWT + refresh, 2FA/TOTP, audit log, rate limiting
+- Биллинг Freemium / Pro / Enterprise (ЮKassa + Stripe)
+- Deploy: Docker Compose, Traefik, GitHub Actions → VPS
+
+### Быстрые ссылки
+
+- [Деплой (GitHub Actions → VPS)](DEPLOY.md)
+- [Документация в репозитории](docs/README.md)
+- [Issues & feature requests](https://github.com/valera7623/MedInsight/issues)
+
+---
+
+Платформа клинической аналитики — загрузка медицинских документов, извлечение сущностей, визуализация статистики и GPT-прогнозирование рисков.
 
 ## Стек
 
