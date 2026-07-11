@@ -691,9 +691,23 @@ select.btn {
   top: 0;
   cursor: crosshair;
   pointer-events: auto;
+  z-index: 2;
 }
 .annotation-overlay {
   pointer-events: none;
+}
+.annotation-overlay.interactive {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+.dicom-viewer-ann-toolbar {
+  min-height: auto;
+  border-top: none;
+  border-bottom: 1px solid var(--border-primary);
+  padding: 0.35rem 1rem;
+}
+.dicom-viewport.annotating .dicom-canvas-wrap {
+  cursor: crosshair;
 }
 .dicom-annotate-body { overflow: hidden; }
 .dicom-annotate-layout {

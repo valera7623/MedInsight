@@ -14,7 +14,10 @@ const viewerState = {
   lastY: 0,
   img: null,
   annotationTool: null,
+  annotationEditor: null,
+  annotationToolbar: null,
   annotationsEnabled: false,
+  annotateMode: false,
 };
 
 function getUrlParams() {
@@ -139,7 +142,31 @@ function drawImage() {
   canvas.style.maxWidth = `${maxW}px`;
   canvas.style.maxHeight = `${maxH}px`;
 
+  fitCanvasStack();
   syncAnnotationOverlay();
+}
+
+function fitCanvasStack() {
+  const wrap = document.getElementById('canvas-wrap');
+  const canvas = document.getElementById('dicom-canvas');
+  const overlay = document.getElementById('annotation-overlay');
+  if (!wrap || !canvas || !viewerState.img) return;
+
+  const maxW = wrap.clientWidth || 800;
+  const maxH = wrap.clientHeight || 600;
+  const iw = viewerState.img.naturalWidth || canvas.width;
+  const ih = viewerState.img.naturalHeight || canvas.height;
+  const scale = Math.min(maxW / iw, maxH / ih, 1);
+  const displayW = Math.max(1, Math.round(iw * scale));
+  const displayH = Math.max(1, Math.round(ih * scale));
+
+  for (const el of [canvas, overlay]) {
+    if (!el) continue;
+    el.style.width = `${displayW}px`;
+    el.style.height = `${displayH}px`;
+    el.style.maxWidth = `${displayW}px`;
+    el.style.maxHeight = `${displayH}px`;
+  }
 }
 
 function syncAnnotationOverlay() {
@@ -149,16 +176,31 @@ function syncAnnotationOverlay() {
   if (overlay && canvas) {
     overlay.width = canvas.width;
     overlay.height = canvas.height;
-    overlay.style.maxWidth = canvas.style.maxWidth;
-    overlay.style.maxHeight = canvas.style.maxHeight;
   }
+  viewerState.annotationTool.setViewTransform({
+    scale: viewerState.scale,
+    panX: viewerState.panX,
+    panY: viewerState.panY,
+    rotation: viewerState.rotation,
+  });
   viewerState.annotationTool.redraw();
 }
 
-async function initViewerAnnotations(frame) {
+function setAnnotateMode(active) {
+  viewerState.annotateMode = active;
+  const overlay = document.getElementById('annotation-overlay');
+  const viewport = document.querySelector('.dicom-viewport');
+  overlay?.classList.toggle('interactive', active);
+  viewport?.classList.toggle('annotating', active);
+}
+
+async function initViewerAnnotationUi(frame) {
   if (!viewerState.annotationsEnabled || !frame?.id) return;
   const overlay = document.getElementById('annotation-overlay');
+  const toolbarEl = document.getElementById('annotation-toolbar');
   if (!overlay || typeof DicomAnnotationTool === 'undefined') return;
+
+  toolbarEl?.classList.remove('hidden');
 
   if (!viewerState.annotationTool) {
     viewerState.annotationTool = new DicomAnnotationTool({
@@ -167,10 +209,30 @@ async function initViewerAnnotations(frame) {
       frameId: frame.id,
       pixelSpacing: frame.pixel_spacing,
       autoSaveDelay: 500,
+      onSaveStatus: status => viewerState.annotationToolbar?.setSaveStatus(status),
+    });
+
+    viewerState.annotationEditor = new DicomAnnotationEditor(viewerState.annotationTool, {
+      historyLimit: 50,
+    });
+    viewerState.annotationTool.editor = viewerState.annotationEditor;
+
+    viewerState.annotationToolbar = new DicomAnnotationToolbar(viewerState.annotationTool, {
+      container: toolbarEl,
+      editor: viewerState.annotationEditor,
+      frameId: frame.id,
+      onToolChange: () => setAnnotateMode(true),
+      onUndo: () => viewerState.annotationEditor?.undo(),
+      onRedo: () => viewerState.annotationEditor?.redo(),
+      onDelete: () => viewerState.annotationTool.deleteSelected(),
+      onSaveAll: () => viewerState.annotationTool.saveAll(),
+      onClearAll: () => viewerState.annotationTool.clearAll(),
     });
   } else {
     viewerState.annotationTool.setFrame(frame.id, frame.pixel_spacing);
   }
+
+  setAnnotateMode(true);
   await viewerState.annotationTool.loadAnnotations(frame.id);
   syncAnnotationOverlay();
 }
@@ -217,7 +279,7 @@ async function loadCurrentFrameImage() {
     setUrlParams(viewerState.frameIndex);
     const frame = currentFrame();
     updateAnnotateLink(frame);
-    initViewerAnnotations(frame);
+    initViewerAnnotationUi(frame);
   };
   img.src = URL.createObjectURL(blob);
 }
@@ -259,6 +321,7 @@ function setupViewerTools() {
 
   const wrap = document.getElementById('canvas-wrap');
   wrap?.addEventListener('wheel', e => {
+    if (viewerState.annotateMode && e.target.closest('#annotation-overlay')) return;
     e.preventDefault();
     viewerState.scale *= e.deltaY < 0 ? 1.1 : 0.9;
     viewerState.scale = Math.max(0.1, Math.min(10, viewerState.scale));
@@ -266,13 +329,14 @@ function setupViewerTools() {
   });
 
   wrap?.addEventListener('mousedown', e => {
+    if (viewerState.annotateMode) return;
     viewerState.dragging = true;
     viewerState.lastX = e.clientX;
     viewerState.lastY = e.clientY;
   });
   window.addEventListener('mouseup', () => { viewerState.dragging = false; });
   window.addEventListener('mousemove', e => {
-    if (!viewerState.dragging) return;
+    if (!viewerState.dragging || viewerState.annotateMode) return;
     viewerState.panX += e.clientX - viewerState.lastX;
     viewerState.panY += e.clientY - viewerState.lastY;
     viewerState.lastX = e.clientX;
@@ -336,4 +400,9 @@ async function initDicomViewer(studyUid) {
   renderSeriesList();
   updateFrameSlider();
   await loadCurrentFrameImage();
+
+  window.addEventListener('resize', () => {
+    fitCanvasStack();
+    syncAnnotationOverlay();
+  });
 }

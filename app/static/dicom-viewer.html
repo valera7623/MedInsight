@@ -40,10 +40,11 @@
           <input type="range" id="wl-slider" min="0" max="200" value="100">
         </label>
         <span id="frame-label" class="dicom-frame-label">Кадр 1 / 1</span>
-        <a class="btn btn-primary btn-sm hidden" id="annotate-link" href="#">✏️ Аннотации</a>
+        <a class="btn btn-primary btn-sm hidden" id="annotate-link" href="#">✏️ Полный редактор</a>
         <a class="btn btn-primary btn-sm" id="view-3d-link" href="#">🧊 3D</a>
         <button class="btn btn-danger btn-sm hidden" id="delete-study-btn" type="button">Удалить</button>
       </div>
+      <div id="annotation-toolbar" class="annotation-toolbar dicom-viewer-ann-toolbar hidden"></div>
       <div class="dicom-canvas-wrap" id="canvas-wrap">
         <div class="dicom-canvas-stack">
           <canvas id="dicom-canvas"></canvas>
@@ -59,6 +60,8 @@
   <script src="/static/js/toast.js"></script>
   <script src="/static/dashboard.js"></script>
   <script src="/static/dicom-annotations.js"></script>
+  <script src="/static/dicom-annotation-editor.js"></script>
+  <script src="/static/dicom-annotation-toolbar.js"></script>
   <script src="/static/dicom-viewer.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {

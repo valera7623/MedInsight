@@ -84,12 +84,22 @@ class DicomAnnotationTool {
   _canvasPoint(evt) {
     const canvas = this.overlayCanvas;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    return {
-      x: (evt.clientX - rect.left) * scaleX,
-      y: (evt.clientY - rect.top) * scaleY,
-    };
+    let x = (evt.clientX - rect.left) * (canvas.width / rect.width);
+    let y = (evt.clientY - rect.top) * (canvas.height / rect.height);
+    const { scale, panX, panY, rotation } = this.viewTransform;
+    const w = canvas.width;
+    const h = canvas.height;
+    x -= w / 2 + panX;
+    y -= h / 2 + panY;
+    const rad = (-rotation * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    let rx = x * cos - y * sin;
+    let ry = x * sin + y * cos;
+    const safeScale = scale || 1;
+    rx /= safeScale;
+    ry /= safeScale;
+    return { x: rx + w / 2, y: ry + h / 2 };
   }
 
   _bindOverlayEvents() {
@@ -410,6 +420,9 @@ class DicomAnnotationTool {
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    ctx.save();
+    this._applyViewTransform(ctx, canvas);
+
     for (const ann of this.annotations) {
       this._drawAnnotation(ctx, ann, ann.id === this.selectedId);
     }
@@ -446,6 +459,18 @@ class DicomAnnotationTool {
       const sel = this.annotations.find(a => String(a.id) === String(this.selectedId));
       if (sel) this.editor.drawHandles(ctx, sel);
     }
+
+    ctx.restore();
+  }
+
+  _applyViewTransform(ctx, canvas) {
+    const w = canvas.width;
+    const h = canvas.height;
+    const { scale, panX, panY, rotation } = this.viewTransform;
+    ctx.translate(w / 2 + panX, h / 2 + panY);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(scale, scale);
+    ctx.translate(-w / 2, -h / 2);
   }
 
   _drawAnnotation(ctx, ann, selected, dashed) {
@@ -501,6 +526,17 @@ class DicomAnnotationTool {
     if (ann.label && ann.type !== 'text') {
       ctx.font = '12px sans-serif';
       ctx.fillText(ann.label, c.x1 ?? c.cx ?? c.x ?? 0, (c.y1 ?? c.cy ?? c.y ?? 0) - 6);
+    } else if (ann.type === 'measurement' && ann.measurement_value != null) {
+      ctx.font = '12px sans-serif';
+      const unit = ann.measurement_unit || 'mm';
+      const text = `${Number(ann.measurement_value).toFixed(1)} ${unit}`;
+      const lx = c.x1 ?? 0;
+      const ly = (c.y1 ?? 0) - 6;
+      ctx.fillText(text, lx, ly);
+    } else if (ann.type === 'angle' && ann.measurement_value != null) {
+      ctx.font = '12px sans-serif';
+      const text = ann.label || `${Number(ann.measurement_value).toFixed(1)}°`;
+      ctx.fillText(text, c.x2 ?? 0, (c.y2 ?? 0) - 8);
     }
     ctx.setLineDash([]);
   }
