@@ -32,6 +32,18 @@ class DicomZipError(Exception):
     pass
 
 
+def _parse_dicom_file_worker(file_path: str) -> dict[str, Any] | None:
+    """Parse one DICOM file (picklable for ProcessPoolExecutor)."""
+    parser = DicomParser()
+    try:
+        parsed = parser.parse_dicom_file(file_path)
+        parsed["source_filename"] = Path(file_path).name
+        return parsed
+    except DicomParseError as exc:
+        logger.warning("Parse failed %s: %s", file_path, exc)
+        return None
+
+
 class DicomZipProcessor:
     """Process ZIP archives containing multiple DICOM files."""
 
@@ -112,10 +124,10 @@ class DicomZipProcessor:
             raise DicomZipError(f"Unsupported archive format: {suffix or '(none)'}")
         return suffix
 
-    def _scan_archive_entries(self, archive_path: str) -> list[str]:
+    def _scan_archive_entries(self, archive_path: str, *, integrity_check: bool = True) -> list[str]:
         suffix = self._archive_suffix(archive_path)
         if suffix == ".zip":
-            return [e.filename for e in self._scan_zip_entries(archive_path)]
+            return [e.filename for e in self._scan_zip_entries(archive_path, integrity_check=integrity_check)]
         return self._scan_7z_entries(archive_path)
 
     def _check_archive_size_limits(
@@ -129,7 +141,7 @@ class DicomZipProcessor:
         if total_uncompressed > self._max_zip_bytes() * 4:
             raise DicomZipError("Uncompressed size exceeds safety limit")
 
-    def _scan_zip_entries(self, zip_path: str) -> list[zipfile.ZipInfo]:
+    def _scan_zip_entries(self, zip_path: str, *, integrity_check: bool = True) -> list[zipfile.ZipInfo]:
         path = Path(zip_path)
         if not path.is_file():
             raise DicomZipError(f"ZIP not found: {zip_path}")
@@ -142,7 +154,7 @@ class DicomZipProcessor:
 
         try:
             with zipfile.ZipFile(path, "r") as zf:
-                if zf.testzip() is not None:
+                if integrity_check and zf.testzip() is not None:
                     raise DicomZipError("Corrupt ZIP archive")
 
                 for info in zf.infolist():
@@ -216,14 +228,14 @@ class DicomZipProcessor:
         """Extract archive to a new temp directory; returns directory path."""
         return self.extract_archive(zip_path)
 
-    def extract_archive(self, archive_path: str) -> str:
+    def extract_archive(self, archive_path: str, *, integrity_check: bool = False) -> str:
         suffix = self._archive_suffix(archive_path)
         if suffix == ".zip":
-            return self._extract_zip(archive_path)
+            return self._extract_zip(archive_path, integrity_check=integrity_check)
         return self._extract_7z(archive_path)
 
-    def _extract_zip(self, zip_path: str) -> str:
-        entries = self._scan_zip_entries(zip_path)
+    def _extract_zip(self, zip_path: str, *, integrity_check: bool = False) -> str:
+        entries = self._scan_zip_entries(zip_path, integrity_check=integrity_check)
         dest = self.temp_root / uuid.uuid4().hex
         dest.mkdir(parents=True, exist_ok=True)
 
@@ -267,8 +279,12 @@ class DicomZipProcessor:
         """List (archive_internal_name, display_filename) without full extraction."""
         return self.iter_archive_dicom_paths(zip_path)
 
-    def iter_archive_dicom_paths(self, archive_path: str) -> list[tuple[str, str]]:
-        names = self._scan_archive_entries(archive_path)
+    def iter_archive_dicom_paths(
+        self, archive_path: str, *, integrity_check: bool | None = None
+    ) -> list[tuple[str, str]]:
+        if integrity_check is None:
+            integrity_check = settings.DICOM_ZIP_INTEGRITY_CHECK
+        names = self._scan_archive_entries(archive_path, integrity_check=integrity_check)
         return [(name, Path(name).name) for name in names]
 
     def group_files(self, files: list[str]) -> dict[str, dict[str, list[str]]]:
@@ -346,20 +362,33 @@ class DicomZipProcessor:
             series_parsed: list[dict[str, Any]] = []
             series_meta: dict[str, Any] | None = None
 
-            for file_path in series_files:
-                try:
-                    parsed = self.parser.parse_dicom_file(file_path)
-                except DicomParseError as exc:
-                    logger.warning("Parse failed %s: %s", file_path, exc)
-                    continue
+            workers = settings.DICOM_ZIP_PARSE_WORKERS
+            if workers > 1 and len(series_files) > 1:
+                from concurrent.futures import ProcessPoolExecutor, as_completed
 
-                parsed["source_filename"] = Path(file_path).name
-                series_parsed.append(parsed)
-                if study_meta is None:
-                    study_meta = parsed
-                if series_meta is None:
-                    series_meta = parsed
-                total_instances += parsed.get("num_instances", len(parsed.get("frames", [])))
+                with ProcessPoolExecutor(max_workers=workers) as pool:
+                    futures = {pool.submit(_parse_dicom_file_worker, fp): fp for fp in series_files}
+                    for future in as_completed(futures):
+                        parsed = future.result()
+                        if not parsed:
+                            continue
+                        series_parsed.append(parsed)
+                        if study_meta is None:
+                            study_meta = parsed
+                        if series_meta is None:
+                            series_meta = parsed
+                        total_instances += parsed.get("num_instances", len(parsed.get("frames", [])))
+            else:
+                for file_path in series_files:
+                    parsed = _parse_dicom_file_worker(file_path)
+                    if not parsed:
+                        continue
+                    series_parsed.append(parsed)
+                    if study_meta is None:
+                        study_meta = parsed
+                    if series_meta is None:
+                        series_meta = parsed
+                    total_instances += parsed.get("num_instances", len(parsed.get("frames", [])))
 
             if series_parsed:
                 parsed_series.append(

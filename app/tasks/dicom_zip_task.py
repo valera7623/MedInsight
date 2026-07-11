@@ -18,6 +18,29 @@ from app.tasks.dicom_task import _notify_dicom_ready
 logger = logging.getLogger(__name__)
 
 PROGRESS_EVERY = 100
+COMMIT_BATCH = 25
+
+
+def _store_encrypted_zip_archive(
+    storage: DicomStorage,
+    study: DicomStudy,
+    zip_path: str,
+    study_uid: str,
+) -> None:
+    """Encrypt original archive in Celery (deferred from HTTP upload)."""
+    if study.zip_original_path or not Path(zip_path).is_file():
+        return
+    try:
+        enc_zip = storage.store_encrypted_zip(
+            zip_path,
+            tenant_id=study.tenant_id,
+            patient_id=study.patient_id,
+            study_uid=study_uid,
+            filename=study.original_filename or "archive.zip",
+        )
+        study.zip_original_path = enc_zip
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("DICOM ZIP archive encryption failed for study %s: %s", study.id, exc)
 
 
 def _update_progress(task, processed: int, total: int, study_uid: str | None = None) -> None:
@@ -50,14 +73,22 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
         study.status = "processing"
         db.commit()
 
-        entries = processor.iter_archive_dicom_paths(zip_path)
-        total_files = len(entries)
-        study.total_files = total_files
-        db.commit()
+        total_files = study.total_files or 0
+        if total_files < 1:
+            entries = processor.iter_archive_dicom_paths(
+                zip_path,
+                integrity_check=settings.DICOM_ZIP_INTEGRITY_CHECK,
+            )
+            total_files = len(entries)
+            study.total_files = total_files
+            db.commit()
 
         _update_progress(self, 0, total_files, study.study_uid)
 
-        temp_dir = processor.extract_archive(zip_path)
+        temp_dir = processor.extract_archive(
+            zip_path,
+            integrity_check=settings.DICOM_ZIP_INTEGRITY_CHECK,
+        )
         dicom_files = processor.scan_files(temp_dir)
         if not dicom_files:
             raise DicomZipError("No DICOM files after extraction")
@@ -141,9 +172,16 @@ def process_dicom_zip(self, study_id: int, zip_path: str, user_id: int) -> dict:
                 processed_count += 1
                 study.processed_files = processed_count
 
+                if processed_count % COMMIT_BATCH == 0:
+                    db.commit()
+                    _update_progress(self, processed_count, total_files, real_study_uid)
+
             db.commit()
             if processed_count % PROGRESS_EVERY == 0:
                 _update_progress(self, processed_count, total_files, real_study_uid)
+
+        _store_encrypted_zip_archive(storage, study, zip_path, real_study_uid)
+        db.commit()
 
         try:
             first_dcm = primary_files[0]

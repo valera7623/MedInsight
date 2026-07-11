@@ -33,6 +33,7 @@ class Settings(BaseSettings):
 
     REDIS_URL: str = "redis://redis:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://redis:6379/1"
+    CELERY_WORKER_CONCURRENCY: int = 2
 
     # Phase 19: Redis response cache
     REDIS_CACHE_ENABLED: bool = True
@@ -174,6 +175,10 @@ class Settings(BaseSettings):
     DICOM_ZIP_TEMP_DIR: str = "./temp/dicom_zip"
     DICOM_ZIP_MAX_FILES: int = 5000
     DICOM_ZIP_TASK_TIMEOUT_SEC: int = 1800
+    # Full ZIP testzip() on every scan is slow for large CT; rely on extract-time errors when false.
+    DICOM_ZIP_INTEGRITY_CHECK: bool = False
+    # Parallel workers for ZIP slice parsing (0/1 = sequential).
+    DICOM_ZIP_PARSE_WORKERS: int = 2
 
     # Phase 12c: DICOM image annotations
     DICOM_ANNOTATIONS_ENABLED: bool = True
@@ -189,7 +194,7 @@ class Settings(BaseSettings):
     DICOM_3D_RENDER_TIMEOUT_SECONDS: int = 30
     DICOM_3D_CACHE_TTL_SECONDS: int = 3600
     # Build volume synchronously when slice count is at or below this (avoids Celery poll latency).
-    DICOM_3D_SYNC_BUILD_MAX_SLICES: int = 120
+    DICOM_3D_SYNC_BUILD_MAX_SLICES: int = 0
     DICOM_3D_FRAME_LOAD_WORKERS: int = 8
     # Downscale server-rendered preview images (faster encode + smaller HTTP payloads).
     DICOM_3D_PREVIEW_MAX_EDGE: int = 512

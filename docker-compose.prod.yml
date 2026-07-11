@@ -29,6 +29,9 @@ services:
       STORAGE_PATH: /app/storage
       REDIS_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
+      CELERY_WORKER_CONCURRENCY: ${CELERY_WORKER_CONCURRENCY:-2}
+      DICOM_3D_SYNC_BUILD_MAX_SLICES: ${DICOM_3D_SYNC_BUILD_MAX_SLICES:-0}
+      DICOM_ZIP_PARSE_WORKERS: ${DICOM_ZIP_PARSE_WORKERS:-2}
       ENCRYPTION_KEY_PATH: /app/secrets/encryption_key.txt
       CHROMA_PERSIST_DIR: /app/chroma_data
     volumes:

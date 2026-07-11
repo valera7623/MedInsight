@@ -21,7 +21,6 @@ from app.models import DicomStudy, Patient, User
 from app.routes.dicom import _ensure_dicom_enabled, _get_study_or_404
 from app.services.access import can_view_patient, effective_tenant_id, is_super_admin
 from app.services.audit import log_audit
-from app.services.dicom_storage import DicomStorage
 from app.services.dicom_zip_processor import DicomZipProcessor, DicomZipError, SUPPORTED_ARCHIVE_SUFFIXES
 from app.services.encryption import decrypt_file
 from app.tasks.celery_app import celery_app, redis_available
@@ -56,6 +55,39 @@ def _archive_media_type(filename: str) -> str:
     if filename.lower().endswith(".7z"):
         return "application/x-7z-compressed"
     return "application/zip"
+
+
+async def _save_archive_stream(upload_file: UploadFile, dest: Path, max_bytes: int) -> int:
+    """Stream multipart archive to disk with a size cap."""
+    size = 0
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with dest.open("wb") as out:
+            while True:
+                chunk = await upload_file.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > max_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"Archive exceeds {settings.DICOM_ZIP_MAX_SIZE_MB} MB limit",
+                    )
+                out.write(chunk)
+    except HTTPException:
+        dest.unlink(missing_ok=True)
+        raise
+    except Exception as exc:
+        dest.unlink(missing_ok=True)
+        logger.exception("DICOM ZIP upload stream failed")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to save archive. Please retry.",
+        ) from exc
+    if size == 0:
+        dest.unlink(missing_ok=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Archive is empty")
+    return size
 
 
 class DicomZipUploadResponse(BaseModel):
@@ -145,20 +177,14 @@ async def upload_dicom_zip(
             detail=f"Unsupported MIME type: {zip_file.content_type}",
         )
 
-    content = await zip_file.read()
     max_bytes = settings.DICOM_ZIP_MAX_SIZE_MB * 1024 * 1024
-    if len(content) > max_bytes:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"ZIP exceeds {settings.DICOM_ZIP_MAX_SIZE_MB} MB limit",
-        )
-
     processor = DicomZipProcessor()
     zip_path = processor.temp_zip_path(suffix)
-    zip_path.write_bytes(content)
+    zip_size = await _save_archive_stream(zip_file, zip_path, max_bytes)
+    zip_size_mb = round(zip_size / (1024 * 1024), 2)
 
     try:
-        entries = processor.iter_archive_dicom_paths(str(zip_path))
+        entries = processor.iter_archive_dicom_paths(str(zip_path), integrity_check=False)
         total_files = len(entries)
     except DicomZipError as exc:
         zip_path.unlink(missing_ok=True)
@@ -172,7 +198,6 @@ async def upload_dicom_zip(
         )
 
     placeholder_uid = f"pending-zip-{uuid.uuid4().hex}"
-    zip_size_mb = round(len(content) / (1024 * 1024), 2)
 
     study = DicomStudy(
         patient_id=patient_id,
@@ -190,23 +215,6 @@ async def upload_dicom_zip(
     db.add(study)
     db.commit()
     db.refresh(study)
-
-    storage = DicomStorage()
-    try:
-        enc_zip = storage.store_encrypted_zip(
-            str(zip_path),
-            tenant_id=patient.tenant_id,
-            patient_id=patient_id,
-            study_uid=placeholder_uid,
-            filename=zip_file.filename,
-        )
-        study.zip_original_path = enc_zip
-        db.commit()
-    except Exception as exc:
-        db.delete(study)
-        db.commit()
-        zip_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to store ZIP") from exc
 
     log_audit(
         db,
