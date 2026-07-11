@@ -242,6 +242,7 @@ class Settings(BaseSettings):
     SESSION_STORE_ENABLED: bool = True
 
     # Enterprise: MFA policy (comma-separated roles; tenant.settings overrides)
+    MFA_ENFORCED: bool = True
     MFA_REQUIRED_ROLES: str = "admin,doctor"
 
     # Enterprise: OIDC SSO
