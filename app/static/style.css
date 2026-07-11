@@ -929,9 +929,36 @@ select.btn {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   overflow: hidden;
   background: #000;
-  position: relative;
+}
+.dicom-3d-unavailable {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  text-align: center;
+  color: #e8eaed;
+  background: rgba(0, 0, 0, 0.88);
+}
+.dicom-3d-unavailable.hidden { display: none; }
+.dicom-3d-unavailable p {
+  margin: 0;
+  max-width: 28rem;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+.dicom-3d-unavailable .dicom-3d-unavailable-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 .dicom-3d-fallback,
 .dicom-3d-mpr-canvas {

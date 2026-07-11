@@ -131,6 +131,74 @@ function setStatus(text, isError = false) {
   }
 }
 
+function viewer2dUrl(studyUid) {
+  return `/dicom/viewer/${encodeURIComponent(studyUid)}`;
+}
+
+function formatVolumeError(message, code) {
+  if (code === 'insufficient_slices' || (message && message.includes('Недостаточно срезов'))) {
+    return message || (
+      'Недостаточно срезов для 3D: в серии меньше 2 кадров. '
+      + 'Откройте исследование в 2D или загрузите полный том (ZIP с множеством .dcm).'
+    );
+  }
+  if (message && message.includes('At least 2 slices')) {
+    return (
+      'Недостаточно срезов для 3D: в серии меньше 2 кадров. '
+      + 'Откройте исследование в 2D или загрузите полный том (ZIP с множеством .dcm).'
+    );
+  }
+  return message || 'Ошибка загрузки 3D';
+}
+
+function clearVolumeUnavailable() {
+  document.getElementById('dicom-3d-unavailable')?.classList.add('hidden');
+  document.getElementById('vr-fallback-canvas')?.classList.remove('hidden');
+}
+
+function showVolumeUnavailable(message, studyUid) {
+  const wrap = document.getElementById('vr-viewport-wrap');
+  if (!wrap) return;
+
+  let panel = document.getElementById('dicom-3d-unavailable');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'dicom-3d-unavailable';
+    panel.className = 'dicom-3d-unavailable';
+    wrap.appendChild(panel);
+  }
+
+  panel.replaceChildren();
+  const text = document.createElement('p');
+  text.textContent = message;
+  panel.appendChild(text);
+
+  const actions = document.createElement('div');
+  actions.className = 'dicom-3d-unavailable-actions';
+
+  const open2d = document.createElement('a');
+  open2d.className = 'btn btn-primary btn-sm';
+  open2d.href = viewer2dUrl(studyUid);
+  open2d.textContent = 'Открыть в 2D';
+  actions.appendChild(open2d);
+
+  const toList = document.createElement('a');
+  toList.className = 'btn btn-secondary btn-sm';
+  toList.href = '/dicom';
+  toList.textContent = 'К списку';
+  actions.appendChild(toList);
+
+  panel.appendChild(actions);
+  panel.classList.remove('hidden');
+  document.getElementById('vr-fallback-canvas')?.classList.add('hidden');
+}
+
+function isVolumeUnavailable(info) {
+  return info?.status === 'unavailable'
+    || info?.error_code === 'insufficient_slices'
+    || (info?.num_slices != null && info.num_slices < 2);
+}
+
 function showVolumeWarning(info) {
   const warn = info?.warning;
   if (!warn) return;
@@ -186,6 +254,12 @@ async function loadVolumeInfo(studyUid) {
 
 async function ensureVolumeReady(studyUid) {
   const info = await loadVolumeInfo(studyUid);
+  if (isVolumeUnavailable(info)) {
+    const err = new Error(info.error_message || formatVolumeError(null, 'insufficient_slices'));
+    err.code = info.error_code || 'insufficient_slices';
+    err.volumeInfo = info;
+    throw err;
+  }
   if (info.cached || info.status === 'ready') return info;
 
   setStatus('Сборка объёма…');
@@ -435,6 +509,7 @@ async function initDicom3dViewer(studyUid) {
   try {
     const info = await ensureVolumeReady(studyUid);
     viewer3dState.volumeInfo = info;
+    clearVolumeUnavailable();
     setupSliceSliders(info);
     showVolumeWarning(info);
 
@@ -445,7 +520,13 @@ async function initDicom3dViewer(studyUid) {
     setStatus(`Готово · ${info.num_slices || 0} срезов · ${mod}`);
   } catch (err) {
     console.error(err);
-    setStatus(err.message || 'Ошибка загрузки', true);
+    const msg = formatVolumeError(err.message, err.code);
+    if (err.code === 'insufficient_slices' || isVolumeUnavailable(err.volumeInfo)) {
+      showVolumeUnavailable(msg, studyUid);
+      setStatus('3D недоступен для этой серии', true);
+    } else {
+      setStatus(msg, true);
+    }
   }
 }
 
@@ -456,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (parts[0] === 'dicom' && parts[1] === '3d' && parts[2]) {
     const studyUid = decodeURIComponent(parts[2]);
     const back = document.getElementById('back-to-2d');
-    if (back) back.href = `/dicom/viewer/${encodeURIComponent(studyUid)}`;
+    if (back) back.href = viewer2dUrl(studyUid);
     initDicom3dViewer(studyUid);
   }
 });

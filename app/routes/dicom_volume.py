@@ -42,6 +42,8 @@ class VolumeInfoResponse(BaseModel):
     orientation: list[float] = Field(default_factory=list)
     cached: bool = False
     status: str = "not_built"
+    error_code: str | None = None
+    error_message: str | None = None
     presets: list[str] = Field(default_factory=list)
     warning: str | None = None
     available_series: list[dict[str, Any]] = Field(default_factory=list)

@@ -23,6 +23,12 @@ from app.services.dicom_storage import DicomStorage
 
 logger = logging.getLogger(__name__)
 
+INSUFFICIENT_SLICES_CODE = "insufficient_slices"
+INSUFFICIENT_SLICES_MESSAGE = (
+    "Недостаточно срезов для 3D: в выбранной серии {count} кадр(ов), нужно минимум 2. "
+    "Откройте исследование в 2D или загрузите полный том (ZIP с множеством .dcm)."
+)
+
 PLANES = frozenset({"axial", "coronal", "sagittal"})
 
 # In-process volume cache — avoids Redis decompress on every MPR/render in the same worker.
@@ -73,7 +79,9 @@ _NON_VOLUMETRIC_MODALITIES = frozenset(
 
 
 class DicomVolumeError(Exception):
-    pass
+    def __init__(self, message: str, *, code: str | None = None):
+        super().__init__(message)
+        self.code = code
 
 
 def _redis_binary():
@@ -307,19 +315,30 @@ class DicomVolumeService:
             if s.frames
         ]
 
+        num_slices = len(frames)
+        status = "not_built"
+        error_code = None
+        error_message = None
+        if num_slices < 2:
+            status = "unavailable"
+            error_code = INSUFFICIENT_SLICES_CODE
+            error_message = INSUFFICIENT_SLICES_MESSAGE.format(count=num_slices)
+
         return {
             "study_uid": study_uid,
             "series_uid": series.series_uid,
             "modality": series.modality or study.modality,
-            "num_slices": len(frames),
-            "dimensions": [len(frames), height, width],
+            "num_slices": num_slices,
+            "dimensions": [num_slices, height, width],
             "spacing": list(spacing),
             "orientation": [1, 0, 0, 0, 1, 0],
             "cached": False,
-            "status": "not_built",
+            "status": status,
+            "error_code": error_code,
+            "error_message": error_message,
             "presets": list(WINDOW_PRESETS.keys()),
             "available_series": available,
-            "warning": self._volume_warning(series, num_slices=len(frames)),
+            "warning": self._volume_warning(series, num_slices=num_slices),
         }
 
     def get_volume_data(self, study_uid: str) -> dict[str, Any]:
@@ -347,7 +366,10 @@ class DicomVolumeService:
 
         frames = self._sorted_frames(series)
         if len(frames) < 2:
-            raise DicomVolumeError("At least 2 slices required for volume reconstruction")
+            raise DicomVolumeError(
+                INSUFFICIENT_SLICES_MESSAGE.format(count=len(frames)),
+                code=INSUFFICIENT_SLICES_CODE,
+            )
 
         self._check_geometric_consistency(frames)
 
