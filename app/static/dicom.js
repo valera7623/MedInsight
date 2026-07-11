@@ -170,6 +170,20 @@ async function loadDicomStudies(page = 1) {
   updatePagination(data);
 }
 
+async function loadDicomThumbnail(img) {
+  const url = img.dataset.thumbUrl;
+  if (!url) return;
+  try {
+    const res = await apiFetch(url);
+    if (!res.ok) return;
+    const blob = await res.blob();
+    img.src = URL.createObjectURL(blob);
+    img.onload = () => URL.revokeObjectURL(img.src);
+  } catch (err) {
+    console.error('DICOM thumbnail load failed', err);
+  }
+}
+
 function renderDicomGrid(items) {
   const grid = document.getElementById('dicom-grid');
   if (!grid) return;
@@ -181,7 +195,7 @@ function renderDicomGrid(items) {
 
   grid.innerHTML = items.map(study => {
     const thumb = study.thumbnail_url
-      ? `<img src="${study.thumbnail_url}" alt="" class="dicom-thumb" loading="lazy">`
+      ? `<img data-thumb-url="${study.thumbnail_url}" alt="" class="dicom-thumb" loading="lazy">`
       : '<div class="dicom-thumb dicom-thumb-placeholder">🩻</div>';
     const canView = study.status === 'ready';
     const viewBtn = canView
@@ -218,6 +232,9 @@ function renderDicomGrid(items) {
 
   grid.querySelectorAll('[data-archive-uid]').forEach(btn => {
     btn.addEventListener('click', () => downloadDicomArchive(btn.dataset.archiveUid));
+  });
+  grid.querySelectorAll('img[data-thumb-url]').forEach(img => {
+    loadDicomThumbnail(img);
   });
   grid.querySelectorAll('[data-delete-id]').forEach(btn => {
     btn.addEventListener('click', () => deleteDicomStudy(Number(btn.dataset.deleteId), btn.dataset.deleteLabel));

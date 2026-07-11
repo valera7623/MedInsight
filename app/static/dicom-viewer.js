@@ -45,6 +45,22 @@ function currentFrame() {
   return frames[viewerState.frameIndex] || null;
 }
 
+function imageDimensions(img) {
+  if (!img) return { w: 0, h: 0 };
+  return {
+    w: img.naturalWidth || img.width || 0,
+    h: img.naturalHeight || img.height || 0,
+  };
+}
+
+function releaseViewerImage() {
+  const img = viewerState.img;
+  if (img && typeof img.close === 'function') {
+    img.close();
+  }
+  viewerState.img = null;
+}
+
 function renderMeta() {
   const el = document.getElementById('dicom-meta');
   if (!el || !viewerState.study) return;
@@ -123,16 +139,18 @@ function drawImage() {
   const wrap = document.getElementById('canvas-wrap');
   const maxW = wrap?.clientWidth || 800;
   const maxH = wrap?.clientHeight || 600;
+  const { w: iw, h: ih } = imageDimensions(viewerState.img);
+  if (!iw || !ih) return;
 
-  canvas.width = viewerState.img.naturalWidth;
-  canvas.height = viewerState.img.naturalHeight;
+  canvas.width = iw;
+  canvas.height = ih;
 
   ctx.save();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.translate(canvas.width / 2 + viewerState.panX, canvas.height / 2 + viewerState.panY);
   ctx.rotate((viewerState.rotation * Math.PI) / 180);
   ctx.scale(viewerState.scale, viewerState.scale);
-  ctx.drawImage(viewerState.img, -viewerState.img.naturalWidth / 2, -viewerState.img.naturalHeight / 2);
+  ctx.drawImage(viewerState.img, -iw / 2, -ih / 2);
   ctx.restore();
 
   if (viewerState.wl !== 100) {
@@ -154,8 +172,8 @@ function fitCanvasStack() {
 
   const maxW = wrap.clientWidth || 800;
   const maxH = wrap.clientHeight || 600;
-  const iw = viewerState.img.naturalWidth || canvas.width;
-  const ih = viewerState.img.naturalHeight || canvas.height;
+  const { w: iw, h: ih } = imageDimensions(viewerState.img);
+  if (!iw || !ih) return;
   const scale = Math.min(maxW / iw, maxH / ih, 1);
   const displayW = Math.max(1, Math.round(iw * scale));
   const displayH = Math.max(1, Math.round(ih * scale));
@@ -232,7 +250,7 @@ async function initViewerAnnotationUi(frame) {
     viewerState.annotationTool.setFrame(frame.id, frame.pixel_spacing);
   }
 
-  setAnnotateMode(true);
+  setAnnotateMode(false);
   await viewerState.annotationTool.loadAnnotations(frame.id);
   syncAnnotationOverlay();
 }
@@ -257,31 +275,33 @@ async function loadCurrentFrameImage() {
   const canvas = document.getElementById('dicom-canvas');
   if (!canvas) return;
 
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  const token = getToken();
-  const tenantId = getTenantId();
-
-  const res = await fetch(frame.image_url, {
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
-    },
-  });
+  const res = await apiFetch(frame.image_url);
   if (!res.ok) {
     console.error('Failed to load frame');
+    notifyError('Не удалось загрузить кадр DICOM');
     return;
   }
-  const blob = await res.blob();
-  img.onload = () => {
-    viewerState.img = img;
-    drawImage();
-    setUrlParams(viewerState.frameIndex);
-    const frame = currentFrame();
-    updateAnnotateLink(frame);
-    initViewerAnnotationUi(frame);
-  };
-  img.src = URL.createObjectURL(blob);
+
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(await res.blob());
+  } catch (err) {
+    console.error('Failed to decode frame', err);
+    notifyError('Не удалось декодировать кадр DICOM');
+    return;
+  }
+
+  releaseViewerImage();
+  viewerState.img = bitmap;
+  drawImage();
+  setUrlParams(viewerState.frameIndex);
+  const current = currentFrame();
+  updateAnnotateLink(current);
+  try {
+    await initViewerAnnotationUi(current);
+  } catch (err) {
+    console.error('Annotation UI init failed', err);
+  }
 }
 
 function setupViewerTools() {

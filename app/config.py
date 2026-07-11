@@ -265,7 +265,13 @@ class Settings(BaseSettings):
     SECURITY_HEADERS_ENABLED: bool = True
     SECURITY_HSTS_ENABLED: bool = True
     SECURITY_HSTS_MAX_AGE: int = 31536000
-    SECURITY_CSP: str = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    SECURITY_CSP: str = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' blob: data:; "
+        "connect-src 'self'"
+    )
 
     # Enterprise: PHI field encryption
     PHI_FIELD_ENCRYPTION_ENABLED: bool = False
