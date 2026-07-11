@@ -32,6 +32,54 @@ compose() {
   docker compose "${COMPOSE_FILES[@]}" "${PROFILE_ARGS[@]}" "$@"
 }
 
+# Read a single KEY=value from .env (first match, no shell export).
+env_file_get() {
+  local key="$1"
+  grep -E "^${key}=" .env 2>/dev/null | head -1 | cut -d= -f2- || true
+}
+
+# Resolve production PostgreSQL URL without clobbering custom .env credentials.
+# Priority: PRODUCTION_DATABASE_URL in .env → shell env → postgresql DATABASE_URL
+# in .env → built from POSTGRES_* in .env → default.
+resolve_production_database_url() {
+  local from_env url user pass db
+
+  from_env="$(env_file_get PRODUCTION_DATABASE_URL)"
+  if [ -n "$from_env" ]; then
+    echo "$from_env"
+    return
+  fi
+
+  if [ -n "${PRODUCTION_DATABASE_URL:-}" ]; then
+    echo "$PRODUCTION_DATABASE_URL"
+    return
+  fi
+
+  from_env="$(env_file_get DATABASE_URL)"
+  if [[ "$from_env" == postgresql://* ]]; then
+    echo "$from_env"
+    return
+  fi
+
+  user="$(env_file_get POSTGRES_USER)"
+  user="${user:-medinsight}"
+  pass="$(env_file_get POSTGRES_PASSWORD)"
+  pass="${pass:-secure_password}"
+  db="$(env_file_get POSTGRES_DB)"
+  db="${db:-medinsight}"
+  echo "postgresql://${user}:${pass}@postgres:5432/${db}"
+}
+
+set_env_var() {
+  local key="$1"
+  local val="$2"
+  if grep -q "^${key}=" .env; then
+    sed -i "s|^${key}=.*|${key}=${val}|" .env
+  else
+    echo "${key}=${val}" >> .env
+  fi
+}
+
 MODE="${1:-dev}"
 
 # ---------------------------------------------------------------------------
@@ -163,22 +211,13 @@ fi
 if [ "$MODE" = "production" ]; then
   COMPOSE_FILES+=(-f docker-compose.prod.yml)
   PROFILE_ARGS=(--profile production)
-  PG_URL="${PRODUCTION_DATABASE_URL:-postgresql://medinsight:secure_password@postgres:5432/medinsight}"
-  if grep -q '^DATABASE_URL=' .env; then
-    sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${PG_URL}|" .env
-  else
-    echo "DATABASE_URL=${PG_URL}" >> .env
-  fi
-  if grep -q '^PRODUCTION_DATABASE_URL=' .env; then
-    sed -i "s|^PRODUCTION_DATABASE_URL=.*|PRODUCTION_DATABASE_URL=${PG_URL}|" .env
-  else
-    echo "PRODUCTION_DATABASE_URL=${PG_URL}" >> .env
-  fi
-  if grep -q '^APP_PORT=' .env; then
-    sed -i 's|^APP_PORT=.*|APP_PORT=8000|' .env
-  else
-    echo "APP_PORT=8000" >> .env
-  fi
+  PG_URL="$(resolve_production_database_url)"
+  PG_USER="$(env_file_get POSTGRES_USER)"
+  PG_USER="${PG_USER:-medinsight}"
+  echo "Production DB URL resolved from .env (postgres service, user: ${PG_USER})"
+  set_env_var DATABASE_URL "$PG_URL"
+  set_env_var PRODUCTION_DATABASE_URL "$PG_URL"
+  set_env_var APP_PORT "8000"
   echo "Starting MedInsight (production, PostgreSQL + HTTPS via Traefik)..."
   for key_val in \
     "CHROMA_EMBEDDINGS_ENABLED=false"; do
