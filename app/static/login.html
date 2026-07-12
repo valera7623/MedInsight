@@ -107,7 +107,7 @@
     const API = '';
 
     if (localStorage.getItem('token')) {
-      window.location.href = '/';
+      window.location.href = '/dashboard';
     }
 
     async function loadTenants() {
@@ -239,7 +239,7 @@
         localStorage.setItem('tenant_id', String(data.tenant_id || tenantOpt.dataset.id));
         localStorage.setItem('role', data.role);
         if (data.demo_mode || isDemoLogin) localStorage.setItem('demo_mode', 'true');
-        window.location.href = '/';
+        window.location.href = '/dashboard';
       } catch (err) {
         if (err.message && err.message.includes('Подтвердите email')) {
           errEl.innerHTML = err.message + ' <a href="/verify-email">Повторить подтверждение</a>';
@@ -301,7 +301,7 @@
         if (loginData.refresh_token) localStorage.setItem('refresh_token', loginData.refresh_token);
         localStorage.setItem('tenant_id', String(loginData.tenant_id || tenantOpt.dataset.id));
         localStorage.setItem('role', loginData.role);
-        window.location.href = '/';
+        window.location.href = '/dashboard';
       } catch (err) {
         errEl.textContent = err.message;
         errEl.classList.remove('hidden');

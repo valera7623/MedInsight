@@ -417,6 +417,11 @@ def verify_email_page():
 
 
 @app.get("/")
+def landing_page():
+    return FileResponse(static_dir / "landing.html")
+
+
+@app.get("/dashboard")
 def dashboard_page():
     return FileResponse(static_dir / "index.html")
 

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedInsight — клиническая аналитика с ИИ для частных клиник</title>
+  <meta name="description" content="Production-ready B2B SaaS для клиник РФ/СНГ: NLP-парсинг меддокументов, DICOM 2D/3D, GPT-прогнозы рисков с SHAP, FHIR R4, мультитенантность и биллинг.">
+  <meta property="og:title" content="MedInsight — клиническая аналитика с ИИ">
+  <meta property="og:description" content="Парсинг PDF/DOCX, DICOM viewer, AI-прогнозы, FHIR, RBAC и 2FA — готовая платформа для клиник и telemedicine.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://fileguardian.com.ru/">
+  <link rel="stylesheet" href="/static/styles/landing.css">
+</head>
+<body>
+  <header class="lp-header">
+    <div class="container lp-header-inner">
+      <a href="/" class="lp-logo">MedInsight</a>
+      <nav class="lp-nav" id="lp-nav">
+        <a href="#features">Возможности</a>
+        <a href="#security">Безопасность</a>
+        <a href="#pricing">Тарифы</a>
+        <a href="/help/" target="_blank" rel="noopener">Документация</a>
+      </nav>
+      <div class="lp-nav-actions">
+        <a class="btn btn-ghost" href="https://github.com/valera7623/MedInsight" target="_blank" rel="noopener">GitHub</a>
+        <a class="btn btn-secondary" href="/login">Войти</a>
+        <a class="btn btn-primary" href="https://demo.fileguardian.com.ru/demo" target="_blank" rel="noopener">Демо</a>
+        <button class="lp-menu-btn" id="lp-menu-btn" aria-label="Меню" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <div class="badge"><span class="badge-dot"></span> Production-ready · MIT</div>
+        <h1>Клиническая аналитика<br><span>с ИИ для вашей клиники</span></h1>
+        <p class="hero-lead">
+          MedInsight — B2B SaaS для частных клиник и telemedicine в РФ/СНГ:
+          парсинг меддокументов, DICOM 2D/3D, GPT-прогнозы рисков с SHAP,
+          мультитенантность и встроенный биллинг.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="/login">Начать работу</a>
+          <a class="btn btn-secondary" href="https://demo.fileguardian.com.ru/demo" target="_blank" rel="noopener">Открыть демо</a>
+        </div>
+        <div class="hero-trust">
+          <span><strong>7 ролей</strong> RBAC</span>
+          <span><strong>FHIR R4</strong> import/export</span>
+          <span><strong>2FA</strong> TOTP</span>
+          <span><strong>Docker</strong> deploy</span>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-panel">
+          <div class="hero-panel-header">
+            <span class="hero-panel-title">Клиника · Дашборд</span>
+            <span class="hero-panel-status">● Online</span>
+          </div>
+          <div class="hero-metrics">
+            <div class="metric-card">
+              <span class="metric-value">847</span>
+              <span class="metric-label">Пациентов</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-value">2.4k</span>
+              <span class="metric-label">Документов</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-value">156</span>
+              <span class="metric-label">DICOM исследований</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-value">94%</span>
+              <span class="metric-label">Точность NLP</span>
+            </div>
+          </div>
+          <div class="hero-chips">
+            <span class="chip">AI-парсинг</span>
+            <span class="chip">DICOM 2D/3D</span>
+            <span class="chip">SHAP</span>
+            <span class="chip">ChromaDB RAG</span>
+            <span class="chip">Webhooks</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="features">
+    <div class="container">
+      <div class="section-head">
+        <h2>Всё, что нужно клинике — в одной платформе</h2>
+        <p>От загрузки выписки до прогноза риска и экспорта в FHIR — без разрозненных систем и ручного ввода.</p>
+      </div>
+      <div class="features-grid">
+        <article class="feature-card">
+          <div class="feature-icon">📄</div>
+          <h3>NLP-парсинг документов</h3>
+          <p>PDF и DOCX: МКБ-10, препараты, анализы. spaCy + GPT через ProxyAPI с self-healing RAG.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">🩻</div>
+          <h3>DICOM 2D / 3D viewer</h3>
+          <p>Загрузка, ZIP-архивы, аннотации, пресеты W/L (Bone, Lung, Brain), MPR и volume rendering.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">🧠</div>
+          <h3>AI-прогнозы рисков</h3>
+          <p>Реадмиссия, осложнения, SHAP-объяснимость — врач видит не только score, но и факторы.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">🏥</div>
+          <h3>Мультитенантность</h3>
+          <p>Изоляция клиник по subdomain, 7 ролей RBAC, отделения, audit log и rate limiting.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">🔗</div>
+          <h3>Интеграции</h3>
+          <p>HL7 FHIR R4, webhooks с HMAC, Telegram-бот, экспорт PDF/DOCX/Excel/ICS.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">💳</div>
+          <h3>Биллинг SaaS</h3>
+          <p>Freemium / Pro / Enterprise — ЮKassa и Stripe, лимиты по тарифу, self-service подписка.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="security">
+    <div class="container security-grid">
+      <div>
+        <div class="section-head" style="text-align:left;margin:0 0 1.5rem">
+          <h2>Безопасность по умолчанию</h2>
+          <p>MedInsight спроектирован для медицинских данных: шифрование, аудит, 2FA и compliance-ready архитектура.</p>
+        </div>
+        <ul class="security-list">
+          <li>Age-шифрование файлов на диске — расшифровка только в памяти</li>
+          <li>JWT access + refresh, блокировка после неудачных входов, TOTP 2FA</li>
+          <li>Полный audit log действий пользователей и экспорт в SIEM</li>
+          <li>DSAR runbook, retention policy, control mapping в документации</li>
+          <li>Demo mode с read-only middleware для безопасных демонстраций</li>
+        </ul>
+      </div>
+      <div class="security-panel">
+        <h3>Compliance &amp; стандарты</h3>
+        <p style="color:var(--lp-muted);font-size:0.92rem;margin-bottom:1.25rem">
+          Готовность к требованиям здравоохранения и интеграции с внешними системами.
+        </p>
+        <div class="compliance-tags">
+          <span class="compliance-tag">FHIR R4</span>
+          <span class="compliance-tag">HL7</span>
+          <span class="compliance-tag">RBAC</span>
+          <span class="compliance-tag">2FA / TOTP</span>
+          <span class="compliance-tag">Audit log</span>
+          <span class="compliance-tag">DSAR</span>
+          <span class="compliance-tag">Prometheus</span>
+          <span class="compliance-tag">OpenTelemetry</span>
+        </div>
+        <p style="margin-top:1.25rem;font-size:0.88rem;color:var(--lp-muted)">
+          <a href="/help/compliance/" target="_blank" rel="noopener" style="color:#93c5fd">Документация по compliance →</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <div class="section-head">
+        <h2>Стек, проверенный в production</h2>
+        <p>FastAPI, Celery, PostgreSQL, Redis, Docker Compose и GitHub Actions — деплой на VPS за минуты.</p>
+      </div>
+      <div class="stack-row">
+        <span class="stack-pill">FastAPI</span>
+        <span class="stack-pill">PostgreSQL</span>
+        <span class="stack-pill">Redis + Celery</span>
+        <span class="stack-pill">spaCy NLP</span>
+        <span class="stack-pill">OpenAI / ProxyAPI</span>
+        <span class="stack-pill">ChromaDB</span>
+        <span class="stack-pill">pydicom</span>
+        <span class="stack-pill">Traefik</span>
+        <span class="stack-pill">Docker Compose</span>
+        <span class="stack-pill">GitHub Actions</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="pricing">
+    <div class="container">
+      <div class="section-head">
+        <h2>Тарифы для любого масштаба</h2>
+        <p>От ознакомления до enterprise-клиники с неограниченными ресурсами и SLA.</p>
+      </div>
+      <div class="pricing-grid">
+        <article class="pricing-card">
+          <div class="pricing-tier">Freemium</div>
+          <h3>Старт</h3>
+          <p class="pricing-desc">Для небольших клиник и пилотных проектов.</p>
+          <ul class="pricing-features">
+            <li>Базовый парсинг документов</li>
+            <li>Дашборд и аналитика</li>
+            <li>Ограничения по пациентам и AI</li>
+            <li>Community support</li>
+          </ul>
+          <a class="btn btn-secondary" href="/login">Зарегистрироваться</a>
+        </article>
+        <article class="pricing-card featured">
+          <div class="pricing-tier">Pro</div>
+          <h3>Клиника</h3>
+          <p class="pricing-desc">Полный функционал для частной клиники или медцентра.</p>
+          <ul class="pricing-features">
+            <li>DICOM 2D/3D и аннотации</li>
+            <li>AI-прогнозы + SHAP</li>
+            <li>FHIR import/export</li>
+            <li>Webhooks и Telegram</li>
+          </ul>
+          <a class="btn btn-primary" href="/login">Выбрать Pro</a>
+        </article>
+        <article class="pricing-card">
+          <div class="pricing-tier">Enterprise</div>
+          <h3>Сеть клиник</h3>
+          <p class="pricing-desc">Мультитенантность, SLA и кастомные интеграции.</p>
+          <ul class="pricing-features">
+            <li>Неограниченные ресурсы</li>
+            <li>SSO и расширенный audit</li>
+            <li>SIEM export, backup</li>
+            <li>Приоритетная поддержка</li>
+          </ul>
+          <a class="btn btn-secondary" href="mailto:valera7623@gmail.com">Связаться</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-band">
+    <div class="container">
+      <h2>Готовы попробовать MedInsight?</h2>
+      <p>Демо доступно сразу — или разверните свой инстанс по инструкции в репозитории.</p>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="https://demo.fileguardian.com.ru/demo" target="_blank" rel="noopener">Открыть демо</a>
+        <a class="btn btn-secondary" href="/login">Войти в систему</a>
+        <a class="btn btn-secondary" href="https://github.com/valera7623/MedInsight" target="_blank" rel="noopener">Исходный код</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="lp-footer">
+    <div class="container footer-grid">
+      <div class="footer-links">
+        <a href="/help/" target="_blank" rel="noopener">Документация</a>
+        <a href="/docs" target="_blank" rel="noopener">API Swagger</a>
+        <a href="https://github.com/valera7623/MedInsight" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://demo.fileguardian.com.ru/demo" target="_blank" rel="noopener">Демо</a>
+      </div>
+      <p class="footer-copy">
+        © 2026 MedInsight ·
+        <a href="https://github.com/valera7623" target="_blank" rel="noopener">Valery Popov</a> ·
+        <a href="https://github.com/valera7623/MedInsight/blob/main/LICENSE" target="_blank" rel="noopener">MIT</a>
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var btn = document.getElementById('lp-menu-btn');
+      var nav = document.getElementById('lp-nav');
+      if (!btn || !nav) return;
+      btn.addEventListener('click', function () {
+        var open = nav.classList.toggle('open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      nav.querySelectorAll('a[href^="#"]').forEach(function (link) {
+        link.addEventListener('click', function () {
+          nav.classList.remove('open');
+          btn.setAttribute('aria-expanded', 'false');
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
