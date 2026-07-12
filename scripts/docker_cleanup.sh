@@ -30,7 +30,12 @@ if [ "$MODE" = "weekly" ] || [ "$MODE" = "full" ]; then
 fi
 
 log "Disk usage after cleanup:"
-docker system df
+if docker system df 2>/dev/null; then
+  :
+else
+  log "Warning: docker system df failed (containerd snapshot metadata); cleanup succeeded."
+  df -h /var/lib/docker 2>/dev/null || df -h /
+fi
 
 if [ -n "$before" ]; then
   log "Cleanup complete."
